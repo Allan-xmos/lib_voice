@@ -88,9 +88,11 @@ typedef struct {
     float_s32_t lc_gain_silence;
     /** Loss control gain to apply when far-end activity only is detected. */
     float_s32_t lc_gain_min;
-
+    /** VNR threshold for voice activity detection. */
     float_s32_t vnr_threshold;
+    /** Low VNR threshold for background estimation. */
     float_s32_t vnr_low;
+    /** Frame count limit for low VNR detection. */
     int vad_low_count_limit;
 } agc_config_t;
 
@@ -192,7 +194,7 @@ typedef struct {
  *
  * @ingroup agc_defs
  */
-#define AGC_META_DATA_NO_VNR 0u
+#define AGC_META_DATA_NO_VNR (float_s32_t){0, 0}
 
 /**
  * If the application has VNR, `adapt_on_vnr` can be enabled in the configuration. This
@@ -208,7 +210,7 @@ typedef struct {
  *
  * @ingroup agc_defs
  */
-#define AGC_META_DATA_NO_AEC (float_s32_t){0, 0, 0}
+#define AGC_META_DATA_NO_AEC (float_s32_t){0, 0}
 
 /**
  * @brief Perform AGC processing on a frame of input data

@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.38.0') _
+@Library('xmos_jenkins_shared_library@v0.42.0') _
 
 def runningOn(machine) {
   println "Stage running on:"
@@ -130,8 +130,8 @@ pipeline {
             runningOn(env.NODE_NAME)
 
             sh "git clone --depth 1 --branch v2.5.2 git@github.com:ThrowTheSwitch/Unity.git"
-            sh "git clone --depth 1 --branch v2.0.0 git@github0.xmos.com:xmos-int/xtagctl.git"
-            sh "git clone --depth 1 --branch new_pinned_versions git@github.com:xmos/audio_test_tools.git"
+            sh "git clone --depth 1 --branch v3.0.0 git@github0.xmos.com:xmos-int/xtagctl.git"
+            sh "git clone --depth 1 --branch develop git@github.com:xmos/audio_test_tools.git"
             sh "git clone --depth 1 --branch main git@github.com:xmos/py_voice.git"
             sh "git clone --depth 1 --branch main git@github.com:xmos/amazon_wwe.git"
             sh "git clone --depth 1 --branch master git@github.com:xmos/sensory_sdk.git"

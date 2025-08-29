@@ -16,11 +16,11 @@ void agc_init(agc_state_t *agc, agc_config_t *config)
     agc->lc_t_far = 0;
     agc->lc_t_near = 0;
 
-    agc->lc_near_power_est = f32_to_float_s32(0.00001F);
-    agc->lc_far_power_est = f32_to_float_s32(0.01F);
-    agc->lc_near_bg_power_est = f32_to_float_s32(0.01F);
+    agc->lc_near_power_est = f32_to_float_s32(0.001F);
+    agc->lc_far_power_est = f32_to_float_s32(0.001F);
+    agc->lc_near_bg_power_est = f32_to_float_s32(0.001F);
     agc->lc_gain = f32_to_float_s32(1);
-    agc->lc_far_bg_power_est = f32_to_float_s32(0.01F);
+    agc->lc_far_bg_power_est = f32_to_float_s32(0.001F);
     agc->lc_corr_val = f32_to_float_s32(0);
     agc->vad_low_count = 0;
 }
@@ -133,37 +133,7 @@ void agc_process_frame(agc_state_t *agc,
         }
     }
 
-    float_s32_t frame_power = float_s64_to_float_s32(bfp_s32_energy(&input_bfp));
     bfp_s32_scale(&output_bfp, &input_bfp, agc->config.gain);
-
-    // Update loss control state
-
-    if (float_s32_gte(agc->lc_far_power_est, meta_data->aec_ref_power)) {
-        agc->lc_far_power_est = float_s32_ema(agc->lc_far_power_est, meta_data->aec_ref_power, AGC_ALPHA_LC_EST_DEC);
-    } else {
-        agc->lc_far_power_est = float_s32_ema(agc->lc_far_power_est, meta_data->aec_ref_power, AGC_ALPHA_LC_EST_INC);
-    }
-
-    // float_s32_t far_bg_power_est = float_s32_mul(agc->config.lc_bg_power_gamma, agc->lc_far_bg_power_est);
-    // if (float_s32_gte(far_bg_power_est, agc->lc_far_power_est)) {
-    //     agc->lc_far_bg_power_est = agc->lc_far_power_est;
-    // } else {
-    //     agc->lc_far_bg_power_est = far_bg_power_est;
-    // }
-
-
-
-    if (float_s32_gte(agc->lc_near_power_est, frame_power)) {
-        agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, AGC_ALPHA_LC_EST_DEC);
-    } else {
-        agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, AGC_ALPHA_LC_EST_INC);
-    }
-
-    if (float_s32_gt(agc->lc_near_bg_power_est, agc->lc_near_power_est)) {
-        agc->lc_near_bg_power_est = float_s32_ema(agc->lc_near_bg_power_est, agc->lc_near_power_est, AGC_ALPHA_LC_BG_POWER_EST_DEC);
-    } else {
-        agc->lc_near_bg_power_est = float_s32_mul(agc->config.lc_bg_power_gamma, agc->lc_near_bg_power_est);
-    }
 
     if (agc->config.lc_enabled) {
         if (meta_data->ref_active_flag) {
@@ -177,6 +147,9 @@ void agc_process_frame(agc_state_t *agc,
             agc->lc_far_bg_power_est = AGC_LC_FAR_BG_POWER_EST_MIN;
         }
 
+        float_s32_t frame_power = float_s64_to_float_s32(bfp_s32_energy(&input_bfp));
+
+        // TODO: Improve speech detection in loss control logic
         // speech_detect_alpha = 0.5;
         // bool speech_detect = false;
         // if (speech_detect){
@@ -190,17 +163,20 @@ void agc_process_frame(agc_state_t *agc,
         // }
         // else
         // {
-        //     agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, speech_detect_alpha);
-        // }
+        if (float_s32_gte(agc->lc_near_power_est, frame_power)) {
+            agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, AGC_ALPHA_LC_EST_DEC);
+        } else {
+            agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, AGC_ALPHA_LC_EST_INC);
+        }
+            // }
 
-        // TODO: Improve speech detection in loss control logic
         if (float_s32_gt(agc->config.vnr_low, meta_data->vnr_flag)) {
             agc->vad_low_count += 1;
         } else {
             agc->vad_low_count = 0;
         }
 
-        if (agc->vad_low_count >= agc->config.vad_low_count_limit) {
+        if (agc->vad_low_count >= agc->config.vnr_low_count_limit) {
             agc->lc_near_bg_power_est = frame_power;
             agc->vad_low_count = 0;
         }

@@ -55,8 +55,8 @@
     .lc_n_frame_near = 10, \
     .lc_n_frame_far = 2, \
     .lc_corr_threshold = f32_to_float_s32(0.9), \
-    .lc_gamma_inc = f32_to_float_s32(2.0), \
-    .lc_gamma_dec = f32_to_float_s32(0.1), \
+    .lc_gamma_inc = f32_to_float_s32(1.005), \
+    .lc_gamma_dec = f32_to_float_s32(0.995), \
     .lc_bg_power_gamma = f32_to_float_s32(1.01), \
     .lc_near_delta_far_active = f32_to_float_s32(19500), \
     .lc_near_delta = f32_to_float_s32(2000), \

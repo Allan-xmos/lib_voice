@@ -72,10 +72,10 @@ void test_loss_control() {
 
     unsigned num_frames = conf_near.lc_n_frame_far;
     if (num_frames < conf_near.lc_n_frame_near) {
-        num_frames = conf_near.lc_n_frame_near;
+        num_frames = conf_near.lc_n_frame_near + 2;
     }
     if (num_frames < conf_near.vnr_low_count_limit + conf_near.lc_n_frame_near) {
-        num_frames = conf_near.vnr_low_count_limit + conf_near.lc_n_frame_near;
+        num_frames = conf_near.vnr_low_count_limit + conf_near.lc_n_frame_near + 2;
     }
 
     for (unsigned iter = 0; iter < (1<<10)/F; ++iter) {

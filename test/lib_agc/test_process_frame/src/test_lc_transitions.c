@@ -38,7 +38,7 @@ struct lc_test_params {
 #define PARAMS_FAR (struct lc_test_params){ \
     .correlation = TEST_LC_FAR_CORR, \
     .power_scale = TEST_LC_FAR_POWER_SCALE, \
-    .silence_scale = TEST_LC_NON_SILENCE_SCALE, \
+    .silence_scale = TEST_LC_AEC_RESIDUAL_SCALE, \
     .ref_active = 1, \
     .vnr = 0.0f \
     }

@@ -92,6 +92,7 @@
 // An input frame for "silence" requires low energy, so a factor is used to scale the raw input frame
 // data in the silence case; for non-silence (near-end, far-end, double-talk), no scaling is required.
 #define TEST_LC_NON_SILENCE_SCALE 1
-#define TEST_LC_SILENCE_SCALE 0.1
+#define TEST_LC_AEC_RESIDUAL_SCALE 0.03 // -30dB
+#define TEST_LC_SILENCE_SCALE 0.01 // -40dB
 
 #endif  // AGC_UNIT_TESTS_

@@ -90,4 +90,39 @@
     }
 
 
+/**
+ * @brief AGC profile tuned for XCV communications.
+ *
+ * @ingroup agc_profiles
+ */
+#define AGC_PROFILE_XCV_COMMS (agc_config_t){ \
+    .gain_dec = f32_to_float_s32(0.98804), \
+    .max_gain = f32_to_float_s32(1000), \
+    .min_gain = f32_to_float_s32(0), \
+    .gain_inc = f32_to_float_s32(1.0034), \
+    .adapt = 1, \
+    .adapt_on_vnr = 1, \
+    .soft_clipping = 1, \
+    .vnr_threshold = f32_to_float_s32(0.6), \
+    .gain = f32_to_float_s32(100), \
+    .upper_threshold = f32_to_float_s32(0.5), \
+    .lower_threshold = f32_to_float_s32(0.5), \
+    .lc_enabled = 1, \
+    .lc_n_frame_near = 10, \
+    .lc_n_frame_far = 2, \
+    .lc_corr_threshold = f32_to_float_s32(0.9), \
+    .lc_gamma_inc = f32_to_float_s32(1.005), \
+    .lc_gamma_dec = f32_to_float_s32(0.995), \
+    .lc_bg_power_gamma = f32_to_float_s32(1.01), \
+    .lc_near_delta_far_active = f32_to_float_s32(2000), \
+    .lc_near_delta = f32_to_float_s32(200), \
+    .lc_far_delta = f32_to_float_s32(10), \
+    .lc_gain_max = f32_to_float_s32(1.0f), \
+    .lc_gain_double_talk = f32_to_float_s32(0.25), \
+    .lc_gain_silence = f32_to_float_s32(0.05), \
+    .lc_gain_min = f32_to_float_s32(0.01), \
+    .vnr_low = f32_to_float_s32(0.2), \
+    .vnr_low_count_limit = 17, \
+    }
+
 #endif

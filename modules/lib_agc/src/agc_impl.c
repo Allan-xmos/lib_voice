@@ -182,8 +182,7 @@ void agc_process_frame(agc_state_t *agc,
         // If VNR has been low a while, and there's not ref correlation, 
         // update the near background power estimate
         agc->lc_corr_val = meta_data->aec_corr_factor;
-        if ((agc->vnr_low_count >= agc->config.vnr_low_count_limit) && 
-            (float_s32_gt(agc->config.lc_corr_threshold, agc->lc_corr_val))){
+        if ((agc->vnr_low_count >= agc->config.vnr_low_count_limit)){
             agc->lc_near_bg_power_est = frame_power;
             agc->vnr_low_count = 0;
         }

@@ -211,6 +211,8 @@ typedef struct {
  * @ingroup agc_defs
  */
 #define AGC_META_DATA_NO_AEC (float_s32_t){0, 0}
+#define AGC_META_DATA_NO_VNR (float_s32_t){0, 0}
+#define AGC_META_DATA_NO_REF 0
 
 /**
  * @brief Perform AGC processing on a frame of input data

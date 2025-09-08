@@ -23,6 +23,7 @@
 #define AGC_ALPHA_LC_EST_DEC 536870912  // 0.6973
 #define AGC_ALPHA_LC_BG_POWER_EST_DEC 588410496  // 0.5480
 #define AGC_ALPHA_LC_CORR 1052267008  // 0.9800
+#define AGC_ALPHA_LC_NEAR_BG_EST 1020054732  // 0.95
 
 // Minimum value for the estimated far background power
 #define AGC_LC_FAR_BG_POWER_EST_MIN (float_s32_t){1152921504, -60}  //0.000000001

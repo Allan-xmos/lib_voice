@@ -112,10 +112,10 @@
     .lc_n_frame_far = 2, \
     .lc_corr_threshold = f32_to_float_s32(0.9), \
     .lc_gamma_inc = f32_to_float_s32(1.005), \
-    .lc_gamma_dec = f32_to_float_s32(0.995), \
+    .lc_gamma_dec = f32_to_float_s32(0.999), \
     .lc_bg_power_gamma = f32_to_float_s32(1.01), \
-    .lc_near_delta_far_active = f32_to_float_s32(2000), \
-    .lc_near_delta = f32_to_float_s32(200), \
+    .lc_near_delta_far_active = f32_to_float_s32(15000), \
+    .lc_near_delta = f32_to_float_s32(1000), \
     .lc_far_delta = f32_to_float_s32(10), \
     .lc_gain_max = f32_to_float_s32(1.0f), \
     .lc_gain_double_talk = f32_to_float_s32(0.25), \

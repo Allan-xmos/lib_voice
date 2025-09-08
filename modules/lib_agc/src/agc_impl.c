@@ -19,7 +19,7 @@ void agc_init(agc_state_t *agc, agc_config_t *config)
     agc->lc_near_power_est = f32_to_float_s32(0.001F);
     agc->lc_far_power_est = f32_to_float_s32(0.001F);
     agc->lc_near_bg_power_est = f32_to_float_s32(0.001F);
-    agc->lc_gain = f32_to_float_s32(1);
+    agc->lc_gain = agc->config.lc_gain_silence;
     agc->lc_far_bg_power_est = f32_to_float_s32(0.001F);
     agc->lc_corr_val = f32_to_float_s32(0);
     agc->vnr_low_count = 0;
@@ -244,10 +244,13 @@ void agc_process_frame(agc_state_t *agc,
         bfp_s32_t lc_scale_bfp;
         bfp_s32_init(&lc_scale_bfp, lc_scale, lc_target_gain.exp, AGC_FRAME_ADVANCE, 0);
         bfp_s32_set(&lc_scale_bfp, lc_target_gain.mant, lc_target_gain.exp);
-        // Add some headroom to avoid changing the exponent when gradually transitioning from
-        // previous lc_gain to lc_target_gain. Anyway, 32 bits of precision is unnecessary.
-        bfp_s32_shl(&lc_scale_bfp, &lc_scale_bfp, -8);
-        lc_scale_bfp.exp += 8;
+
+        if (float_s32_gt(lc_target_gain, agc->lc_gain)) {
+            // Add some headroom to avoid changing the exponent when gradually transitioning from
+            // previous lc_gain to lc_target_gain. Anyway, 32 bits of precision is unnecessary.
+            bfp_s32_shl(&lc_scale_bfp, &lc_scale_bfp, -8);
+            lc_scale_bfp.exp += 8;
+        }
 
         for (unsigned idx = 0; idx < AGC_FRAME_ADVANCE; ++idx) {
             if (float_s32_gt(agc->lc_gain, lc_target_gain)) {
@@ -255,13 +258,13 @@ void agc_process_frame(agc_state_t *agc,
                 if (float_s32_gt(lc_target_gain, agc->lc_gain)) {
                     agc->lc_gain = lc_target_gain;
                 }
-                lc_scale[idx] = use_exp_float(agc->lc_gain, lc_target_gain.exp);
+                lc_scale[idx] = use_exp_float(agc->lc_gain, lc_scale_bfp.exp);
             } else if (float_s32_gt(lc_target_gain, agc->lc_gain)) {
                 agc->lc_gain = float_s32_mul(agc->lc_gain, agc->config.lc_gamma_inc);
                 if (float_s32_gt(agc->lc_gain, lc_target_gain)) {
                     agc->lc_gain = lc_target_gain;
                 }
-                lc_scale[idx] = use_exp_float(agc->lc_gain, lc_target_gain.exp);
+                lc_scale[idx] = use_exp_float(agc->lc_gain, lc_scale_bfp.exp);
             } else {
                 break;
             }

@@ -148,29 +148,9 @@ void agc_process_frame(agc_state_t *agc,
             agc->lc_far_bg_power_est = AGC_LC_FAR_BG_POWER_EST_MIN;
         }
 
+        // near power is smoothed input power
         float_s32_t frame_power = float_s64_to_float_s32(bfp_s32_energy(&input_bfp));
-
-        // TODO: Improve near end speech detection 
-        // speech_detect_alpha = 0.5;
-        // bool speech_detect = false;
-        // if (speech_detect){
-        //     speech_detect_alpha = 0.5;
-        //     if meta_data->vnr > agc->config.vnr_threshold{
-        //     agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, speech_detect_alpha);
-        //     }
-        //     else{
-        //         agc->lc_near_power_est *= speech_detect_alpha;
-        //     }
-        // }
-        // else
-        // {
-        // Update near power estimate
-        if (float_s32_gte(agc->lc_near_power_est, frame_power)) {
-            agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, AGC_ALPHA_LC_EST_DEC);
-        } else {
-            agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, AGC_ALPHA_LC_EST_INC);
-        }
-            // }
+        agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, AGC_ALPHA_LC_EST_DEC);
 
         // Update the low VNR counter
         if (float_s32_gt(agc->config.vnr_low, meta_data->vnr_flag)) {

@@ -251,7 +251,7 @@ void ic_calc_vnr_pred(
     float_s32_t ie_output;
     vnr_inference(&ie_output, &feature_patch);
     ic_state->vnr_pred_state.input_vnr_pred = float_s32_ema(ic_state->vnr_pred_state.input_vnr_pred, ie_output, ic_state->vnr_pred_state.pred_alpha_q30);
-    *input_vnr_pred = ic_state->vnr_pred_state.input_vnr_pred;
+    *input_vnr_pred = ie_output;
 
     vnr_extract_features(&ic_state->vnr_pred_state.feature_state[1], &feature_patch, feature_patch_data, &ic_state->Error_bfp[0]);
     vnr_inference(&ie_output, &feature_patch);

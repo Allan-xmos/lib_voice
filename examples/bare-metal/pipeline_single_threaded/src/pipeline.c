@@ -128,15 +128,16 @@ void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metada
     ic_filter(&state->ic_state, input_data[0], input_data[1], ic_output[0]);
 
     // VNR
-    ic_calc_vnr_pred(&state->ic_state, &state->input_vnr_pred, &state->output_vnr_pred);
+    float_s32_t input_vnr_pred, output_vnr_pred;
+    ic_calc_vnr_pred(&state->ic_state, &input_vnr_pred, &output_vnr_pred);
 #if PRINT_VNR_PREDICTION 
         printf("VNR OUTPUT PRED: %ld %d\n", state->output_vnr_pred.mant, state->output_vnr_pred.exp);
         printf("VNR INPUT PRED: %ld %d\n", state->input_vnr_pred.mant, state->input_vnr_pred.exp);
 #endif
     // float_s32_t agc_vnr_threshold = f32_to_float_s32(VNR_AGC_THRESHOLD);
-    md.vnr_pred_flag = state->input_vnr_pred;
+    md.vnr_pred_flag = input_vnr_pred;
    
-    ic_adapt(&state->ic_state, state->input_vnr_pred);
+    ic_adapt(&state->ic_state, state->ic_state.vnr_pred_state.input_vnr_pred);
 
     // Copy IC output to the other channel
     for(int v = 0; v < AP_FRAME_ADVANCE; v++){

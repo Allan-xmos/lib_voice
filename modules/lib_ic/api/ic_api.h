@@ -83,6 +83,7 @@ void ic_calc_vnr_pred(ic_state_t *state,
  *
  * @ingroup ic_func
  */
+// TODO: remove vnr parameter and get from state->vnr_pred_state
 void ic_adapt(ic_state_t *state,
                       float_s32_t vnr);
 

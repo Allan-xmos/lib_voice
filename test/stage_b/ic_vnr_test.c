@@ -29,7 +29,7 @@ float_s32_t test_vnr(){
     float_s32_t input_vnr_pred, output_vnr_pred;
     ic_calc_vnr_pred(&ic_state, &input_vnr_pred, &output_vnr_pred);
 
-    return input_vnr_pred;
+    return ic_state.vnr_pred_state.input_vnr_pred;
 }
 
 void test_control_system(double vnr_fl, int32_t ad_config, double fast_ratio){

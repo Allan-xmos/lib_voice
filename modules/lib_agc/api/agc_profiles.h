@@ -91,7 +91,7 @@
 
 
 /**
- * @brief AGC profile tuned for XCV communications.
+ * @brief AGC profile tuned for human to human communications.
  *
  * @ingroup agc_profiles
  */

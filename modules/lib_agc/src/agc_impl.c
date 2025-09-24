@@ -87,7 +87,6 @@ void agc_process_frame(agc_state_t *agc,
         float_s32_t min_sample = float_s32_abs(bfp_s32_min(&input_bfp));
         float_s32_t max_abs_value;
 
-        
         if (float_s32_gte(max_sample, min_sample)) {
             max_abs_value = max_sample;
         } else {
@@ -106,7 +105,9 @@ void agc_process_frame(agc_state_t *agc,
         float_s32_t gained_max_abs_value = float_s32_mul(max_abs_value, agc->config.gain);
         unsigned exceed_threshold = float_s32_gte(gained_max_abs_value, agc->config.upper_threshold);
 
+        
         if (exceed_threshold || vnr_flag) {
+            // Only adapt if the gained max abs value exceeds the upper threshold or if VNR indicates voice activity
             unsigned peak_rising = float_s32_gte(agc->x_fast, agc->x_peak);
             if (peak_rising) {
                 agc->x_peak = float_s32_ema(agc->x_peak, agc->x_fast, AGC_ALPHA_PEAK_RISE);
@@ -116,10 +117,13 @@ void agc_process_frame(agc_state_t *agc,
 
             float_s32_t gained_pk = float_s32_mul(agc->x_peak, agc->config.gain);
             unsigned near_only = (agc->lc_t_near != 0) && (agc->lc_t_far == 0);
+
             if (float_s32_gte(gained_pk, agc->config.upper_threshold)) {
+                // reduce gain if above upper threshold
                 agc->config.gain = float_s32_mul(agc->config.gain_dec, agc->config.gain);
             } else if (float_s32_gte(agc->config.lower_threshold, gained_pk) &&
                        (agc->config.lc_enabled == 0 || near_only != 0)) {
+                // increase gain if below lower threshold and LC is either disabled or near-end only
                 agc->config.gain = float_s32_mul(agc->config.gain_inc, agc->config.gain);
             }
 
@@ -141,7 +145,7 @@ void agc_process_frame(agc_state_t *agc,
         if (meta_data->ref_active_flag) {
             agc->lc_far_power_est = meta_data->aec_ref_power;
         }
-        else{
+        else {
             agc->lc_far_bg_power_est = meta_data->aec_ref_power;
         }
         if (float_s32_gte(AGC_LC_FAR_BG_POWER_EST_MIN, agc->lc_far_bg_power_est)) {

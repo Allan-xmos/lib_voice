@@ -100,9 +100,6 @@ static void perform_transition(agc_state_t *agc, struct lc_test_params *params, 
         }
     }
 
-    printf("LC gain: %f, expected: %f\n",
-           float_s32_to_float(agc->lc_gain),
-           float_s32_to_float(expected));
     // Have failed to transition to the expected state
     TEST_ASSERT(0);
 }
@@ -113,60 +110,46 @@ void test_lc_transitions() {
     conf.adapt_on_vnr = 0;
 
     for (unsigned iter = 0; iter < (1<<10)/F; ++iter) {
-        // printf("Starting iteration %u\n", iter);
         agc_init(&agc, &conf);
 
         // Far-end only
-        // printf("Test 1: Far-end transition\n");
         perform_transition(&agc, &PARAMS_FAR, conf.lc_gain_min);
 
         // Silence
-        // printf("Test 2: Silence transition\n");
         perform_transition(&agc, &PARAMS_SILENCE, conf.lc_gain_silence);
 
         // Double-talk
-        // printf("Test 3: Double-talk transition\n");
         perform_transition(&agc, &PARAMS_DOUBLE_TALK, conf.lc_gain_double_talk);
 
         // Silence
-        // printf("Test 4: Silence transition\n");
         perform_transition(&agc, &PARAMS_SILENCE, conf.lc_gain_silence);
 
         // Near-end only
-        // printf("Test 5: Near-end transition\n");
         perform_transition(&agc, &PARAMS_NEAR, conf.lc_gain_max);
 
         // Silence
-        // printf("Test 6: Silence transition\n");
         perform_transition(&agc, &PARAMS_SILENCE, conf.lc_gain_silence);
 
         // Far-end only
-        // printf("Test 7: Far-end transition\n");
         perform_transition(&agc, &PARAMS_FAR, conf.lc_gain_min);
 
         // Double-talk
-        // printf("Test 8: Double-talk transition\n");
         perform_transition(&agc, &PARAMS_DOUBLE_TALK, conf.lc_gain_double_talk);
 
         // Near-end only
-        // printf("Test 9: Near-end transition\n");
         perform_transition(&agc, &PARAMS_NEAR, conf.lc_gain_max);
 
         // Double-talk
-        // printf("Test 10: Double-talk transition\n");
         perform_transition(&agc, &PARAMS_DOUBLE_TALK, conf.lc_gain_double_talk);
 
         // Silence
-        // printf("Test 11: Silence transition\n");
         perform_transition(&agc, &PARAMS_SILENCE, conf.lc_gain_silence);
 
         // Far-end only
-        // printf("Test 12: Far-end transition\n");
         perform_transition(&agc, &PARAMS_FAR, conf.lc_gain_min);
 
-        // // Near-end only
-        // printf("Test 13: Near-end transition\n");
-        // perform_transition(&agc, &PARAMS_NEAR, conf.lc_gain_max);
+        // Near-end only
+        perform_transition(&agc, &PARAMS_NEAR, conf.lc_gain_max);
         
         printf("Completed iteration %u\n", iter);
     }

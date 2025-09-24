@@ -134,7 +134,6 @@ void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metada
         printf("VNR OUTPUT PRED: %ld %d\n", state->output_vnr_pred.mant, state->output_vnr_pred.exp);
         printf("VNR INPUT PRED: %ld %d\n", state->input_vnr_pred.mant, state->input_vnr_pred.exp);
 #endif
-    // float_s32_t agc_vnr_threshold = f32_to_float_s32(VNR_AGC_THRESHOLD);
     md.vnr_pred_flag = input_vnr_pred;
    
     ic_adapt(&state->ic_state, state->ic_state.vnr_pred_state.input_vnr_pred);

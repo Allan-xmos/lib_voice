@@ -26,10 +26,10 @@ void test_input_output() {
     agc_meta_data_t md;
 
     agc_state_t agc0;
-    agc_init(&agc0, &AGC_PROFILE_COMMS);
+    agc_init(&agc0, &AGC_PROFILE_XCV_COMMS);
 
     agc_state_t agc1;
-    agc_init(&agc1, &AGC_PROFILE_COMMS);
+    agc_init(&agc1, &AGC_PROFILE_XCV_COMMS);
 
     // Random seed
     unsigned seed = 34090;

@@ -133,8 +133,7 @@ typedef struct {
     float_s32_t lc_far_bg_power_est;
     /** EWMA of the far-end correlation for detecting double-talk. */
     float_s32_t lc_corr_val;
-
-
+    /** Counter of how many frames the VNR has been low for. */
     int vnr_low_count;
 } agc_state_t;
 
@@ -184,7 +183,6 @@ typedef struct {
     float_s32_t aec_corr_factor;
     /** Flag to indicate if the reference signal is currently active */
     int32_t ref_active_flag;
-
 } agc_meta_data_t;
 
 /**
@@ -211,8 +209,6 @@ typedef struct {
  * @ingroup agc_defs
  */
 #define AGC_META_DATA_NO_AEC (float_s32_t){0, 0}
-#define AGC_META_DATA_NO_VNR (float_s32_t){0, 0}
-#define AGC_META_DATA_NO_REF 0
 
 /**
  * @brief Perform AGC processing on a frame of input data

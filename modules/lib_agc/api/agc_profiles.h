@@ -30,7 +30,7 @@
     .soft_clipping = 1, \
     .gain = f32_to_float_s32(500), \
     .max_gain = f32_to_float_s32(1000), \
-    .min_gain = f32_to_float_s32(0), \
+    .min_gain = f32_to_float_s32(0.00001), \
     .upper_threshold = f32_to_float_s32(0.9999), \
     .lower_threshold = f32_to_float_s32(0.7000), \
     .gain_inc = f32_to_float_s32(1.197), \
@@ -52,6 +52,7 @@
     .vnr_threshold = f32_to_float_s32(0.5),\
     .vnr_low = f32_to_float_s32(0.2),\
     .vnr_low_count_limit = 17, \
+    .startup_delay = 0, \
     }
 
 /**
@@ -87,6 +88,7 @@
     .vnr_threshold = f32_to_float_s32(0.5),\
     .vnr_low = f32_to_float_s32(0.2),\
     .vnr_low_count_limit = 17, \
+    .startup_delay = 0, \
     }
 
 
@@ -98,7 +100,7 @@
 #define AGC_PROFILE_XCV_COMMS (agc_config_t){ \
     .gain_dec = f32_to_float_s32(0.98804), \
     .max_gain = f32_to_float_s32(1000), \
-    .min_gain = f32_to_float_s32(0), \
+    .min_gain = f32_to_float_s32(0.00001), \
     .gain_inc = f32_to_float_s32(1.0034), \
     .adapt = 1, \
     .adapt_on_vnr = 1, \
@@ -123,6 +125,7 @@
     .lc_gain_min = f32_to_float_s32(0.01), \
     .vnr_low = f32_to_float_s32(0.2), \
     .vnr_low_count_limit = 17, \
+    .startup_delay = 0, \
     }
 
 #endif

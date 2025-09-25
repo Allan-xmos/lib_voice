@@ -94,6 +94,8 @@ typedef struct {
     float_s32_t vnr_low;
     /** Frame count limit for low VNR detection. */
     int vnr_low_count_limit;
+    /** Number of frames to mute the output at startup. */
+    uint32_t startup_delay;
 } agc_config_t;
 
 /**
@@ -135,6 +137,8 @@ typedef struct {
     float_s32_t lc_corr_val;
     /** Counter of how many frames the VNR has been low for. */
     int vnr_low_count;
+    /** Frame counter since initialisation, used for startup delay */
+    uint32_t frame_count;
 } agc_state_t;
 
 /**

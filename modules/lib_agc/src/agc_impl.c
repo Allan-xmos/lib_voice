@@ -23,6 +23,7 @@ void agc_init(agc_state_t *agc, agc_config_t *config)
     agc->lc_far_bg_power_est = f32_to_float_s32(0.001F);
     agc->lc_corr_val = f32_to_float_s32(0);
     agc->vnr_low_count = 0;
+    agc->frame_count = 0;
 }
 
 // Returns the mantissa for the input float shifted to an exponent of parameter exp
@@ -137,7 +138,14 @@ void agc_process_frame(agc_state_t *agc,
         }
     }
 
-    bfp_s32_scale(&output_bfp, &input_bfp, agc->config.gain);
+    // Startup delay to mute the output at boot
+    agc->frame_count += 1;
+    if (agc->frame_count < agc->config.startup_delay) {
+        bfp_s32_scale(&output_bfp, &input_bfp, FLOAT_S32_ZERO);
+    }
+    else {
+        bfp_s32_scale(&output_bfp, &input_bfp, agc->config.gain);
+    }
 
     if (agc->config.lc_enabled) {
 

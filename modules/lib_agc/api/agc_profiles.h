@@ -50,8 +50,8 @@
     .lc_gain_silence = f32_to_float_s32(0), \
     .lc_gain_min = f32_to_float_s32(0), \
     .vnr_threshold = f32_to_float_s32(0.5),\
-    .vnr_low = f32_to_float_s32(0.2),\
-    .vnr_low_count_limit = 17, \
+    .lc_vnr_low = f32_to_float_s32(0.2),\
+    .lc_vnr_low_count_limit = 17, \
     .startup_delay = 0, \
     }
 
@@ -86,8 +86,8 @@
     .lc_gain_silence = f32_to_float_s32(0), \
     .lc_gain_min = f32_to_float_s32(0), \
     .vnr_threshold = f32_to_float_s32(0.5),\
-    .vnr_low = f32_to_float_s32(0.2),\
-    .vnr_low_count_limit = 17, \
+    .lc_vnr_low = f32_to_float_s32(0.2),\
+    .lc_vnr_low_count_limit = 17, \
     .startup_delay = 0, \
     }
 
@@ -123,8 +123,8 @@
     .lc_gain_double_talk = f32_to_float_s32(0.25), \
     .lc_gain_silence = f32_to_float_s32(0.05), \
     .lc_gain_min = f32_to_float_s32(0.01), \
-    .vnr_low = f32_to_float_s32(0.2), \
-    .vnr_low_count_limit = 17, \
+    .lc_vnr_low = f32_to_float_s32(0.2), \
+    .lc_vnr_low_count_limit = 17, \
     .startup_delay = 0, \
     }
 

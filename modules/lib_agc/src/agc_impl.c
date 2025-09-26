@@ -22,7 +22,7 @@ void agc_init(agc_state_t *agc, agc_config_t *config)
     agc->lc_gain = agc->config.lc_gain_silence;
     agc->lc_far_bg_power_est = f32_to_float_s32(0.001F);
     agc->lc_corr_val = f32_to_float_s32(0);
-    agc->vnr_low_count = 0;
+    agc->lc_vnr_low_count = 0;
     agc->frame_count = 0;
 }
 
@@ -165,16 +165,16 @@ void agc_process_frame(agc_state_t *agc,
         agc->lc_near_power_est = float_s32_ema(agc->lc_near_power_est, frame_power, AGC_ALPHA_LC_EST_DEC);
 
         // Update the low VNR counter
-        if (float_s32_gt(agc->config.vnr_low, meta_data->vnr_flag)) {
-            agc->vnr_low_count += 1;
+        if (float_s32_gt(agc->config.lc_vnr_low, meta_data->vnr_flag)) {
+            agc->lc_vnr_low_count += 1;
         } else {
-            agc->vnr_low_count = 0;
+            agc->lc_vnr_low_count = 0;
         }
 
         // If VNR has been low a while, and there's not ref correlation, 
         // update the near background power estimate
         agc->lc_corr_val = meta_data->aec_corr_factor;
-        if ((agc->vnr_low_count >= agc->config.vnr_low_count_limit) && 
+        if ((agc->lc_vnr_low_count >= agc->config.lc_vnr_low_count_limit) && 
             (float_s32_gt(agc->config.lc_corr_threshold, agc->lc_corr_val))){
             agc->lc_near_bg_power_est = float_s32_ema(agc->lc_near_bg_power_est, frame_power, AGC_ALPHA_LC_NEAR_BG_EST);
         }

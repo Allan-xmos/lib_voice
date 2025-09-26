@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.42.0') _
+@Library('xmos_jenkins_shared_library@v0.43.0') _
 
 def runningOn(machine) {
   println "Stage running on:"
@@ -51,7 +51,7 @@ pipeline {
           steps {
             checkout scm
             warnError("Docs") {
-              buildDocs(archiveZipOnly: true)
+              buildDocs()
             }
           }
           post {

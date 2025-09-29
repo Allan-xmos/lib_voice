@@ -106,7 +106,6 @@ void agc_process_frame(agc_state_t *agc,
         float_s32_t gained_max_abs_value = float_s32_mul(max_abs_value, agc->config.gain);
         unsigned exceed_threshold = float_s32_gte(gained_max_abs_value, agc->config.upper_threshold);
 
-        
         if (exceed_threshold || vnr_flag) {
             // Only adapt if the gained max abs value exceeds the upper threshold or if VNR indicates voice activity
             unsigned peak_rising = float_s32_gte(agc->x_fast, agc->x_peak);

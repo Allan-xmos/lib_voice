@@ -94,8 +94,7 @@ static void perform_transition(agc_state_t *agc, struct lc_test_params *params, 
         agc_process_frame(agc, output, input, &md);
 
         // Return here if successfully transitioned to the expected state
-        // if ((agc->lc_gain.mant == expected.mant) && (agc->lc_gain.exp == expected.exp)) {
-        if (float_s32_to_float(agc->lc_gain) == float_s32_to_float(expected)) {
+        if ((agc->lc_gain.mant == expected.mant) && (agc->lc_gain.exp == expected.exp)) {
             return;
         }
     }

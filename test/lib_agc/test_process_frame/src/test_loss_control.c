@@ -132,8 +132,6 @@ void test_loss_control() {
         bfp_s32_headroom(&output_double_talk_bfp);
         float_s32_t output_double_talk_energy = float_s64_to_float_s32(bfp_s32_energy(&output_double_talk_bfp));
 
-        // printf("Near energy: %f, DT energy: %f\n", float_s32_to_float(output_near_energy), float_s32_to_float(output_double_talk_energy));
-        // printf("Far energy: %f\n", float_s32_to_float(output_far_energy));
         // This test assumes: lc_gain_near > lc_gain_double_talk > lc_gain_far
         TEST_ASSERT(float_s32_gt(output_near_energy, output_double_talk_energy));
 

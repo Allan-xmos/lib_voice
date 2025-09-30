@@ -105,7 +105,9 @@ typedef struct {
     float_s32_t lc_near_delta_far_active;
     /** Loss control gain to apply when near-end activity only is detected. */
     float_s32_t lc_gain_max;
-    /** Loss control gain to apply when double-talk is detected. */
+    /** Loss control gain to apply when double-talk is detected. Reducing this
+     *  value will reduce the level of the near-end speech during double-talk,
+     *  but may help to reduce the level of residual far-end echo that is heard. */
     float_s32_t lc_gain_double_talk;
     /** Loss control gain to apply when silence is detected. */
     float_s32_t lc_gain_silence;

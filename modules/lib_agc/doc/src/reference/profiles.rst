@@ -17,9 +17,9 @@ The key AGC parameters are highlighted below:
 
 .. doxygenstruct:: agc_config_t
    :members-only:
-   :members: adapt, vnr_threshold, gain, max_gain, upper_threshold, lower_threshold,
-      soft_clipping, lc_enabled, lc_near_delta, lc_near_delta_far_active
    :no-link:
+   :members: adapt, vnr_threshold, gain, max_gain, upper_threshold, lower_threshold,
+      soft_clipping, lc_enabled, lc_near_delta, lc_near_delta_far_active, lc_gain_double_talk
 
 Other AGC parameters are described in the `agc_profiles.h` header file,
 and are described in detail in :c:struct:`agc_config_t`.

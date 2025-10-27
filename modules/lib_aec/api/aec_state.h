@@ -69,6 +69,8 @@ typedef struct {
     float_s32_t thresh_minus20dB;
     /** Number of frames after low coherence, adaption frozen for.*/
     unsigned mu_coh_time;
+    /** Number of frames after low erle, adaption frozen for.*/
+    unsigned mu_erle_time;
     /** Number of frames after shadow filter use, the adaption is fast for*/
     unsigned mu_shad_time;
     /** Filter adaption mode. Auto, force ON or force OFF*/
@@ -145,7 +147,7 @@ typedef struct {
     float_s32_t erle; ///< Current ERLE
     float_s32_t mov_erle; ///< Slow moving average ERLE
 
-    int32_t mu_coh_count; ///< Counter for tracking number of frames coherence has been low for.
+    int32_t mu_coh_timer; ///< Timer for tracking number of frames adaption is frozen for.
     int32_t mu_shad_count; ///< Counter for tracking number of frames shadow filter has been used in
     float_s32_t coh_mu[AEC_LIB_MAX_X_CHANNELS]; ///< Coherence mu
 }coherence_mu_params_t;

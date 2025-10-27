@@ -120,7 +120,7 @@ void aec_priv_main_init(
         coh_params[ch].coh_slow = f64_to_float_s32(0.0);
         coh_params[ch].erle = f64_to_float_s32(0.0);
         coh_params[ch].mov_erle = f64_to_float_s32(0.0);
-        coh_params[ch].mu_coh_count = 0;
+        coh_params[ch].mu_coh_timer = 0;
         coh_params[ch].mu_shad_count = 0;
     }
 
@@ -405,14 +405,11 @@ void aec_priv_calc_coherence_mu(
         unsigned num_x_channels,
         const uint32_t ref_active_flag)
 {
-    //# If the coherence has been low within the last 15 frames, keep the count != 0
+    //# If the coherence has been low, decrement the timer
     for(unsigned ch=0; ch<num_y_channels; ch++)
     {
-        if(coh_mu_state[ch].mu_coh_count > 0) {
-            coh_mu_state[ch].mu_coh_count += 1;
-        }
-        if(coh_mu_state[ch].mu_coh_count > coh_conf->mu_coh_time) {
-            coh_mu_state[ch].mu_coh_count = 0;
+        if(coh_mu_state[ch].mu_coh_timer > 0) {
+            coh_mu_state[ch].mu_coh_timer -= 1;
         }
     }
     //# If the shadow filter has be en used within the last 15 frames, keep the count != 0
@@ -442,12 +439,23 @@ void aec_priv_calc_coherence_mu(
     {
         if(shadow_flag[ch] >= SIGMA) {
             //# if the shadow filter has triggered, override any drop in coherence
-            coh_mu_state[ch].mu_coh_count = 0;
+            coh_mu_state[ch].mu_coh_timer = 0;
         }
         else {
-            //# otherwise if the coherence is low start the count
-            if(float_s32_gt(coh_conf->coh_thresh_abs, coh_mu_state[ch].coh)) {
-                coh_mu_state[ch].mu_coh_count = 1;
+            if((shadow_flag[ch] != LOW_REF) && coh_thresh_abs(coh_mu_state[ch].coh_slow, coh_conf->coh_thresh_abs)){
+                if(float_s32_gt(coh_thresh_abs, coh_mu_state[ch].coh)) {
+                    //# if coherence is below threshold, start the timer
+                    coh_mu_state[ch].mu_coh_timer = coh_conf->mu_coh_time;
+                }
+                else {
+                    float_s32_t thresh = float_s32_mul(coh_mu_state[ch].mov_erle, coh_conf->erle_thresh);
+                    if(float_s32_gt(thresh, coh_mu_state[ch].erle)) {
+                        //# if the erle is low, start the timer (assuming mu_coh_time > mu_erle_time)
+                        if (coh_mu_state[ch].mu_coh_timer < coh_conf->mu_erle_time){
+                            coh_mu_state[ch].mu_coh_timer = coh_conf->mu_erle_time;
+                        }
+                    }
+                }
             }
         }
     }
@@ -464,34 +472,46 @@ void aec_priv_calc_coherence_mu(
                     coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(1.0); //TODO profile f64_to_float_s32
                 }
             }
-            else if(coh_mu_state[ch].mu_coh_count > 0)
+            else if(coh_mu_state[ch].mu_coh_timer > 0)
             {
                 for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
                     coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(0);
                 }
             }
             else { //# if yy_hat coherence denotes absence of near-end/noise
-                if(float_s32_gt(coh_mu_state[ch].coh, coh_mu_state[ch].coh_slow)) {
+
+                if float_s32_gt(coh_mu_state[ch].coh_slow, coh_conf->coh_thresh_abs) {
+
+                    if(float_s32_gt(coh_mu_state[ch].coh, coh_mu_state[ch].coh_slow)) {
+                        for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
+                            coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(1.0);
+                        }
+                    }
+                    else if(float_s32_gt(coh_mu_state[ch].coh, CC_thres))
+                    {
+                        //# scale coh_mu depending on how far above the threshold it is
+                        //self.mu[y_ch] = 0.5*((self.coh[y_ch]-CC_thres)/(self.coh_slow[y_ch]-CC_thres))**2
+                        float_s32_t s1 = float_s32_sub(coh_mu_state[ch].coh, CC_thres);
+                        float_s32_t s2 = float_s32_sub(coh_mu_state[ch].coh_slow, CC_thres);
+                        float_s32_t s3 = float_s32_div(s1, s2);
+                        s3 = float_s32_mul(s3, s3);
+                        s3 = float_s32_mul(s3, f64_to_float_s32(0.5));
+                        for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
+                            coh_mu_state[ch].coh_mu[x_ch] = s3;
+                        }
+                    }
+                    else {
+                        for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
+                            coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(0.0);
+                        }
+                    }
+                    
+                }
+                else{
+                    //# slow coherence is low, filter has not converged.
                     for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
                         coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(1.0);
-                    }
                 }
-                else if(float_s32_gt(coh_mu_state[ch].coh, CC_thres))
-                {
-                    //# scale coh_mu depending on how far above the threshold it is
-                    //self.mu[y_ch] = ((self.coh[y_ch]-CC_thres)/(self.coh_slow[y_ch]-CC_thres))**2
-                    float_s32_t s1 = float_s32_sub(coh_mu_state[ch].coh, CC_thres);
-                    float_s32_t s2 = float_s32_sub(coh_mu_state[ch].coh_slow, CC_thres);
-                    float_s32_t s3 = float_s32_div(s1, s2);
-                    s3 = float_s32_mul(s3, s3);
-                    for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-                        coh_mu_state[ch].coh_mu[x_ch] = s3;
-                    }
-                }
-                else {
-                    for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-                        coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(0);
-                    }
                 }
             }
         }
@@ -1019,15 +1039,16 @@ void aec_priv_init_config_params(
     coherence_mu_config_params_t *coh_cfg = &config_params->coh_mu_conf;
     coh_cfg->coh_alpha = f64_to_float_s32(0.0);
     coh_cfg->coh_slow_alpha = f64_to_float_s32(0.99);
-    coh_cfg->coh_thresh_slow = f64_to_float_s32(0.9);
-    coh_cfg->coh_thresh_abs = f64_to_float_s32(0.65);
+    coh_cfg->coh_thresh_slow = f64_to_float_s32(0.95);
+    coh_cfg->coh_thresh_abs = f64_to_float_s32(0.75);
     coh_cfg->erle_thresh = f64_to_float_s32(pow(10, -25/10.0));
     coh_cfg->erle_alpha_rise = f64_to_float_s32(0.95);
     coh_cfg->erle_alpha_fall = f64_to_float_s32(0.975);
     coh_cfg->mu_scalar = f64_to_float_s32(1.0);
     coh_cfg->eps = f64_to_float_s32((double)1e-100);
     coh_cfg->thresh_minus20dB = f64_to_float_s32(pow(10, -20/10.0));
-    coh_cfg->mu_coh_time = 2;
+    coh_cfg->mu_coh_time = 5;
+    coh_cfg->mu_erle_time = 2;
     coh_cfg->mu_shad_time = 5;
 
     coh_cfg->adaption_config = AEC_ADAPTION_AUTO;

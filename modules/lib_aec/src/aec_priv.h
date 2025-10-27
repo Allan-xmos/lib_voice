@@ -49,6 +49,13 @@ void aec_priv_compare_filters(
         aec_state_t *main_state,
         aec_state_t *shadow_state);
 
+void aec_priv_calc_erle(
+    aec_state_t *main_state,
+    const int32_t *shadow_flag,
+    coherence_mu_params_t *coh_mu_state,
+    const coherence_mu_config_params_t *coh_conf,
+);
+
 void aec_priv_calc_coherence_mu(
         coherence_mu_params_t *coh_mu_state,
         const coherence_mu_config_params_t *coh_conf,

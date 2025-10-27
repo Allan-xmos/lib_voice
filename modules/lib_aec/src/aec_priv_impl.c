@@ -118,6 +118,8 @@ void aec_priv_main_init(
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         coh_params[ch].coh = f64_to_float_s32(1.0);
         coh_params[ch].coh_slow = f64_to_float_s32(0.0);
+        coh_params[ch].erle = f64_to_float_s32(0.0);
+        coh_params[ch].mov_erle = f64_to_float_s32(0.0);
         coh_params[ch].mu_coh_count = 0;
         coh_params[ch].mu_shad_count = 0;
     }
@@ -367,6 +369,35 @@ void aec_priv_compare_filters(
         for(unsigned ch=0; ch<main_state->shared_state->num_x_channels; ch++)
         {
             aec_priv_bfp_s32_reset(&shared_state->sigma_XX[ch]);
+        }
+    }
+}
+
+void aec_priv_calc_erle(
+    aec_state_t *main_state,
+    const int32_t *shadow_flag,
+    coherence_mu_params_t *coh_mu_state,
+    const coherence_mu_config_params_t *coh_conf,
+)
+{
+    for(unsigned ch=0; ch<num_y_channels; ch++)
+    {
+        if(shadow_flag[ch] != LOW_REF) {
+            if (main_state->overall_Error[ch].mant == 0) {
+                coh_mu_state[ch].erle = f32_to_float_s32(0.0)
+            } else {
+                coh_mu_state[ch].erle = main_state->overall_Y[ch]/main_state->overall_Error[ch];
+            }
+
+            //# update moving average ERLE
+            if(coh_mu_state[ch].erle > coh_mu_state[ch].mov_erle*coh_mu_state[ch].erle_thresh) {
+                if(coh_mu_state[ch].erle < coh_mu_state[ch].mov_erle) {
+                    coh_mu_state[ch].mov_erle = float_s32_ema(coh_mu_state[ch].mov_erle, coh_mu_state[ch].erle, coh_conf->erle_alpha_fall); 
+                }
+                else {
+                    coh_mu_state[ch].mov_erle = float_s32_ema(coh_mu_state[ch].mov_erle, coh_mu_state[ch].erle, coh_conf->erle_alpha_rise); 
+                }
+            }
         }
     }
 }
@@ -986,6 +1017,9 @@ void aec_priv_init_config_params(
     coh_cfg->coh_slow_alpha = f64_to_float_s32(0.99);
     coh_cfg->coh_thresh_slow = f64_to_float_s32(0.9);
     coh_cfg->coh_thresh_abs = f64_to_float_s32(0.65);
+    coh_cfg->erle_thresh = f64_to_float_s32(pow(10, -25/10.0));
+    coh_cfg->erle_alpha_rise = f64_to_float_s32(0.95);
+    coh_cfg->erle_alpha_fall = f64_to_float_s32(0.975);
     coh_cfg->mu_scalar = f64_to_float_s32(1.0);
     coh_cfg->eps = f64_to_float_s32((double)1e-100);
     coh_cfg->thresh_minus20dB = f64_to_float_s32(pow(10, -20/10.0));

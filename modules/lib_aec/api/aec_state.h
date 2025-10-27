@@ -55,6 +55,12 @@ typedef struct {
     float_s32_t coh_thresh_slow;
     /** Adaption frozen if coh below coh_thresh_abs.*/
     float_s32_t coh_thresh_abs;
+    /** ERLE threshold */
+    float_s32_t erle_thresh;
+    /** ERLE alpha when bigger */
+    float_s32_t erle_alpha_rise;
+    /** ERLE alpha when smaller */
+    float_s32_t erle_alpha_fall;
     /** Scalefactor for scaling the calculated mu.*/
     float_s32_t mu_scalar;
     /** Parameter to avoid divide by 0 in coh calculation.*/
@@ -141,6 +147,9 @@ typedef struct {
     float_s32_t coh; ///< Moving average coherence
     float_s32_t coh_slow; ///< Slow moving average coherence
 
+    float_s32_t erle; ///< Current ERLE
+    float_s32_t mov_erle; ///< Slow moving average ERLE
+
     int32_t mu_coh_count; ///< Counter for tracking number of frames coherence has been low for.
     int32_t mu_shad_count; ///< Counter for tracking number of frames shadow filter has been used in
     float_s32_t coh_mu[AEC_LIB_MAX_X_CHANNELS]; ///< Coherence mu
@@ -222,6 +231,10 @@ typedef struct {
     /** Energy of the mic input spectrum. This is calculated by calculating the energy per bin and summing across all
      * bins. Stored in a y channels array with every value stored as a 32bit integer mantissa and exponent.*/
     float_s32_t overall_Y[AEC_LIB_MAX_Y_CHANNELS];
+
+    /** Energy of the estimated mic input spectrum. This is calculated by calculating the energy per bin and summing across all
+     * bins. Stored in a y channels array with every value stored as a 32bit integer mantissa and exponent.*/
+    float_s32_t overall_Yhat[AEC_LIB_MAX_Y_CHANNELS];
 
     /** Sum of the X_energy across all bins for a given x channel. Stored in a x channels array with every value stored
      * as a 32bit integer mantissa and exponent.*/ 

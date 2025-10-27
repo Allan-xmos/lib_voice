@@ -332,6 +332,8 @@ void aec_compare_filters_and_calc_mu(
 
     coherence_mu_params_t *coh_mu_state_ptr = main_state->shared_state->coh_mu_state;
     coherence_mu_config_params_t *coh_mu_conf_ptr = &main_state->shared_state->config_params.coh_mu_conf;
+    aec_priv_calc_erle(main_state, main_state->shared_state->shadow_filter_params.shadow_flag,
+            coh_mu_state_ptr, coh_mu_conf_ptr)
     aec_priv_calc_coherence_mu(coh_mu_state_ptr, coh_mu_conf_ptr, main_state->shared_state->sum_X_energy,
             main_state->shared_state->shadow_filter_params.shadow_flag, main_state->shared_state->num_y_channels, main_state->shared_state->num_x_channels);
     

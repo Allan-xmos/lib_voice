@@ -234,7 +234,8 @@ void aec_calc_coherence(
     bfp_s32_t temp;
     bfp_s32_init(&temp, state->shared_state->prev_y[ch].data, state->shared_state->prev_y[ch].exp, AEC_FRAME_ADVANCE, 1);
 
-    aec_priv_calc_coherence(coh_mu_state_ptr, &temp, &y_hat_subset, &state->shared_state->config_params);
+    aec_priv_calc_coherence(coh_mu_state_ptr, &temp, &y_hat_subset, &state->shared_state->config_params,
+            state->shared_state->ref_active_flag, state->shared_state->num_y_channels);
 }
 
 void aec_calc_output(

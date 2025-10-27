@@ -94,7 +94,9 @@ void aec_priv_calc_coherence(
         coherence_mu_params_t *coh_mu_state,
         const bfp_s32_t *y,
         const bfp_s32_t *y_hat,
-        const aec_config_params_t *conf);
+        const aec_config_params_t *conf,
+        const uint32_t ref_flag,
+        const unsigned num_y_channels);
 
 void aec_priv_create_output(
         bfp_s32_t *output,

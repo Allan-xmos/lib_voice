@@ -20,7 +20,6 @@ typedef struct {
     double mu_scalar;
     double eps;
     double thresh_minus20dB;
-    double x_energy_thresh;
 
     unsigned mu_coh_time;
     unsigned mu_shad_time;
@@ -33,7 +32,6 @@ typedef struct {
     double shadow_copy_thresh;
     double shadow_reset_thresh;
     double shadow_delay_thresh;
-    double x_energy_thresh;
     double shadow_mu;
 
     int shadow_better_thresh;
@@ -87,7 +85,6 @@ static void init_shadow_config_fp(shadow_filt_config_fp_t *cfg) {
     cfg->shadow_copy_thresh = 0.5;
     cfg->shadow_reset_thresh = 1.5;
     cfg->shadow_delay_thresh = 0.5;
-    cfg->x_energy_thresh = pow(10, -40/10);
     cfg->shadow_mu = 1.0;
     cfg->shadow_better_thresh = 5;
     cfg->shadow_zero_thresh = 5;
@@ -104,7 +101,6 @@ static void init_coherence_mu_config_fp(coherence_mu_config_fp_t *cfg) {
     cfg->eps = (double)1e-100;
     
     cfg->thresh_minus20dB = pow(10, -20/10);
-    cfg->x_energy_thresh = pow(10, -40/10);
     cfg->mu_coh_time = 2;
     cfg->mu_shad_time = 5;
     cfg->adaption_config = AEC_ADAPTION_AUTO;
@@ -298,8 +294,8 @@ void calc_coherence_mu_fp(
             if(sum_X_energy_max < sum_X_energy[xch]) sum_X_energy_max = sum_X_energy[xch];
         }
         for(int xch=0; xch<params->x_channels; xch++) {
-            //if ref_energy_log[x_ch] <= ref_energy_thresh or ref_energy_log[x_ch] < np.max(ref_energy_log)-20: 
-            if((sum_X_energy[xch] <= cfg->x_energy_thresh) || (sum_X_energy[xch] < (sum_X_energy_max * cfg->thresh_minus20dB))) {
+            //if not self.ref_flag or ref_energy_log[x_ch] < np.max(ref_energy_log)-20: 
+            if((ref_active_flag == 0) || (sum_X_energy[xch] < (sum_X_energy_max * cfg->thresh_minus20dB))) {
                 checkpoints_mu[12] |= 1;
                 for(int ych=0; ych<params->y_channels; ych++) {
                     params->coh_mu[ych][xch] = 0.0;
@@ -343,16 +339,9 @@ void compare_filter_fp(
     double *sum_X_energy = params->sum_X_energy;
 
     //# check if shadow or reference filter will be used and flag accordingly
-    int ref_low_all = 1;
-    for(int i=0; i<params->x_channels; i++) {
-        if(sum_X_energy[i] >= cfg->x_energy_thresh) {
-            ref_low_all = 0;
-            break;
-        }
-    }
     for(int ch=0; ch<params->y_channels; ch++) {
         overall_Input[ch] = overall_Input[ch] / 2;
-        if(ref_low_all) {
+        if(ref_active_flag == 0) {
             //printf("checkpoint 0\n");
             checkpoints[0] |= 1;
             params->shadow_flag[ch] = LOW_REF;

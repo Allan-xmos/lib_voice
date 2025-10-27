@@ -14,7 +14,6 @@ typedef struct {
     double mu_scalar;
     double eps;
     double thresh_minus20dB;
-    double x_energy_thresh;
 
     unsigned mu_coh_time;
     unsigned mu_shad_time;
@@ -36,7 +35,6 @@ static void init_coherence_mu_config_fp(coherence_mu_params_fp *cfg, int channel
     cfg->mu_scalar = 1;
     cfg->eps = 1e-100;
     
-    cfg->x_energy_thresh = -40;
     cfg->mu_coh_time = 2;
     cfg->mu_shad_time = 30;
     cfg->adaption_config = AEC_ADAPTION_AUTO;

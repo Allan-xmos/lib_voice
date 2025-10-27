@@ -272,13 +272,7 @@ void aec_priv_compare_filters(
     aec_shared_state_t *shared_state = main_state->shared_state;
     shadow_filt_config_params_t *shadow_conf = &shared_state->config_params.shadow_filt_conf;
     shadow_filter_params_t *shadow_params = &shared_state->shadow_filter_params;
-    unsigned ref_low_all_xch = 1;
-    for(unsigned ch=0; ch<main_state->shared_state->num_x_channels; ch++) {
-        if(float_s32_gte(shared_state->sum_X_energy[ch], shadow_conf->x_energy_thresh)) {
-            ref_low_all_xch = 0;
-            break;
-        }
-    }
+
     for(unsigned ch=0; ch<main_state->shared_state->num_y_channels; ch++) {
         main_state->shared_state->overall_Y[ch].exp -= 1; //Y_data is 512 samples, Errors are 272 (inc window), approx half the size
         //printf("Ov_Error_shad = %f, Ov_Error = %f, Ov_input = %f\n", float_s32_to_double(shadow_state->overall_Error[ch]), float_s32_to_double(main_state->overall_Error[ch]), float_s32_to_double(shared_state->overall_Y[ch]));
@@ -286,7 +280,7 @@ void aec_priv_compare_filters(
         float_s32_t shadow_sigma_thresh_x_Ov_Error = float_s32_mul(shadow_conf->shadow_sigma_thresh, main_state->overall_Error[ch]);
         float_s32_t shadow_reset_thresh_x_Ov_Error = float_s32_mul(shadow_conf->shadow_reset_thresh, main_state->overall_Error[ch]);
         //# check if shadow or reference filter will be used and flag accordingly
-        if(ref_low_all_xch) {
+        if(shared_state->ref_active_flag == 0) {
             //# input level is low, so error is unreliable, do nothing
             shadow_params->shadow_flag[ch] = LOW_REF;
             continue;
@@ -408,7 +402,8 @@ void aec_priv_calc_coherence_mu(
         const float_s32_t *sum_X_energy,
         const int32_t *shadow_flag,
         unsigned num_y_channels,
-        unsigned num_x_channels)
+        unsigned num_x_channels,
+        const uint32_t ref_active_flag)
 {
     //# If the coherence has been low within the last 15 frames, keep the count != 0
     for(unsigned ch=0; ch<num_y_channels; ch++)
@@ -509,9 +504,9 @@ void aec_priv_calc_coherence_mu(
         //np.max(ref_energy_log)-20 is done as (max_ref_energy_not_log*(pow(10, -20/10)))
         float_s32_t max_ref_energy_minus_20dB = float_s32_mul(max_ref_energy, coh_conf->thresh_minus20dB);
         for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-            //if ref_energy_log[x_ch] <= ref_energy_thresh or ref_energy_log[x_ch] < np.max(ref_energy_log)-20: 
+            //if not self.ref_flag or ref_energy_log[x_ch] < np.max(ref_energy_log)-20: 
             //        self.mu[:, x_ch] = 0
-            if(float_s32_gte(coh_conf->x_energy_thresh, sum_X_energy[x_ch]) ||
+            if(ref_active_flag == 0 ||
                 float_s32_gt(max_ref_energy_minus_20dB, sum_X_energy[x_ch])
                 )
             {
@@ -691,7 +686,9 @@ void aec_priv_calc_coherence(
         coherence_mu_params_t *coh_mu_state,
         const bfp_s32_t *y_subset,
         const bfp_s32_t *y_hat_subset,
-        const aec_config_params_t *conf)
+        const aec_config_params_t *conf,
+        const uint32_t ref_flag,
+        const unsigned num_y_channels)
 {
     const coherence_mu_config_params_t *coh_conf = &conf->coh_mu_conf;
 
@@ -720,12 +717,20 @@ void aec_priv_calc_coherence(
     float_s32_t t2 = float_s32_mul(one_minus_alpha, this_coh);
     coh_mu_state->coh = float_s32_add(t1, t2);
 
-    //# update slow moving averages used for thresholding
-    //self.coh_slow = self.coh_slow_alpha*self.coh_slow + (1.0 - self.coh_slow_alpha)*self.coh
-    float_s32_t one_minus_slow_alpha = float_s32_sub(one, coh_conf->coh_slow_alpha);
-    t1 = float_s32_mul(coh_conf->coh_slow_alpha, coh_mu_state->coh_slow);
-    t2 = float_s32_mul(one_minus_slow_alpha, coh_mu_state->coh);
-    coh_mu_state->coh_slow = float_s32_add(t1, t2);
+    // only update slow moving average if reference is active and coherence 
+    // is above threshold
+    if (ref_flag == 1){
+        for (y_ch=0; y_ch<num_y_channels; y_ch++){
+            if (coh_mu_state[y_ch].coh > coh_conf ->coh_thresh_abs){
+                //# update slow moving averages used for thresholding
+                //self.coh_slow = self.coh_slow_alpha*self.coh_slow + (1.0 - self.coh_slow_alpha)*self.coh
+                float_s32_t one_minus_slow_alpha = float_s32_sub(one, coh_conf->coh_slow_alpha);
+                t1 = float_s32_mul(coh_conf->coh_slow_alpha, coh_mu_state->coh_slow);
+                t2 = float_s32_mul(one_minus_slow_alpha, coh_mu_state->coh);
+                coh_mu_state->coh_slow = float_s32_add(t1, t2);
+            }
+        }
+    }
 }
 
 float_s32_t aec_priv_calc_corr_factor(bfp_s32_t *y, bfp_s32_t *yhat) {
@@ -1005,7 +1010,6 @@ void aec_priv_init_config_params(
     shadow_cfg->shadow_copy_thresh = f64_to_float_s32(0.5); //# threshold for copying shadow filter
     shadow_cfg->shadow_reset_thresh = f64_to_float_s32(1.5);
     shadow_cfg->shadow_delay_thresh = f64_to_float_s32(0.5); //# will not reset if reference delay is large
-    shadow_cfg->x_energy_thresh = f64_to_float_s32(pow(10, -40/10.0));
     shadow_cfg->shadow_better_thresh = 5; //# how many times better before copying
     shadow_cfg->shadow_zero_thresh = 5;//# zero shadow filter every n resets
     shadow_cfg->shadow_reset_timer = 20; //# number of frames between zeroing resets
@@ -1023,7 +1027,6 @@ void aec_priv_init_config_params(
     coh_cfg->mu_scalar = f64_to_float_s32(1.0);
     coh_cfg->eps = f64_to_float_s32((double)1e-100);
     coh_cfg->thresh_minus20dB = f64_to_float_s32(pow(10, -20/10.0));
-    coh_cfg->x_energy_thresh = f64_to_float_s32(pow(10, -40/10.0));
     coh_cfg->mu_coh_time = 2;
     coh_cfg->mu_shad_time = 5;
 

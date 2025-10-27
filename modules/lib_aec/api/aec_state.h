@@ -67,8 +67,6 @@ typedef struct {
     float_s32_t eps;
     /** -20dB threshold*/
     float_s32_t thresh_minus20dB;
-    /** X_energy threshold used for determining if the signal has enough reference energy for sensible coherence mu calculation*/ 
-    float_s32_t x_energy_thresh;
     /** Number of frames after low coherence, adaption frozen for.*/
     unsigned mu_coh_time;
     /** Number of frames after shadow filter use, the adaption is fast for*/
@@ -91,9 +89,6 @@ typedef struct {
     float_s32_t shadow_reset_thresh;
     /** threshold for turning off shadow filter reset if reference delay is large*/
     float_s32_t shadow_delay_thresh;
-    /** X energy threshold used for deciding whether the system has enough reference energy for main and shadow filter
-     * comparison to make sense*/
-    float_s32_t x_energy_thresh;
     /** fixed mu value used during shadow filter adaption.*/
     float_s32_t shadow_mu;
     /** Number of times shadow filter needs to be better before it gets copied to main filter.*/
@@ -240,6 +235,9 @@ typedef struct {
      * as a 32bit integer mantissa and exponent.*/ 
     float_s32_t sum_X_energy[AEC_LIB_MAX_X_CHANNELS]; 
     
+    /** Reference active flag. Indicates if the reference signal is active or not for any x channel.*/
+    uint32_t ref_active_flag
+
     /** Structure containing coherence mu calculation related parameters.*/
     coherence_mu_params_t coh_mu_state[AEC_LIB_MAX_Y_CHANNELS];
 

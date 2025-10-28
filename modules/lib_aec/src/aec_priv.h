@@ -53,8 +53,7 @@ void aec_priv_calc_erle(
     aec_state_t *main_state,
     const int32_t *shadow_flag,
     coherence_mu_params_t *coh_mu_state,
-    const coherence_mu_config_params_t *coh_conf,
-);
+    const coherence_mu_config_params_t *coh_conf);
 
 void aec_priv_calc_coherence_mu(
         coherence_mu_params_t *coh_mu_state,
@@ -62,7 +61,8 @@ void aec_priv_calc_coherence_mu(
         const float_s32_t *sum_X_energy,
         const int32_t *shadow_flag,
         unsigned num_y_channels,
-        unsigned num_x_channels);
+        unsigned num_x_channels,
+        const uint32_t ref_active_flag);
 
 void aec_priv_update_total_X_energy(
         bfp_s32_t *X_energy,

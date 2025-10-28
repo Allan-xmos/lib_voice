@@ -58,9 +58,9 @@ typedef struct {
     /** ERLE threshold */
     float_s32_t erle_thresh;
     /** ERLE alpha when bigger */
-    float_s32_t erle_alpha_rise;
+    uq2_30 erle_alpha_rise;
     /** ERLE alpha when smaller */
-    float_s32_t erle_alpha_fall;
+    uq2_30 erle_alpha_fall;
     /** Scalefactor for scaling the calculated mu.*/
     float_s32_t mu_scalar;
     /** Parameter to avoid divide by 0 in coh calculation.*/
@@ -238,7 +238,7 @@ typedef struct {
     float_s32_t sum_X_energy[AEC_LIB_MAX_X_CHANNELS]; 
     
     /** Reference active flag. Indicates if the reference signal is active or not for any x channel.*/
-    uint32_t ref_active_flag
+    uint32_t ref_active_flag;
 
     /** Structure containing coherence mu calculation related parameters.*/
     coherence_mu_params_t coh_mu_state[AEC_LIB_MAX_Y_CHANNELS];

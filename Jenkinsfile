@@ -18,7 +18,7 @@ pipeline {
     )
     string(
       name: 'XMOSDOC_VERSION',
-      defaultValue: 'v6.3.1',
+      defaultValue: 'v8.0.0',
       description: 'The xmosdoc version'
     )
     booleanParam(name: 'FULL_TEST_OVERRIDE',

@@ -1,6 +1,10 @@
 XMOS Voice Framework Change Log
 ===============================
 
+0.9.0
+-----
+  * CHANGED: Updated AGC and Loss Control algorithms
+
 0.8.1
 -----
 

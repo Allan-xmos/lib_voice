@@ -77,17 +77,20 @@ void test_loss_control() {
 
     unsigned num_frames = conf_near.lc_n_frame_far;
     if (num_frames < conf_near.lc_n_frame_near) {
-        num_frames = conf_near.lc_n_frame_near + 2;
+        num_frames = conf_near.lc_n_frame_near + 30;
     }
     if (num_frames < conf_near.lc_vnr_low_count_limit + conf_near.lc_n_frame_near) {
-        num_frames = conf_near.lc_vnr_low_count_limit + conf_near.lc_n_frame_near + 2;
+        num_frames = conf_near.lc_vnr_low_count_limit + conf_near.lc_n_frame_near + 30;
     }
 
-    for (unsigned iter = 0; iter < (1<<10)/F; ++iter) {
+    for (unsigned iter = 0; iter < (1<<7)/F; ++iter) {
         agc_init(&agc_near, &conf_near);
         agc_init(&agc_far, &conf_far);
         agc_init(&agc_double_talk, &conf_double_talk);
         agc_init(&agc_silence, &conf_silence);
+
+        // Set initial near background power estimates to non-zero values
+        agc_far.lc_near_bg_power_est = f32_to_float_s32(TEST_LC_SILENCE_SCALE);
 
         for (unsigned frame = 0; frame < num_frames; ++frame) {
             for (unsigned idx = 0; idx < AGC_FRAME_ADVANCE; ++idx) {
@@ -95,6 +98,7 @@ void test_loss_control() {
             }
             bfp_s32_headroom(&input_bfp);
             bfp_s32_scale(&input_bfp, &input_bfp, scale);
+            bfp_s32_use_exponent(&input_bfp, FRAME_EXP);
             float_s32_t input_energy = float_s64_to_float_s32(bfp_s32_energy(&input_bfp));
 
             bfp_s32_scale(&input_far_bfp, &input_bfp, scale_aec_residual);

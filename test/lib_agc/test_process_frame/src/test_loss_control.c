@@ -95,15 +95,12 @@ void test_loss_control() {
             }
             bfp_s32_headroom(&input_bfp);
             bfp_s32_scale(&input_bfp, &input_bfp, scale);
-            bfp_s32_use_exponent(&input_bfp, FRAME_EXP);
             float_s32_t input_energy = float_s64_to_float_s32(bfp_s32_energy(&input_bfp));
 
             bfp_s32_scale(&input_far_bfp, &input_bfp, scale_aec_residual);
-            bfp_s32_use_exponent(&input_far_bfp, FRAME_EXP);
             float_s32_t input_far_energy = float_s64_to_float_s32(bfp_s32_energy(&input_far_bfp));
 
             bfp_s32_scale(&input_silence_bfp, &input_bfp, scale_silence);
-            bfp_s32_use_exponent(&input_silence_bfp, FRAME_EXP);
             float_s32_t input_silence_energy = float_s64_to_float_s32(bfp_s32_energy(&input_silence_bfp));
 
             md_near.aec_ref_power = float_s32_mul(input_energy, f32_to_float_s32(TEST_LC_NEAR_POWER_SCALE));

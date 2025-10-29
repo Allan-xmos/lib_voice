@@ -140,7 +140,7 @@ void agc_process_frame(agc_state_t *agc,
     // Startup delay to mute the output at boot
     agc->frame_count += 1;
     if (agc->frame_count < agc->config.startup_delay) {
-        bfp_s32_scale(&output_bfp, &input_bfp, FLOAT_S32_ZERO);
+        bfp_s32_set(&output_bfp, 0, -1024);
     }
     else {
         bfp_s32_scale(&output_bfp, &input_bfp, agc->config.gain);

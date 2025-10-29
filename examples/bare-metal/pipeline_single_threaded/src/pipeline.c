@@ -136,7 +136,7 @@ void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metada
 #endif
     md.vnr_pred_flag = input_vnr_pred;
    
-    ic_adapt(&state->ic_state, state->ic_state.vnr_pred_state.input_vnr_pred);
+    ic_adapt(&state->ic_state);
 
     // Copy IC output to the other channel
     for(int v = 0; v < AP_FRAME_ADVANCE; v++){

@@ -259,9 +259,9 @@ void ic_calc_vnr_pred(
     *output_vnr_pred = ic_state->vnr_pred_state.output_vnr_pred;
 }
 
-void ic_adapt(
-        ic_state_t *state,
-        float_s32_t vnr){
+void ic_adapt(ic_state_t *state){
+
+    float_s32_t vnr = state->vnr_pred_state.input_vnr_pred;
 
     if(state == NULL) {
         return;

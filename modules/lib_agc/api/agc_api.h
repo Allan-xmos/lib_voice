@@ -73,7 +73,7 @@ typedef struct {
     uint32_t startup_delay;
     /** Boolean to enable loss control. The loss control applies additional
      *  attenuation when there is no near end speech. This must be disabled 
-     *  if the application doesn't have an AEC. */
+     *  if the application doesn't have an AEC or VNR. */
     int lc_enabled;
     /** Number of frames required to consider far-end audio active. */
     int lc_n_frame_far;
@@ -200,7 +200,7 @@ void agc_init(agc_state_t *agc, agc_config_t *config);
  * @ingroup agc_defs
  */
 typedef struct {
-    /** Boolean to indicate the detection of voice activity in the current frame. */
+    /** Estimated voice-to-noise ratio in the current frame. */
     float_s32_t vnr_flag;
     /** The power of the most powerful reference channel. */
     float_s32_t aec_ref_power;

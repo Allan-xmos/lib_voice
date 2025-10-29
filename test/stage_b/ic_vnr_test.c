@@ -21,7 +21,7 @@ void test_filter(
 }
 
 void test_adapt(float_s32_t vnr){
-    ic_adapt(&ic_state, vnr);
+    ic_adapt(&ic_state);
 }
 
 float_s32_t test_vnr(){

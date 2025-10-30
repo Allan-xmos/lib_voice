@@ -238,7 +238,7 @@ typedef struct {
     float_s32_t sum_X_energy[AEC_LIB_MAX_X_CHANNELS]; 
     
     /** Reference active flag. Indicates if the reference signal is active or not for any x channel.*/
-    uint32_t ref_active_flag;
+    int32_t ref_active_flag;
 
     /** Structure containing coherence mu calculation related parameters.*/
     coherence_mu_params_t coh_mu_state[AEC_LIB_MAX_Y_CHANNELS];

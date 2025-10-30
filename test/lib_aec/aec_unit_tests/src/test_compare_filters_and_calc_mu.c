@@ -52,7 +52,7 @@ typedef struct {
     int mu_coh_timer[AEC_MAX_Y_CHANNELS];
     int mu_shad_count[AEC_MAX_Y_CHANNELS];
     double coh_mu[AEC_MAX_Y_CHANNELS][AEC_MAX_X_CHANNELS];
-    uint32_t ref_active_flag;
+    int32_t ref_active_flag;
 
     //common
     complex_double_t H_hat[TEST_NUM_Y][TEST_NUM_X][TEST_MAIN_PHASES][NUM_BINS];

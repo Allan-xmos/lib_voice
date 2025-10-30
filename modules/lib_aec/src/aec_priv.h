@@ -62,7 +62,7 @@ void aec_priv_calc_coherence_mu(
         const int32_t *shadow_flag,
         unsigned num_y_channels,
         unsigned num_x_channels,
-        const uint32_t ref_active_flag);
+        const int32_t ref_active_flag);
 
 void aec_priv_update_total_X_energy(
         bfp_s32_t *X_energy,
@@ -95,7 +95,7 @@ void aec_priv_calc_coherence(
         const bfp_s32_t *y,
         const bfp_s32_t *y_hat,
         const aec_config_params_t *conf,
-        const uint32_t ref_flag,
+        const int32_t ref_flag,
         const unsigned num_y_channels);
 
 void aec_priv_create_output(

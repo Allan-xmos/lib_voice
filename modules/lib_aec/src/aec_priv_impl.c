@@ -403,7 +403,7 @@ void aec_priv_calc_coherence_mu(
         const int32_t *shadow_flag,
         unsigned num_y_channels,
         unsigned num_x_channels,
-        const uint32_t ref_active_flag)
+        const int32_t ref_active_flag)
 {
     //# If the coherence has been low, decrement the timer
     for(unsigned ch=0; ch<num_y_channels; ch++)
@@ -707,7 +707,7 @@ void aec_priv_calc_coherence(
         const bfp_s32_t *y_subset,
         const bfp_s32_t *y_hat_subset,
         const aec_config_params_t *conf,
-        const uint32_t ref_flag,
+        const int32_t ref_flag,
         const unsigned num_y_channels)
 {
     const coherence_mu_config_params_t *coh_conf = &conf->coh_mu_conf;

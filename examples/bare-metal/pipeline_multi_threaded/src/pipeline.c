@@ -210,7 +210,6 @@ void pipeline_stage_4(chanend_t c_frame_in, chanend_t c_frame_out) {
         // Receive metadata
         chan_in_buf_byte(c_frame_in, (uint8_t*)&md, sizeof(pipeline_metadata_t));
         agc_md.aec_ref_power = md.max_ref_energy;
-        agc_md.aec_corr_factor = md.aec_corr_factor[0]; // Using the first channel's AEC correlation factor for all channels
         agc_md.vnr_flag = md.vnr_pred_flag;
         agc_md.ref_active_flag = md.ref_active_flag;
 

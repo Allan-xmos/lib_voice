@@ -740,15 +740,13 @@ void aec_priv_calc_coherence(
     // only update slow moving average if reference is active and coherence 
     // is above threshold
     if (ref_flag == 1){
-        for (unsigned y_ch=0; y_ch<num_y_channels; y_ch++){
-            if (float_s32_gt(coh_mu_state[y_ch].coh, coh_conf->coh_thresh_abs)){
-                //# update slow moving averages used for thresholding
-                //self.coh_slow = self.coh_slow_alpha*self.coh_slow + (1.0 - self.coh_slow_alpha)*self.coh
-                float_s32_t one_minus_slow_alpha = float_s32_sub(one, coh_conf->coh_slow_alpha);
-                t1 = float_s32_mul(coh_conf->coh_slow_alpha, coh_mu_state->coh_slow);
-                t2 = float_s32_mul(one_minus_slow_alpha, coh_mu_state->coh);
-                coh_mu_state->coh_slow = float_s32_add(t1, t2);
-            }
+        if (float_s32_gt(coh_mu_state->coh, coh_conf->coh_thresh_abs)){
+            //# update slow moving averages used for thresholding
+            //self.coh_slow = self.coh_slow_alpha*self.coh_slow + (1.0 - self.coh_slow_alpha)*self.coh
+            float_s32_t one_minus_slow_alpha = float_s32_sub(one, coh_conf->coh_slow_alpha);
+            t1 = float_s32_mul(coh_conf->coh_slow_alpha, coh_mu_state->coh_slow);
+            t2 = float_s32_mul(one_minus_slow_alpha, coh_mu_state->coh);
+            coh_mu_state->coh_slow = float_s32_add(t1, t2);
         }
     }
 }

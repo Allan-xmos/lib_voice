@@ -105,6 +105,12 @@ void aec_task(const char *input_file_name, const char *output_file_name) {
                 frame_x[ch][f] = input_read_buffer[i];
             }
         }
+
+        /** Detect if there's activity on the reference channels*/
+        int32_t ref_active_flag;
+        ref_active_flag = aec_detect_input_activity(frame_x, state->ref_active_threshold, state->aec_main_state.shared_state->num_x_channels);
+        state->aec_main_state.shared_state->ref_active_flag = ref_active_flag;
+
         // Call AEC functions to process AEC_FRAME_ADVANCE new samples of data
         /* Reuse mic data memory for main filter output
          * Reuse ref data memory for shadow filter output.

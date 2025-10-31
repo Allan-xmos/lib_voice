@@ -35,7 +35,7 @@ DECLARE_JOB(pipeline_stage_4, (chanend_t, chanend_t));
 
 /// pipeline_stage_1
 // Stage 1 state
-stage_1_state_t DWORD_ALIGNED stage_1_state;
+stage_1_state_t DWORD_ALIGNED stage_1_state = {0};
 void pipeline_stage_1(chanend_t c_frame_in, chanend_t c_frame_out) {
     // Pipeline metadata
     pipeline_metadata_t md;
@@ -71,6 +71,8 @@ void pipeline_stage_1(chanend_t c_frame_in, chanend_t c_frame_out) {
     int32_t DWORD_ALIGNED frame[AP_MAX_X_CHANNELS + AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
     int32_t DWORD_ALIGNED stage_1_out[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE]; // stage1 will not process the frame in-place since Mic input is needed to overwrite the output in certain cases
     while(1) {
+        memset(&md, 0, sizeof(pipeline_metadata_t));
+
         // Receive input frame
         chan_in_buf_word(c_frame_in, (uint32_t*)&frame[0][0], ((AP_MAX_X_CHANNELS+AP_MAX_Y_CHANNELS) * AP_FRAME_ADVANCE));
 #if DISABLE_STAGE_1

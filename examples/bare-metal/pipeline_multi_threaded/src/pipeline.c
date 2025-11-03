@@ -205,7 +205,7 @@ void pipeline_stage_4(chanend_t c_frame_in, chanend_t c_frame_out) {
     agc_init(&agc_state[0], &agc_conf_asr);
     agc_init(&agc_state[1], &agc_conf_asr);
 
-    agc_meta_data_t agc_md;
+    agc_meta_data_t agc_md = agc_meta_data_init();
 
     int32_t frame[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
     while(1) {

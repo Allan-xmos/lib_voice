@@ -247,10 +247,6 @@ pipeline {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
                     withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                      dir("test_wav_vnr") {
-                        sh "pytest -n 1 --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
                       dir("vnr_unit_tests") {
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
@@ -530,8 +526,6 @@ pipeline {
           // NS artefacts
           archiveArtifacts artifacts: "${REPO}/test/lib_ns/test_ns_profile/ns_prof.log", fingerprint: true
           // VNR artifacts
-          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_wav_vnr/*.png", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_wav_vnr/*.csv", fingerprint: true
           archiveArtifacts artifacts: "${REPO}/examples/bare-metal/vnr/*.png", fingerprint: true
           archiveArtifacts artifacts: "${REPO}/examples/bare-metal/vnr/vnr_prof.log", fingerprint: true
           // Pipelines tests

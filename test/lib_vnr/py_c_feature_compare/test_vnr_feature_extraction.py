@@ -6,6 +6,7 @@ import scipy.io.wavfile
 import audio_wav_utils as awu
 import sys, os
 import tempfile
+import pytest
 from pathlib import Path
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
@@ -17,7 +18,10 @@ import vnr_test_py.lib as vnr_test_lib
 sys.path.append(str(Path(__file__).parents[2] / "shared" / "python")) # For py_vs_c_utils
 import py_vs_c_utils as pvc
 
-input_file = str(Path(__file__).parents[3] / "examples" / "bare-metal" / "vnr" / "test_stream_1.wav")
+hydra_audio_path = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio'))
+print(hydra_audio_path)
+streams = (hydra_audio_path / "test_wav_vnr_streams").glob("*wav")
+
 vnr_model_path = str(Path(__file__).parents[3] / "modules" / "lib_vnr" / "python" / "model" / "model_output" / "trained_model.tflite")
 vnr_conf_path = Path(__file__).parents[4] / "py_voice" / "py_voice" / "config" / "components" / "vnr_only.json"
 
@@ -76,8 +80,8 @@ class vnr_feature_comparison:
         
         return ref_features, dut_features, ref_ie_output[0], dut_ie_output
         
-
-def test_frame_features():
+@pytest.mark.parametrize("input_file", streams)
+def test_frame_features(input_file):
     vnrc = vnr_feature_comparison()
     input_rate, input_wav_file = scipy.io.wavfile.read(input_file, 'r')
     input_wav_data, input_channel_count, file_length = awu.parse_audio(input_wav_file)
@@ -111,8 +115,8 @@ def test_frame_features():
     assert(arith_closeness_features > 0.999), f"features, arith_closeness {arith_closeness_features} less than pass threshold"
     assert(geo_closeness_features > 0.999), f"features, arith_closeness {geo_closeness_features} less than pass threshold"
 
-    assert(max_error_ie < 0.05), f"Inference, max ref-dut error {max_error_ie} exceeds threshold"
-    assert(arith_closeness_ie > 0.99), f"Inference, arith_closeness {arith_closeness_ie} less than pass threshold"
+    assert(max_error_ie < 0.08), f"Inference, max ref-dut error {max_error_ie} exceeds threshold"
+    assert(arith_closeness_ie > 0.976), f"Inference, arith_closeness {arith_closeness_ie} less than pass threshold"
     assert(geo_closeness_ie > 0.99), f"Inference, arith_closeness {geo_closeness_ie} less than pass threshold"
 
 

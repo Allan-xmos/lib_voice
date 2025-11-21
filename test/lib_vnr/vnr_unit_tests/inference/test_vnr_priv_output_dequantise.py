@@ -1,13 +1,13 @@
 import numpy as np
-import os
 import sys
-this_file_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(this_file_dir, "../feature_extraction"))
+from pathlib import Path
+
+this_file_dir = Path(__file__).parent
+sys.path.append(str(this_file_dir / "../feature_extraction"))
 import test_utils
 
-
-exe_dir = os.path.join(this_file_dir, '../../../../build/test/lib_vnr/vnr_unit_tests/inference/bin/')
-xe = os.path.join(exe_dir, 'fwk_voice_test_vnr_priv_output_dequantise.xe')
+exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/inference/bin/'
+xe = exe_dir / 'fwk_voice_test_vnr_priv_output_dequantise.xe'
 
 def test_vnr_priv_output_dequantise(target, tflite_model):
     np.random.seed(1243)
@@ -33,9 +33,9 @@ def test_vnr_priv_output_dequantise(target, tflite_model):
         ref_output_double = np.append(ref_output_double, dequant_output)
 
     exe_name = xe
-    if(target == "x86"): #Remove the .xe extension from the xe name to get the x86 executable
-        exe_name = os.path.splitext(xe)[0]
-    op = test_utils.run_dut(input_data, "test_vnr_priv_output_dequantise", exe_name)
+    if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
+        exe_name = xe.with_suffix('')
+    op = test_utils.run_dut(input_data, "test_vnr_priv_output_dequantise", str(exe_name))
     dut_mant = op[0::2]
     dut_exp = op[1::2]
     d = dut_mant.astype(np.float64) * (2.0 ** dut_exp)

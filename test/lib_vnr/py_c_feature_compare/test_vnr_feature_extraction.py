@@ -6,6 +6,7 @@ import scipy.io.wavfile
 import audio_wav_utils as awu
 import sys, os
 import tempfile
+import shutil
 import pytest
 from pathlib import Path
 import py_voice.modules.vnr.frame_preprocessor as fp
@@ -15,7 +16,7 @@ from build import vnr_test_py
 from vnr_test_py import ffi
 import vnr_test_py.lib as vnr_test_lib
 
-sys.path.append(str(Path(__file__).parents[2] / "shared" / "python")) # For py_vs_c_utils
+sys.path.append(str(Path(__file__).parents[2] / "shared" / "python"))  # For py_vs_c_utils
 import py_vs_c_utils as pvc
 
 hydra_audio_path = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio'))
@@ -34,17 +35,14 @@ def bfp_s32_to_float(bfp_struct, data):
     return data_float
 
 def get_closeness_metric(ref, dut):
-    tmp_folder = tempfile.mkdtemp(dir=".")
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
-    output_file = "temp.wav"
+    tmp_folder = Path(tempfile.mkdtemp(dir="."))
+    output_file = tmp_folder / "temp.wav"
     output_wav_data = np.zeros((2, len(ref)))
     output_wav_data[0,:] = ref
     output_wav_data[1,:] = dut
     scipy.io.wavfile.write(output_file, 16000, output_wav_data.T)
-    arith_closeness, geo_closeness, c_delay, peak2ave = pvc.pcm_closeness_metric(output_file, verbose=False)
-    os.chdir(prev_path)
-    os.system("rm -r {}".format(tmp_folder))
+    arith_closeness, geo_closeness, c_delay, peak2ave = pvc.pcm_closeness_metric(str(output_file), verbose=False)
+    shutil.rmtree(tmp_folder)
     return arith_closeness, geo_closeness
 
 class vnr_feature_comparison:

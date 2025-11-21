@@ -1,8 +1,9 @@
 import pytest
-import os
-this_file_path = os.path.dirname(os.path.realpath(__file__))
 import sys
-sys.path.append(os.path.join(this_file_path, "feature_extraction"))
+from pathlib import Path
+
+this_file_path = Path(__file__).parent
+sys.path.append(str(this_file_path / "feature_extraction"))
 import test_utils
 
 @pytest.fixture 

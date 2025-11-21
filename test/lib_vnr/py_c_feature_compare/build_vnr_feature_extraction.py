@@ -3,21 +3,21 @@
 
 import shutil
 import sys
-import os
+from pathlib import Path
 import xmos_ai_tools.runtime as rt
 from cffi import FFI
 
 from extract_state import extract_pre_defs_vnr
 
 # One more ../ than necessary - builds in the 'build' folder
-MODULE_ROOT = "../../../../modules"
-XCORE_MATH = "../../../../build/fwk_voice_deps/lib_xcore_math"
+MODULE_ROOT = Path("../../../../modules")
+XCORE_MATH = Path("../../../../build/fwk_voice_deps/lib_xcore_math")
 
 # TFLite Micro configuration
-TFLITE_MICRO_ROOT = os.path.dirname(rt.__file__)
-TFLITE_MICRO_LIB_DIR = f"{TFLITE_MICRO_ROOT}/lib"
-TFLITE_MICRO_INCLUDE = f"{TFLITE_MICRO_ROOT}/include"
-TFLITE_MICRO_LIB = f"host_xtflitemicro" # use the host platform
+TFLITE_MICRO_ROOT = Path(rt.__file__).parent
+TFLITE_MICRO_LIB_DIR = TFLITE_MICRO_ROOT / "lib"
+TFLITE_MICRO_INCLUDE = TFLITE_MICRO_ROOT / "include"
+TFLITE_MICRO_LIB = "host_xtflitemicro"  # use the host platform
 
 # Flag, Include, Libraries
 FLAGS = [
@@ -28,33 +28,33 @@ FLAGS = [
 ]
 
 INCLUDE_DIRS = [
-    f"{MODULE_ROOT}/lib_vnr/api/common",
-    f"{MODULE_ROOT}/lib_vnr/api/features",
-    f"{MODULE_ROOT}/lib_vnr/src/features",
-    f"{MODULE_ROOT}/lib_vnr/api/inference",
-    f"{MODULE_ROOT}/lib_vnr/src/inference/model",
-    f"{MODULE_ROOT}/lib_vnr/src/inference",
-    f"{XCORE_MATH}/lib_xcore_math/api",
-    TFLITE_MICRO_INCLUDE
+    str(MODULE_ROOT / "lib_vnr" / "api" / "common"),
+    str(MODULE_ROOT / "lib_vnr" / "api" / "features"),
+    str(MODULE_ROOT / "lib_vnr" / "src" / "features"),
+    str(MODULE_ROOT / "lib_vnr" / "api" / "inference"),
+    str(MODULE_ROOT / "lib_vnr" / "src" / "inference" / "model"),
+    str(MODULE_ROOT / "lib_vnr" / "src" / "inference"),
+    str(XCORE_MATH / "lib_xcore_math" / "api"),
+    str(TFLITE_MICRO_INCLUDE)
 ]
 
 LIBRARY_DIRS = [
     '../../../../build/modules/lib_vnr',
     '../../../../build/test/lib_vnr',
     '../../../../build/fwk_voice_deps/build',
-    TFLITE_MICRO_LIB_DIR  
+    str(TFLITE_MICRO_LIB_DIR)
 ]
 
 LIBRARIES = [
     'fwk_voice_module_lib_vnr_inference', 
     'fwk_voice_module_lib_vnr_features', 
     'lib_xcore_math', 
-    TFLITE_MICRO_LIB,
+    str(TFLITE_MICRO_LIB),
     'm', 
     'stdc++'
 ]  # on Unix, link with the math library. Linking order is important here for gcc compile on Linux!
 
-SRCS = f"../vnr_test.c".split()
+SRCS = ["../vnr_test.c"]
 ffibuilder = FFI()
 
 #Extract all defines and state from lib_vnr programatically

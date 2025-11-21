@@ -1,13 +1,13 @@
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
-import os
 import test_utils
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-this_file_dir = os.path.dirname(os.path.realpath(__file__))
-exe_dir = os.path.join(this_file_dir, '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/')
-xe = os.path.join(exe_dir, 'fwk_voice_test_vnr_priv_make_slice.xe')
+this_file_dir = Path(__file__).parent
+exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/'
+xe = exe_dir / 'fwk_voice_test_vnr_priv_make_slice.xe'
 
 def test_vnr_priv_make_slice(target, tflite_model, vnr_conf):
     np.random.seed(1243)
@@ -45,9 +45,9 @@ def test_vnr_priv_make_slice(target, tflite_model, vnr_conf):
         ref_output_float = np.append(ref_output_float, new_slice)
         
     exe_name = xe
-    if(target == "x86"): #Remove the .xe extension from the xe name to get the x86 executable
-        exe_name = os.path.splitext(xe)[0]
-    op = test_utils.run_dut(input_data, "test_vnr_priv_make_slice", exe_name)
+    if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
+        exe_name = xe.with_suffix('')
+    op = test_utils.run_dut(input_data, "test_vnr_priv_make_slice", str(exe_name))
     dut_mant = op.astype(np.float64)
     dut_exp = -24 # dut output is always 8.24
     d = test_utils.int32_to_double(dut_mant, dut_exp)

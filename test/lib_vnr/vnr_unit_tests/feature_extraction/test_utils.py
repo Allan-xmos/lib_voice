@@ -2,7 +2,7 @@
 import numpy as np
 import xscope_fileio
 import xtagctl
-import os
+import shutil
 import tempfile
 import sys
 import scipy.io.wavfile
@@ -22,21 +22,23 @@ def get_vnr_conf():
     return Path(__file__).parents[5] / "py_voice" / "py_voice" / "config" / "components" / "vnr_only.json"
 
 def run_dut(input_data, test_name, xe):
-    tmp_folder = tempfile.mkdtemp(dir=".", suffix=os.path.basename(test_name))
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
-    input_data.astype(np.int32).tofile("input.bin")
-
-    if(os.path.splitext(xe)[-1] == ".xe"): # xcore run
+    xe_path = Path(xe) if not isinstance(xe, Path) else xe
+    tmp_folder = Path(tempfile.mkdtemp(dir=".", suffix=Path(test_name).name))
+    
+    input_file = tmp_folder / "input.bin"
+    input_data.astype(np.int32).tofile(input_file)
+    
+    if xe_path.suffix == ".xe":  # xcore run
         with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-            xscope_fileio.run_on_target(adapter_id, xe)
-    else: # x86 run
-        subprocess.run([xe])
-        
-    with open("output.bin", "rb") as fdut:
+            xscope_fileio.run_on_target(adapter_id, str(xe_path), cwd=str(tmp_folder))
+    else:  # x86 run
+        subprocess.run([str(xe_path)], cwd=tmp_folder)
+    
+    output_file = tmp_folder / "output.bin"
+    with open(output_file, "rb") as fdut:
         dut_output = np.fromfile(fdut, dtype=np.int32)
-    os.chdir(prev_path)
-    os.system("rm -r {}".format(tmp_folder))
+    
+    shutil.rmtree(tmp_folder)
     return dut_output
 
 def double_to_int32(x, exp):
@@ -55,17 +57,14 @@ def f64_to_float_s32(d):
     return (m_int, e)
 
 def get_closeness_metric(ref, dut):
-    tmp_folder = tempfile.mkdtemp(dir=".")
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
-    output_file = "temp.wav"
+    tmp_folder = Path(tempfile.mkdtemp(dir="."))
+    output_file = tmp_folder / "temp.wav"
     output_wav_data = np.zeros((2, len(ref)))
     output_wav_data[0,:] = ref
     output_wav_data[1,:] = dut
     scipy.io.wavfile.write(output_file, 16000, output_wav_data.T)
-    arith_closeness, geo_closeness, c_delay, peak2ave = pvc.pcm_closeness_metric(output_file, verbose=False)
-    os.chdir(prev_path)
-    os.system("rm -r {}".format(tmp_folder))
+    arith_closeness, geo_closeness, c_delay, peak2ave = pvc.pcm_closeness_metric(str(output_file), verbose=False)
+    shutil.rmtree(tmp_folder)
     return arith_closeness, geo_closeness
 
 def get_model_details(model_file):

@@ -229,9 +229,7 @@ pipeline {
                       sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/agc/bin/fwk_voice_example_bare_metal_agc.xe --input ../shared_src/test_streams/agc_example_input.wav"
                     }
                     dir("examples/bare-metal/vnr") {
-                      sh "python host_app.py test_stream_1.wav vnr_out2.bin --run-with-xscope-fileio" // With xscope host in lib xscope_fileio
-                      sh "python host_app.py test_stream_1.wav vnr_out1.bin" // With xscope host in python
-                      sh "diff vnr_out1.bin vnr_out2.bin"
+                      sh "python host_app.py test_stream_1.wav vnr_out.bin"
                     }
                   }
                 }

@@ -15,14 +15,14 @@ After configuring the CMake project, the following commands can be used from the
 ::
     
     cd ../../../build
-    make fwk_voice_example_bare_metal_vnr_fileio
+    make fwk_voice_example_bare_metal_vnr
     cd ../examples/bare-metal/vnr
-    python host_app.py test_stream_1.wav vnr_out.bin --run-with-xscope-fileio --show-plot
+    python host_app.py test_stream_1.wav vnr_out.bin --show-plot
 
 Alternatively, to not have the VNR output plot displayed on the screen, run,
 ::
 
-    python host_app.py test_stream_1.wav vnr_out.bin --run-with-xscope-fileio
+    python host_app.py test_stream_1.wav vnr_out.bin
 
 Output
 ******

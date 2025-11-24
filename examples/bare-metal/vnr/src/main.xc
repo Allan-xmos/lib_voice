@@ -9,22 +9,23 @@
 #else
 #include <xcore/chanend.h>
 #endif
+#include "xscope_io_device.h"
+
 
 extern "C"{
-  void get_frame(chanend, chanend);
-  void vnr(chanend, chanend);
-  void send_frame(chanend);
+    void vnr_task(const char* input_filename, const char *output_filename);
 }
 
 int main (void){
-  chan xscope_chan;
-  chan read_chan;
-  chan write_chan;
-  par {
-    xscope_host_data(xscope_chan);
-    on tile[0]: get_frame(xscope_chan, read_chan);
-    on tile[0]: vnr(read_chan, write_chan);
-    on tile[0]: send_frame(write_chan);
-  }
-  return 0;
+    chan xscope_chan;
+    par
+    {
+        xscope_host_data(xscope_chan);
+        on tile[0]: {
+            xscope_io_init(xscope_chan);
+            vnr_task("input.wav", "vnr_out.bin");
+            _Exit(0);        
+        }
+    }
+    return 0;
 }

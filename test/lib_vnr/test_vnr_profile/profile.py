@@ -96,14 +96,3 @@ def parse_profile_log(prof_stdo, src_folder, profile_file="parsed_profile.log", 
                 #processor_cycles_per_sec/1000000 => MCPS
                 mcps = (processor_cycles_120MHz/0.015)/1000000 
                 fp.write(f'{key:<24}: {worst_case_frame:<26} {round(worst_case_cycles_100MHz_timer,2):<24} {round(mcps,3):<24} {round(percentage_total, 3)}%\n')
-
-def parse_profiling_info(stdo, src_folder):
-    xcore_stdo = []
-    #ignore lines that don't contain [DEVICE]. Remove everything till and including [DEVICE] if [DEVICE] is present
-    for line in stdo:
-        m = re.search(r'^\s*\[DEVICE\]', line)
-        if m is not None:
-            xcore_stdo.append(re.sub(r'\[DEVICE\]\s*', '', line))
-
-    #print(xcore_stdo)
-    parse_profile_log(xcore_stdo, src_folder, worst_case_file=f"vnr_prof.log")

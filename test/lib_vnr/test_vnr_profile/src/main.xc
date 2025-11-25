@@ -23,7 +23,7 @@ int main (void){
         xscope_host_data(xscope_chan);
         on tile[0]: {
             xscope_io_init(xscope_chan);
-            vnr_task("input.wav", "vnr_out.bin");
+            vnr_task("input.bin", "output.bin");
             _Exit(0);        
         }
     }

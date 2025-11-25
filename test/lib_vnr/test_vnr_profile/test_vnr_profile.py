@@ -12,12 +12,15 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-import shutil
 from pathlib import Path
-sys.path.append(str(Path.cwd() / "../shared_src/python"))
-import run_xcoreai
-import subprocess
-from profile import parse_profiling_info
+sys.path.append(str(Path.cwd() / "../../shared/python"))
+from profile_utils import run_profiler
+import soundfile as sf
+from profile import parse_profile_log
+
+cwd = Path(__file__).parent
+exe = cwd / "../../../build/test/lib_vnr/test_vnr_profile/bin/fwk_voice_vnr_test_profile"
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -43,19 +46,25 @@ def plot_result(vnr_out, out_file, show_plot=False):
     fig_instance.savefig(plotfile)
 
 def run_with_xscope_fileio(input_file, output_file, run_x86, parse_profile=False):
-    if run_x86:
-        subprocess.run(["../../../build/examples/bare-metal/vnr/bin/fwk_voice_example_bare_metal_vnr", input_file, output_file], check=True)
+
+    input_data, _ = sf.read(input_file)
+    if np.issubdtype(input_data.dtype, np.integer):
+        input_data = input_data.astype(np.int32)
+    if np.issubdtype(input_data.dtype, np.floating):
+        input_data = (input_data * (2 ** 31 - 1)).astype(np.int32)
     else:
-        stdo = run_xcoreai.run("../../../build/examples/bare-metal/vnr/bin/fwk_voice_example_bare_metal_vnr.xe", input_file, return_stdout=True)
-        if parse_profile:
-            src_folder = Path(__file__).parent / 'src'
-            parse_profiling_info(stdo, str(src_folder))
-        try:
-            shutil.copy2("vnr_out.bin", output_file) # fwk_voice_example_bare_metal_vnr.xe writes vnr output in vnr_out.bin file
-        except shutil.SameFileError as e:
-            pass
-        except IOError as e:
-             print('Error: %s' % e.strerror)
+        assert 0, f"{input_file} is not an interger or floating point type"
+
+    assert len(input_data.shape) == 1, "Input data can be signle channel only"
+
+    local_exe = exe
+    if not run_x86: local_exe = local_exe.with_suffix(".xe")
+    stdout = run_profiler(input_data.astype(np.int32), "test_vnr_profile", local_exe, output_file)
+
+    if not run_x86 and parse_profile:
+        src_folder = cwd / 'src'
+        parse_profile_log(stdout, str(src_folder), worst_case_file="vnr_prof.log")
+
     return np.fromfile(output_file, dtype=np.int32)
 
 if __name__ == "__main__":

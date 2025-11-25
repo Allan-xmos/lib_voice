@@ -1,11 +1,11 @@
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
-add_executable(fwk_voice_example_bare_metal_vnr)
+add_executable(fwk_voice_vnr_test_profile)
 
-target_sources(fwk_voice_example_bare_metal_vnr PRIVATE src/vnr_task.c)
+target_sources(fwk_voice_vnr_test_profile PRIVATE src/vnr_task.c)
 
-target_link_libraries(fwk_voice_example_bare_metal_vnr 
+target_link_libraries(fwk_voice_vnr_test_profile 
     PUBLIC
         fwk_voice::vnr::features
         fwk_voice::vnr::inference
@@ -13,8 +13,8 @@ target_link_libraries(fwk_voice_example_bare_metal_vnr
         )
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    target_sources(fwk_voice_example_bare_metal_vnr PRIVATE src/main.xc)
-    target_link_libraries(fwk_voice_example_bare_metal_vnr 
+    target_sources(fwk_voice_vnr_test_profile PRIVATE src/main.xc)
+    target_link_libraries(fwk_voice_vnr_test_profile 
         PUBLIC
             fwk_voice::example::profile_xcore
             )
@@ -27,13 +27,13 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
         -Wno-xcore-fptrgroup    
         -target=${XCORE_TARGET}
     )
-    target_compile_options(fwk_voice_example_bare_metal_vnr
+    target_compile_options(fwk_voice_vnr_test_profile
         PRIVATE ${APP_COMPILER_FLAGS} ${CONFIG_XSCOPE_PATH}/config.xscope)
 
-    target_compile_definitions(fwk_voice_example_bare_metal_vnr
+    target_compile_definitions(fwk_voice_vnr_test_profile
         PRIVATE PROFILE_PROCESSING=1)
 
-    target_link_options(fwk_voice_example_bare_metal_vnr
+    target_link_options(fwk_voice_vnr_test_profile
         PRIVATE
             -w            
             "-target=${XCORE_TARGET}"
@@ -47,15 +47,15 @@ else()
       "-D__xtflm_conf_h_exists__"
       "-DNN_USE_REF"
     )
-    target_compile_options(fwk_voice_example_bare_metal_vnr
+    target_compile_options(fwk_voice_vnr_test_profile
         PRIVATE ${BUILD_FLAGS})
 
-    target_link_options(fwk_voice_example_bare_metal_vnr
+    target_link_options(fwk_voice_vnr_test_profile
         PRIVATE
             ${BUILD_FLAGS})
 
-    target_link_libraries(fwk_voice_example_bare_metal_vnr PRIVATE "-lpthread")
-    target_link_libraries(fwk_voice_example_bare_metal_vnr PRIVATE m)
+    target_link_libraries(fwk_voice_vnr_test_profile PRIVATE "-lpthread")
+    target_link_libraries(fwk_voice_vnr_test_profile PRIVATE m)
 
 endif()
 

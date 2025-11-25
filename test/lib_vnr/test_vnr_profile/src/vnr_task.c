@@ -10,7 +10,6 @@ static void prof(int n, const char* str) {}
 static void print_prof(int a, int b, int framenum){}
 #endif
 #include "fileio.h"
-#include "wav_utils.h"
 
 void vnr_task(const char* input_filename, const char *output_filename){
     vnr_input_state_t vnr_input_state;
@@ -35,48 +34,16 @@ void vnr_task(const char* input_filename, const char *output_filename){
 
 
     int framenum = 0;
-    wav_header input_header_struct;
-    unsigned input_header_size;
-    if(get_wav_header_details(&input_file, &input_header_struct, &input_header_size) != 0){
-        printf("error in get_wav_header_details()\n");
-        _Exit(1);
-    }
-    file_seek(&input_file, input_header_size, SEEK_SET);
-    // Ensure 16bit wav file
-    if((input_header_struct.bit_depth != 32) && (input_header_struct.bit_depth != 16)){
-        printf("Test works on only 16 bit or 32 bit wav files. %d bit wav input provided\n",input_header_struct.bit_depth);
-        assert(0);
-    }
-
-    // Ensure input wav file contains correct number of channels 
-    if(input_header_struct.num_channels != 1){
-        printf("Error: wav num channels(%d) does not match expected 1 channel\n", input_header_struct.num_channels);
-        _Exit(1);
-    }
-    
-    unsigned frame_count = wav_get_num_frames(&input_header_struct);
+    int file_size = get_file_size(&input_file);
+    unsigned frame_count = file_size / sizeof(int32_t);
     // Calculate number of frames in the wav file
     unsigned block_count = frame_count / VNR_FRAME_ADVANCE;
     printf("%d Frames in this test input wav\n",block_count);
-    unsigned bytes_per_frame = wav_get_num_bytes_per_frame(&input_header_struct);
 
-    int16_t input_read_buffer[VNR_FRAME_ADVANCE] = {0}; // Array for storing interleaved input read from wav file
     int32_t new_frame[VNR_FRAME_ADVANCE] = {0};
-
     for(unsigned b=0; b<block_count; b++) {
-        long input_location =  wav_get_frame_start(&input_header_struct, b * VNR_FRAME_ADVANCE, input_header_size);
-        file_seek (&input_file, input_location, SEEK_SET);
-        
-        if(input_header_struct.bit_depth == 16){
-            file_read (&input_file, (uint8_t*)&input_read_buffer[0], bytes_per_frame* VNR_FRAME_ADVANCE);
-            // Convert to 32 bit
-            for(int i=0; i<VNR_FRAME_ADVANCE; i++) {
-                new_frame[i] = (int32_t)input_read_buffer[i] << 16; //1.31
-            }
-        }
-        else {
-            file_read (&input_file, (uint8_t*)&new_frame[0], bytes_per_frame* VNR_FRAME_ADVANCE);
-        }
+
+        file_read (&input_file, (uint8_t*)&new_frame[0], sizeof(int32_t) * VNR_FRAME_ADVANCE);
         prof(2, "start_vnr_form_input_frame");
         complex_s32_t DWORD_ALIGNED input_frame[VNR_FD_FRAME_LENGTH];
         bfp_complex_s32_t X;

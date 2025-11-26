@@ -167,8 +167,8 @@ pipeline {
                     sh "python build_ic_frame_proc.py"
                   }
                   // We do this again on the NUCs for verification later, but this just checks we have no build error
-                  dir("test/lib_vnr/py_c_feature_compare") {
-                    sh "python build_vnr_feature_extraction.py"
+                  dir("test/lib_vnr/test_vnr_cffi") {
+                    sh "python build_vnr_cffi.py"
                   }
                   dir("test/stage_b") {
                     sh "python build_c_code.py"
@@ -246,9 +246,9 @@ pipeline {
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
-                      dir("py_c_feature_compare") {
-                        sh "python build_vnr_feature_extraction.py"
-                        sh "pytest -s --junitxml=pytest_result.xml"
+                      dir("test_vnr_cffi") {
+                        sh "python build_vnr_cffi.py"
+                        sh "pytest -n 4 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
                       dir("test_vnr_profile") {

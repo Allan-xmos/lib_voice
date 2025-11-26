@@ -5,7 +5,6 @@ import xtagctl
 import shutil
 import tempfile
 import sys
-import scipy.io.wavfile
 import math
 import subprocess
 from pathlib import Path
@@ -57,14 +56,10 @@ def f64_to_float_s32(d):
     return (m_int, e)
 
 def get_closeness_metric(ref, dut):
-    tmp_folder = Path(tempfile.mkdtemp(dir="."))
-    output_file = tmp_folder / "temp.wav"
     output_wav_data = np.zeros((2, len(ref)))
     output_wav_data[0,:] = ref
     output_wav_data[1,:] = dut
-    scipy.io.wavfile.write(output_file, 16000, output_wav_data.T)
-    arith_closeness, geo_closeness, c_delay, peak2ave = pvc.pcm_closeness_metric(str(output_file), verbose=False)
-    shutil.rmtree(tmp_folder)
+    arith_closeness, geo_closeness, _, _ = pvc.pcm_closeness_metric(output_wav_data, verbose=False)
     return arith_closeness, geo_closeness
 
 def get_model_details(model_file):

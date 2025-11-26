@@ -2,8 +2,8 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import numpy as np
-import scipy.io.wavfile
-import audio_wav_utils as awu
+import soundfile as sf
+from pathlib import Path
 import sys
 
 # Turn a float32 from C into an np float scalar
@@ -36,8 +36,18 @@ def float_to_uint8(array_float):
 # Arithmetic closeness is more sensitive than geo_closeness
 # Anything in the 0.90 region or more is extremely close indeed
 def pcm_closeness_metric(input_file, verbose=True):
-    input_rate, input_wav_file = scipy.io.wavfile.read(input_file, 'r')
-    input_wav_data, input_channel_count, file_length = awu.parse_audio(input_wav_file)
+    if isinstance(input_file, str) or isinstance(input_file, Path):
+        input_wav_data, _ = sf.read(input_file, always_2d=True)
+        input_wav_data = input_wav_data.T
+        input_channel_count = input_wav_data.shape[0]
+        file_length = input_wav_data.shape[1]
+    elif isinstance(input_file, np.ndarray):
+        input_wav_data = input_file
+        input_channel_count = input_wav_data.shape[0]
+        file_length = input_wav_data.shape[1]
+    else:
+        assert 0, "Not an expected input format"
+
     assert input_channel_count == 2, f"This function works on a 2 channel file only, you supplied {input_channel_count}.."
 
     dtype = type(input_wav_data[0][0])

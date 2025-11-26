@@ -47,13 +47,7 @@ def plot_result(vnr_out, out_file, show_plot=False):
 
 def run_with_xscope_fileio(input_file, output_file, run_x86, parse_profile=False):
 
-    input_data, _ = sf.read(input_file)
-    if np.issubdtype(input_data.dtype, np.integer):
-        input_data = input_data.astype(np.int32)
-    if np.issubdtype(input_data.dtype, np.floating):
-        input_data = (input_data * (2 ** 31 - 1)).astype(np.int32)
-    else:
-        assert 0, f"{input_file} is not an interger or floating point type"
+    input_data, _ = sf.read(input_file, dtype="int32")
 
     assert len(input_data.shape) == 1, "Input data can be signle channel only"
 

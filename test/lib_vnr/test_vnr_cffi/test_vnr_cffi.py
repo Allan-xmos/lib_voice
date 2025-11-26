@@ -2,11 +2,8 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import numpy as np
-import scipy.io.wavfile
-import audio_wav_utils as awu
+import soundfile as sf
 import sys, os
-import tempfile
-import shutil
 import pytest
 from pathlib import Path
 import py_voice.modules.vnr.frame_preprocessor as fp
@@ -19,9 +16,10 @@ import vnr_test_py.lib as vnr_test_lib
 sys.path.append(str(Path(__file__).parents[2] / "shared" / "python"))  # For py_vs_c_utils
 import py_vs_c_utils as pvc
 
-hydra_audio_path = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio'))
+hydra_audio_path = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio')).expanduser()
 print(hydra_audio_path)
 streams = (hydra_audio_path / "test_wav_vnr_streams").glob("*wav")
+streams = [str(s) for s in streams]
 
 vnr_model_path = str(Path(__file__).parents[3] / "modules" / "lib_vnr" / "python" / "model" / "model_output" / "trained_model.tflite")
 vnr_conf_path = Path(__file__).parents[4] / "py_voice" / "py_voice" / "config" / "components" / "vnr_only.json"
@@ -35,14 +33,10 @@ def bfp_s32_to_float(bfp_struct, data):
     return data_float
 
 def get_closeness_metric(ref, dut):
-    tmp_folder = Path(tempfile.mkdtemp(dir="."))
-    output_file = tmp_folder / "temp.wav"
     output_wav_data = np.zeros((2, len(ref)))
     output_wav_data[0,:] = ref
     output_wav_data[1,:] = dut
-    scipy.io.wavfile.write(output_file, 16000, output_wav_data.T)
-    arith_closeness, geo_closeness, c_delay, peak2ave = pvc.pcm_closeness_metric(str(output_file), verbose=False)
-    shutil.rmtree(tmp_folder)
+    arith_closeness, geo_closeness, _, _ = pvc.pcm_closeness_metric(output_wav_data, verbose=False)
     return arith_closeness, geo_closeness
 
 class vnr_feature_comparison:
@@ -77,20 +71,21 @@ class vnr_feature_comparison:
         dut_ie_output = vnr_test_lib.test_vnr_inference(dut_features_bfp_ptr)
         
         return ref_features, dut_features, ref_ie_output[0], dut_ie_output
-        
+
 @pytest.mark.parametrize("input_file", streams)
 def test_frame_features(input_file):
     vnrc = vnr_feature_comparison()
-    input_rate, input_wav_file = scipy.io.wavfile.read(input_file, 'r')
-    input_wav_data, input_channel_count, file_length = awu.parse_audio(input_wav_file)
-    
+
     ref_features_output = np.empty(0, dtype=np.float64)
     dut_features_output = np.empty(0, dtype=np.float64)
     ref_ie_output = np.empty(0, dtype=np.float64)
     dut_ie_output = np.empty(0, dtype=np.float64)
-    for frame_start in range(0, file_length - fp.FRAME_ADVANCE, fp.FRAME_ADVANCE):
-        # buffer the input data into STFT slices
-        new_x_frame = awu.get_frame(input_wav_data, frame_start, fp.FRAME_ADVANCE)
+
+    for new_x_frame in sf.blocks(input_file, fp.FRAME_ADVANCE, always_2d=True):
+        # convert to [ch][samp]
+        new_x_frame = new_x_frame.T
+        if len(new_x_frame[0]) < fp.FRAME_ADVANCE: continue
+
         ref_features, dut_features, ref_ie, dut_ie = vnrc.process_frame(new_x_frame)
         ref_features_output = np.append(ref_features_output, ref_features)
         dut_features_output = np.append(dut_features_output, dut_features)
@@ -119,4 +114,4 @@ def test_frame_features(input_file):
 
 
 if __name__ == "__main__":
-    test_frame_features()
+    test_frame_features(streams[0])

@@ -1,13 +1,10 @@
 import numpy as np
 import os
-import sys
 import matplotlib.pyplot as plt
+import py_vs_c_utils as pvc
+from run_dut import run_dut
 
 this_file_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(this_file_dir, "../../lib_vnr/vnr_unit_tests/feature_extraction"))
-
-import test_utils # Use vnr test's test_utils
-
 exe_dir = os.path.join(this_file_dir, '../../../build/test/lib_ic/test_calc_vnr_pred/bin/')
 xe = os.path.join(exe_dir, 'fwk_voice_test_calc_vnr_pred.xe')
 
@@ -44,7 +41,7 @@ def test_calc_vnr_pred(target, show_plot=False):
         data[-1] = 0 #Im part of DC and nyquist is 0
         input_data = np.append(input_data, int(exp))
         input_data = np.append(input_data, data)
-        data = test_utils.int32_to_double(data, exp)
+        data = pvc.int32_to_double(data, exp)
         ifc.Y_data[0] = data.astype(np.float64).view(np.complex128) # Reference Y_data
 
         # Generate random Error values
@@ -56,7 +53,7 @@ def test_calc_vnr_pred(target, show_plot=False):
         data[-1] = 0 #Im part of DC and nyquist is 0
         input_data = np.append(input_data, int(exp))
         input_data = np.append(input_data, data)
-        data = test_utils.int32_to_double(data, exp)
+        data = pvc.int32_to_double(data, exp)
         Error_ap = data.astype(np.float64).view(np.complex128)
         Error_ap = Error_ap.reshape((1, len(Error_ap))) # Reference Error values
 
@@ -69,7 +66,7 @@ def test_calc_vnr_pred(target, show_plot=False):
     exe_name = xe
     if(target == "x86"): #Remove the .xe extension from the xe name to get the x86 executable
         exe_name = os.path.splitext(xe)[0]
-    op = test_utils.run_dut(input_data, "test_calc_vnr_pred", exe_name)
+    op, _ = run_dut(input_data, "test_calc_vnr_pred", exe_name)
     # Parse Output from DUT. Inteleaved: input_pred_mant, input_pred_exp, output_pred_mant, output_pred_exp, input_pred_mant,..
     mants = op[0::2]
     input_pred_mants = mants[0::2]
@@ -88,8 +85,8 @@ def test_calc_vnr_pred(target, show_plot=False):
     assert(input_vnr_pred_diff < 0.005) 
     assert(output_vnr_pred_diff < 0.005) 
     
-    input_vnr_arith_closeness, input_vnr_geo_closeness = test_utils.get_closeness_metric(ref_input_vnr_pred, dut_input_vnr_pred)    
-    output_vnr_arith_closeness, output_vnr_geo_closeness = test_utils.get_closeness_metric(ref_output_vnr_pred, dut_output_vnr_pred)    
+    input_vnr_arith_closeness, input_vnr_geo_closeness = pvc.get_closeness_metric(ref_input_vnr_pred, dut_input_vnr_pred)    
+    output_vnr_arith_closeness, output_vnr_geo_closeness = pvc.get_closeness_metric(ref_output_vnr_pred, dut_output_vnr_pred)    
     print(f"input_vnr_arith_closeness {input_vnr_arith_closeness}, input_vnr_geo_closeness {input_vnr_geo_closeness}")  
     print(f"output_vnr_arith_closeness {output_vnr_arith_closeness}, output_vnr_geo_closeness {output_vnr_geo_closeness}")  
     assert(input_vnr_arith_closeness > 0.90)

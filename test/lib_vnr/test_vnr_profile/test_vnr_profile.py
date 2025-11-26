@@ -8,13 +8,11 @@
 ### To see the plot
 # python host_app.py test_stream_1.wav vnr_out.bin --show-plot
 
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 from pathlib import Path
-sys.path.append(str(Path.cwd() / "../../shared/python"))
-from profile_utils import run_profiler
+from run_dut import run_dut
 import soundfile as sf
 from profile import parse_profile_log
 
@@ -25,7 +23,6 @@ exe = cwd / "../../../build/test/lib_vnr/test_vnr_profile/bin/fwk_voice_vnr_test
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("input_wav", nargs='?', help="input wav file")
-    parser.add_argument("output_bin", nargs='?', help="vnr output bin file")
     parser.add_argument("--show-plot", action='store_true', help="show the VNR output plot")
     parser.add_argument("--run-x86", action='store_true', help="Run x86 exe")
     args = parser.parse_args()
@@ -45,7 +42,7 @@ def plot_result(vnr_out, out_file, show_plot=False):
     plotfile = f"vnr_example_plot_{Path(out_file).stem}.png"
     fig_instance.savefig(plotfile)
 
-def run_with_xscope_fileio(input_file, output_file, run_x86, parse_profile=False):
+def run_with_xscope_fileio(input_file, run_x86, parse_profile=False):
 
     input_data, _ = sf.read(input_file, dtype="int32")
 
@@ -53,18 +50,23 @@ def run_with_xscope_fileio(input_file, output_file, run_x86, parse_profile=False
 
     local_exe = exe
     if not run_x86: local_exe = local_exe.with_suffix(".xe")
-    stdout = run_profiler(input_data.astype(np.int32), "test_vnr_profile", local_exe, output_file)
+    output_data, stdout = run_dut(input_data, "test_vnr_profile", local_exe)
 
     if not run_x86 and parse_profile:
         src_folder = cwd / 'src'
         parse_profile_log(stdout, str(src_folder), worst_case_file="vnr_prof.log")
 
-    return np.fromfile(output_file, dtype=np.int32)
+    return output_data
+
+def test_vnr_profile():
+    wav_name = "test_stream_1.wav"
+    vnr_out = run_with_xscope_fileio(wav_name, False, True)
+    plot_result(vnr_out, wav_name, False)
 
 if __name__ == "__main__":
     args = parse_arguments()
-    print(f"input_file: {args.input_wav}, output_file: {args.output_bin}, show_plot={args.show_plot}, run_x86={args.run_x86}")
-    vnr_out = run_with_xscope_fileio(args.input_wav, args.output_bin, args.run_x86, parse_profile=True)
+    print(f"input_file: {args.input_wav}, show_plot={args.show_plot}, run_x86={args.run_x86}")
+    vnr_out = run_with_xscope_fileio(args.input_wav, args.run_x86, parse_profile=True)
 
     plot_result(vnr_out, args.input_wav, show_plot=args.show_plot)
 

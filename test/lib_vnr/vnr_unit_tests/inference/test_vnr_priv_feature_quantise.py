@@ -2,6 +2,8 @@ import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import sys
 from pathlib import Path
+import py_vs_c_utils as pvc
+from run_dut import run_dut
 
 # Paths definition
 this_file_dir = Path(__file__).parent
@@ -34,13 +36,13 @@ def test_vnr_priv_feature_quantise(target, tflite_model):
         input_data = np.append(input_data, exp)
         input_data = np.append(input_data, data)
         # Ref implementation
-        this_patch = test_utils.int32_to_double(data, exp)
+        this_patch = pvc.int32_to_double(data, exp)
         quant_patch = test_utils.quantise_patch(this_patch, model_in_details)
         ref_output = np.append(ref_output, quant_patch)
     exe_name = xe
     if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
         exe_name = xe.with_suffix('')
-    op = test_utils.run_dut(input_data, "test_vnr_priv_feature_quantise", str(exe_name))
+    op, _ = run_dut(input_data, "test_vnr_priv_feature_quantise", str(exe_name))
     dut_output = op.view(np.int8)
 
     for fr in range(0,test_frames):
@@ -50,6 +52,3 @@ def test_vnr_priv_feature_quantise(target, tflite_model):
         assert(diff < 1), f"ERROR: test_vnr_priv_feature_quantise frame {fr}. diff {diff} exceeds 0"
 
     print("max_diff = ",np.max(np.abs(ref_output-dut_output)))
-
-if __name__ == "__main__":
-    test_vnr_priv_feature_quantise("xcore", test_utils.get_model())

@@ -1,9 +1,10 @@
 
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
-import test_utils
 import py_voice.modules.vnr as vnr
 from pathlib import Path
+import py_vs_c_utils as pvc
+from run_dut import run_dut
 
 this_file_dir = Path(__file__).parent
 exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/'
@@ -38,7 +39,7 @@ def test_vnr_priv_mel_compute(target, tflite_model, vnr_conf):
         input_data = np.append(input_data, data)
 
         # Ref Mel filtering implementation
-        X_spect = test_utils.int32_to_double(data, exp)
+        X_spect = pvc.int32_to_double(data, exp)
         X_spect = X_spect.astype(np.float64).view(np.complex128)
 
         out_spect = np.abs(X_spect)**2
@@ -49,7 +50,7 @@ def test_vnr_priv_mel_compute(target, tflite_model, vnr_conf):
     exe_name = xe
     if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
         exe_name = xe.with_suffix('')
-    op = test_utils.run_dut(input_data, "test_vnr_priv_mel_compute", str(exe_name))
+    op, _ = run_dut(input_data, "test_vnr_priv_mel_compute", str(exe_name))
     mant = op[0::2].astype(np.float64)
     exp = op[1::2]
     dut_output_float = mant * (2.0 ** exp)

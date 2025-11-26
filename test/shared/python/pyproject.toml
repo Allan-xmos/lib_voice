@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fwk_voice_test_utils"
+version = "0.1.0"
+description = "Test utilities for fwk_voice."
+authors = [
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+]
+
+[tool.setuptools]
+py-modules = ["generate_task_distribution_scheme", "run_dut", "py_vs_c_utils"]

@@ -1,15 +1,12 @@
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
-import sys
-import test_utils
 import matplotlib.pyplot as plt
 from pathlib import Path
+import py_vs_c_utils as pvc
+from run_dut import run_dut
 
 this_file_dir = Path(__file__).parent
-sys.path.append(str(this_file_dir / "../feature_extraction"))
-import test_utils
-
 exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/full/bin/'
 xe = exe_dir / 'fwk_voice_test_vnr_full.xe'
 
@@ -38,7 +35,7 @@ def test_vnr_full(target, tflite_model, vnr_conf):
         data = data >> hr
         input_data = np.append(input_data, data)
         input_data = np.append(input_data, enable_highpass)
-        new_x_frame = test_utils.int32_to_double(data, -31)
+        new_x_frame = pvc.int32_to_double(data, -31)
 
         # Ref VNR implementation
         x_data = np.roll(x_data, -fp.FRAME_ADVANCE, axis = 0)
@@ -50,7 +47,7 @@ def test_vnr_full(target, tflite_model, vnr_conf):
     exe_name = xe
     if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
         exe_name = xe.with_suffix('')
-    op = test_utils.run_dut(input_data, "test_vnr_full", str(exe_name))
+    op, _ = run_dut(input_data, "test_vnr_full", str(exe_name))
     dut_mant = op[0::2]
     dut_exp = op[1::2]
     d = dut_mant.astype(np.float64) * (2.0 ** dut_exp)
@@ -63,7 +60,7 @@ def test_vnr_full(target, tflite_model, vnr_conf):
         assert(diff < 0.05), "ERROR: test_vnr_inference frame {fr}. diff exceeds threshold"
     
     print("max_diff = ",np.max(np.abs(ref_output_double - dut_output_double)))
-    arith_closeness, geo_closeness = test_utils.get_closeness_metric(ref_output_double, dut_output_double)
+    arith_closeness, geo_closeness = pvc.get_closeness_metric(ref_output_double, dut_output_double)
     print(f"arith_closeness = {arith_closeness}, geo_closeness = {geo_closeness}")
     assert(geo_closeness > 0.97), "inference output geo_closeness below pass threshold"
     assert(arith_closeness > 0.95), "inference output arith_closeness below pass threshold"
@@ -77,6 +74,3 @@ def test_vnr_full(target, tflite_model, vnr_conf):
     #plt.show()
     fig.set_size_inches(18.5, 10.5)
     fig.savefig('vnr_full_test.png', dpi=100)
-
-if __name__ == "__main__":
-    test_vnr_full("xcore", test_utils.get_model())

@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 from pathlib import Path
+from run_dut import run_dut
 
 this_file_dir = Path(__file__).parent
 sys.path.append(str(this_file_dir / "../feature_extraction"))
@@ -35,7 +36,7 @@ def test_vnr_priv_output_dequantise(target, tflite_model):
     exe_name = xe
     if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
         exe_name = xe.with_suffix('')
-    op = test_utils.run_dut(input_data, "test_vnr_priv_output_dequantise", str(exe_name))
+    op, _ = run_dut(input_data, "test_vnr_priv_output_dequantise", str(exe_name))
     dut_mant = op[0::2]
     dut_exp = op[1::2]
     d = dut_mant.astype(np.float64) * (2.0 ** dut_exp)
@@ -47,7 +48,3 @@ def test_vnr_priv_output_dequantise(target, tflite_model):
         assert(diff < 1), "ERROR: test_vnr_priv_output_dequantise frame {fr}. diff exceeds threshold"
     
     print("max_diff = ",np.max(np.abs(ref_output_double - dut_output_double)))
-
-
-if __name__ == "__main__":
-    test_vnr_priv_output_dequantise("xcore", test_utils.get_model())

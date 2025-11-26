@@ -1,9 +1,10 @@
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
-import test_utils
 import matplotlib.pyplot as plt
 from pathlib import Path
+import py_vs_c_utils as pvc
+from run_dut import run_dut
 
 this_file_dir = Path(__file__).parent
 exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/'
@@ -47,10 +48,10 @@ def test_vnr_priv_make_slice(target, tflite_model, vnr_conf):
     exe_name = xe
     if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
         exe_name = xe.with_suffix('')
-    op = test_utils.run_dut(input_data, "test_vnr_priv_make_slice", str(exe_name))
+    op, _ = run_dut(input_data, "test_vnr_priv_make_slice", str(exe_name))
     dut_mant = op.astype(np.float64)
     dut_exp = -24 # dut output is always 8.24
-    d = test_utils.int32_to_double(dut_mant, dut_exp)
+    d = pvc.int32_to_double(dut_mant, dut_exp)
     dut_output_float = np.append(dut_output_float, d)
     for fr in range(0, test_frames):
         dut = dut_output_float[fr*fp.MEL_FILTERS : (fr+1)*fp.MEL_FILTERS]

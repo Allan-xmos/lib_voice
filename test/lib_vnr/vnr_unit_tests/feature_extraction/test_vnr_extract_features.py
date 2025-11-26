@@ -4,6 +4,8 @@ import py_voice.modules.vnr as vnr
 import test_utils
 import matplotlib.pyplot as plt
 from pathlib import Path
+import py_vs_c_utils as pvc
+from run_dut import run_dut
 
 this_file_dir = Path(__file__).parent
 exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/'
@@ -38,7 +40,7 @@ def test_vnr_extract_features(target, tflite_model, vnr_conf, verbose=False):
         data = data >> hr
         input_data = np.append(input_data, data)
         input_data = np.append(input_data, enable_highpass)
-        new_x_frame = test_utils.int32_to_double(data, -31)
+        new_x_frame = pvc.int32_to_double(data, -31)
 
         # Ref form input frame implementation
         x_data = np.roll(x_data, -fp.FRAME_ADVANCE, axis = 0)
@@ -52,7 +54,7 @@ def test_vnr_extract_features(target, tflite_model, vnr_conf, verbose=False):
     exe_name = xe
     if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
         exe_name = xe.with_suffix('')
-    op = test_utils.run_dut(input_data, "test_vnr_extract_features", str(exe_name))
+    op, _ = run_dut(input_data, "test_vnr_extract_features", str(exe_name))
     # Deinterleave dut output into normalised and quantised patches
     sections = []
     ii = 0
@@ -76,7 +78,7 @@ def test_vnr_extract_features(target, tflite_model, vnr_conf, verbose=False):
     
     for fr in range(0,test_frames):
         # Compare normalised output
-        dut = test_utils.int32_to_double(dut_mants[fr*(fp.PATCH_WIDTH * fp.MEL_FILTERS) : (fr+1)*(fp.PATCH_WIDTH * fp.MEL_FILTERS)], dut_exp[fr])
+        dut = pvc.int32_to_double(dut_mants[fr*(fp.PATCH_WIDTH * fp.MEL_FILTERS) : (fr+1)*(fp.PATCH_WIDTH * fp.MEL_FILTERS)], dut_exp[fr])
         ref = ref_normalised_output[fr*(fp.PATCH_WIDTH * fp.MEL_FILTERS) : (fr+1)*(fp.PATCH_WIDTH * fp.MEL_FILTERS)]
         dut_normalised_output = np.append(dut_normalised_output, dut)
         
@@ -90,7 +92,7 @@ def test_vnr_extract_features(target, tflite_model, vnr_conf, verbose=False):
                 for index in ii[0]:
                     print(f"frame {fr}. diff = {diff[index]}, ref {ref[index]} dut {dut[index]}")
         
-        arith_closeness, geo_closeness = test_utils.get_closeness_metric(ref, dut)
+        arith_closeness, geo_closeness = pvc.get_closeness_metric(ref, dut)
         assert(geo_closeness > 0.999), f"ERROR: frame {fr}. normalised_output geo_closeness below pass threshold"
         assert(arith_closeness > 0.999), f"ERROR: frame {fr}. normalised_output arith_closeness below pass threshold"
 

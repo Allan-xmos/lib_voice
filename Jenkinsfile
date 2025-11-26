@@ -252,7 +252,8 @@ pipeline {
                         junit "pytest_result.xml"
                       }
                       dir("test_vnr_profile") {
-                        sh "python test_vnr_profile.py test_stream_1.wav vnr_out.bin"
+                        sh "pytest -s --junitxml=pytest_result.xml"
+                        junit "pytest_result.xml"
                       }
                     }
                   }

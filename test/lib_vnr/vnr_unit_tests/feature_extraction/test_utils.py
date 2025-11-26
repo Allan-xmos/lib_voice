@@ -1,66 +1,6 @@
 
 import numpy as np
-import xscope_fileio
-import xtagctl
-import shutil
-import tempfile
-import sys
-import math
-import subprocess
-from pathlib import Path
-
 from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
-
-sys.path.append(str(Path(__file__).parents[3] / "shared" / "python"))
-import py_vs_c_utils as pvc
-
-def get_model():
-    return str(Path(__file__).parents[4] / "modules" / "lib_vnr" / "python" / "model" / "model_output" / "trained_model.tflite")
-
-def get_vnr_conf():
-    return Path(__file__).parents[5] / "py_voice" / "py_voice" / "config" / "components" / "vnr_only.json"
-
-def run_dut(input_data, test_name, xe):
-    xe_path = Path(xe) if not isinstance(xe, Path) else xe
-    tmp_folder = Path(tempfile.mkdtemp(dir=".", suffix=Path(test_name).name))
-    
-    input_file = tmp_folder / "input.bin"
-    input_data.astype(np.int32).tofile(input_file)
-    
-    if xe_path.suffix == ".xe":  # xcore run
-        with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-            xscope_fileio.run_on_target(adapter_id, str(xe_path), cwd=str(tmp_folder))
-    else:  # x86 run
-        subprocess.run([str(xe_path)], cwd=tmp_folder)
-    
-    output_file = tmp_folder / "output.bin"
-    with open(output_file, "rb") as fdut:
-        dut_output = np.fromfile(fdut, dtype=np.int32)
-    
-    shutil.rmtree(tmp_folder)
-    return dut_output
-
-def double_to_int32(x, exp):
-    y = x.astype(np.float64) * (2.0 ** -exp)
-    y = y.astype(np.int32)
-    return y
-
-def int32_to_double(x, exp):
-    y = x.astype(np.float64) * (2.0 ** exp)
-    return y
-
-def f64_to_float_s32(d):
-    m,e = math.frexp(d)
-    m_int = int(m * (2.0 ** 31))
-    e = e-31
-    return (m_int, e)
-
-def get_closeness_metric(ref, dut):
-    output_wav_data = np.zeros((2, len(ref)))
-    output_wav_data[0,:] = ref
-    output_wav_data[1,:] = dut
-    arith_closeness, geo_closeness, _, _ = pvc.pcm_closeness_metric(output_wav_data, verbose=False)
-    return arith_closeness, geo_closeness
 
 def get_model_details(model_file):
     with TFLMHostInterpreter() as interpreter_tflite: # important to close interpreter to avoid OOM error

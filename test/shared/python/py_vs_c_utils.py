@@ -30,6 +30,21 @@ def float_to_uint8(array_float):
     array_uint8 = np.clip((np.array(array_float) * (2**8)), np.iinfo(np.uint8).min, np.iinfo(np.uint8).max).astype(np.uint8)
     return array_uint8
 
+def double_to_int32(x, exp):
+    y = x.astype(np.float64) * (2.0 ** -exp)
+    y = y.astype(np.int32)
+    return y
+
+def int32_to_double(x, exp):
+    y = x.astype(np.float64) * (2.0 ** exp)
+    return y
+
+def get_closeness_metric(ref, dut):
+    data = np.zeros((2, len(ref)))
+    data[0,:] = ref
+    data[1,:] = dut
+    arith_closeness, geo_closeness, _, _ = pcm_closeness_metric(data, verbose=False)
+    return arith_closeness, geo_closeness
 
 # compare a two channel wav file and quantify how close they are
 # Any file that is 1 sample out in delay will show low results of 0.20 or worse

@@ -1,8 +1,9 @@
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
-import test_utils
 from pathlib import Path
+import py_vs_c_utils as pvc
+from run_dut import run_dut
 
 this_file_dir = Path(__file__).parent
 exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/'
@@ -31,7 +32,7 @@ def test_vnr_priv_add_new_slice(target, tflite_model, vnr_conf):
         input_data = np.append(input_data, data)
 
         # Ref form input frame implementation
-        ref_new_slice = test_utils.int32_to_double(data, -24)
+        ref_new_slice = pvc.int32_to_double(data, -24)
         vnr_obj.add_new_slice(ref_new_slice, buffer_number=0)
         normalised_patch = vnr_obj.normalise_patch(vnr_obj.feature_buffers[0])
         ref_output_float = np.append(ref_output_float, normalised_patch)
@@ -39,7 +40,7 @@ def test_vnr_priv_add_new_slice(target, tflite_model, vnr_conf):
     exe_name = xe
     if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
         exe_name = xe.with_suffix('')
-    op = test_utils.run_dut(input_data, "test_vnr_priv_normalise_patch", str(exe_name))
+    op, _ = run_dut(input_data, "test_vnr_priv_normalise_patch", str(exe_name))
 
     exp_indices = np.arange(0, len(op), output_words_per_frame) # Every (257*2 + 1)th value starting from index 0 is the exponent
     exp_indices = exp_indices.astype(np.int32)
@@ -50,7 +51,7 @@ def test_vnr_priv_add_new_slice(target, tflite_model, vnr_conf):
     max_diff = 0
     for fr in range(0,test_frames):
         r = ref_output_float[fr*(fp.PATCH_WIDTH * fp.MEL_FILTERS) : (fr+1)*(fp.PATCH_WIDTH * fp.MEL_FILTERS)]
-        ref = test_utils.double_to_int32(r, dut_exp[fr])
+        ref = pvc.double_to_int32(r, dut_exp[fr])
         dut = dut_mants[fr*(fp.PATCH_WIDTH * fp.MEL_FILTERS) : (fr+1)*(fp.PATCH_WIDTH * fp.MEL_FILTERS)]
         diff = np.max(np.abs(ref-dut))
         assert diff<2, "ERROR: test_vnr_priv_normalise_patch diff exceeds threshold of 2"

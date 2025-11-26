@@ -3,7 +3,7 @@
 
 import numpy as np
 import soundfile as sf
-import sys, os
+import os
 import pytest
 from pathlib import Path
 import py_voice.modules.vnr.frame_preprocessor as fp
@@ -13,7 +13,6 @@ from build import vnr_test_py
 from vnr_test_py import ffi
 import vnr_test_py.lib as vnr_test_lib
 
-sys.path.append(str(Path(__file__).parents[2] / "shared" / "python"))  # For py_vs_c_utils
 import py_vs_c_utils as pvc
 
 hydra_audio_path = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio')).expanduser()
@@ -31,13 +30,6 @@ def bfp_s32_to_float(bfp_struct, data):
     len = bfp_struct[4]
     data_float = data[:len].astype(np.float64) * (2.0 ** exp)
     return data_float
-
-def get_closeness_metric(ref, dut):
-    output_wav_data = np.zeros((2, len(ref)))
-    output_wav_data[0,:] = ref
-    output_wav_data[1,:] = dut
-    arith_closeness, geo_closeness, _, _ = pvc.pcm_closeness_metric(output_wav_data, verbose=False)
-    return arith_closeness, geo_closeness
 
 class vnr_feature_comparison:
     def __init__(self):
@@ -93,13 +85,13 @@ def test_frame_features(input_file):
         dut_ie_output = np.append(dut_ie_output, dut_ie)
     
     # Compare features
-    arith_closeness_features, geo_closeness_features = get_closeness_metric(ref_features_output, dut_features_output)
+    arith_closeness_features, geo_closeness_features = pvc.get_closeness_metric(ref_features_output, dut_features_output)
     print(f"Features: arith_closeness {arith_closeness_features}, geo_closeness {geo_closeness_features}")
     max_error_features = np.max(np.abs(ref_features_output - dut_features_output))
     print(f"Features: max_error = {max_error_features}")
 
     # Compare infrence output
-    arith_closeness_ie, geo_closeness_ie = get_closeness_metric(ref_ie_output, dut_ie_output)
+    arith_closeness_ie, geo_closeness_ie = pvc.get_closeness_metric(ref_ie_output, dut_ie_output)
     print(f"Inference: arith_closeness {arith_closeness_ie}, geo_closeness {geo_closeness_ie}")
     max_error_ie = np.max(np.abs(ref_ie_output - dut_ie_output))
     print(f"Inference: max_error = {max_error_ie}")

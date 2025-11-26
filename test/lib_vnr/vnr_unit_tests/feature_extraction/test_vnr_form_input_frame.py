@@ -1,7 +1,8 @@
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
-import test_utils
 from pathlib import Path
+import py_vs_c_utils as pvc
+from run_dut import run_dut
 
 this_file_dir = Path(__file__).parent
 exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/'
@@ -40,7 +41,7 @@ def test_vnr_form_input_frame(target):
     exe_name = xe
     if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
         exe_name = xe.with_suffix('')
-    op = test_utils.run_dut(input_data, "test_vnr_form_input_frame", str(exe_name)) # dut data has exponent followed by 257*2 data values
+    op, _ = run_dut(input_data, "test_vnr_form_input_frame", str(exe_name)) # dut data has exponent followed by 257*2 data values
     
     # Separate out mantissas and exponents
     exp_indices = np.arange(0, len(op), output_words_per_frame) # Every (257*2 + 1)th value starting from index 0 is the exponent
@@ -54,13 +55,13 @@ def test_vnr_form_input_frame(target):
     # Convert to floating point
     for i in range(frames):
         m = (mants[i*fd_frame_len*2 : (i+1)*(fd_frame_len*2)]) # Interleaved real and imaginary dut output
-        ref_real = test_utils.double_to_int32(ref_output[i*fd_frame_len : (i+1)*fd_frame_len].real, exp[i])
+        ref_real = pvc.double_to_int32(ref_output[i*fd_frame_len : (i+1)*fd_frame_len].real, exp[i])
         dut_real = m[0::2]
         diff = np.max(np.abs(ref_real - dut_real))
         max_diff_real = max(max_diff_real, diff)
         assert diff < 100, "test_vnr_form_input_frame: real diff exceeds 100"
 
-        ref_imag = test_utils.double_to_int32(ref_output[i*fd_frame_len : (i+1)*fd_frame_len].imag, exp[i])
+        ref_imag = pvc.double_to_int32(ref_output[i*fd_frame_len : (i+1)*fd_frame_len].imag, exp[i])
         dut_imag = m[1::2]
         diff = np.max(np.abs(ref_imag - dut_imag))
         assert diff < 100, "test_vnr_form_input_frame: imag diff exceeds 100"

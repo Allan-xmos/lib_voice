@@ -4,9 +4,9 @@ import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
 import py_vs_c_utils as pvc
 from run_dut import run_dut
+from test_utils import rand_int32_arr
 
-def test_vnr_priv_mel_compute(tflite_model, vnr_conf, exe_name):
-    np.random.seed(1243)
+def test_vnr_priv_mel_compute(rng, tflite_model, vnr_conf, exe_name):
     vnr_obj = vnr.vnr(vnr_conf, model_file=tflite_model) 
     
     input_data = np.empty(0, dtype=np.int32)
@@ -19,17 +19,13 @@ def test_vnr_priv_mel_compute(tflite_model, vnr_conf, exe_name):
     output_words_per_frame = fp.MEL_FILTERS*2 #float_s32_t y[MEL_FILTERS]
 
     input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))
-    min_int = -2**31
-    max_int = 2**31
+
     test_frames = 2048
     
     ref_output_float = np.empty(0, dtype=np.float64)
     for itt in range(0,test_frames):
-        hr = np.random.randint(5)
-        exp = np.random.randint(-32, high=-8)
-        data = np.random.randint(min_int, high=max_int, size=fd_frame_len*2)
-        data = np.array(data, dtype=np.int32)
-        data = data >> hr
+        exp = rng.integers(-32, -8)
+        data = rand_int32_arr(rng, fd_frame_len*2, 5)
         input_data = np.append(input_data, exp)
         input_data = np.append(input_data, data)
 

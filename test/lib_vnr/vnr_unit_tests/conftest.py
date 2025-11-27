@@ -1,11 +1,12 @@
 import pytest
 from pathlib import Path
+import numpy as np
 
-@pytest.fixture 
+@pytest.fixture(scope="session") 
 def tflite_model():
     return str(Path(__file__).parents[3] / "modules" / "lib_vnr" / "python" / "model" / "model_output" / "trained_model.tflite")
 
-@pytest.fixture 
+@pytest.fixture(scope="session")
 def vnr_conf():
     return Path(__file__).parents[4] / "py_voice" / "py_voice" / "config" / "components" / "vnr_only.json"
 
@@ -16,6 +17,10 @@ def exe_name(request, target):
     if target == "xcore":
         exe_path = exe_path.with_suffix(".xe")
     return exe_path
+
+@pytest.fixture(scope="session")
+def rng():
+    return np.random.default_rng(1243)
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:

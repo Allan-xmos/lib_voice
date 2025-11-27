@@ -2,9 +2,9 @@ import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_vs_c_utils as pvc
 from run_dut import run_dut
+from test_utils import rand_int32_arr
 
-def test_vnr_form_input_frame(exe_name):
-    np.random.seed(1243)
+def test_vnr_form_input_frame(rng, exe_name):
     input_data = np.empty(0, dtype=np.int32)
     input_words_per_frame = fp.FRAME_ADVANCE #No. of int32 values sent to dut as input per frame
 
@@ -12,18 +12,14 @@ def test_vnr_form_input_frame(exe_name):
     output_words_per_frame = fd_frame_len*2 + 1 # No. of int32 output values expected from dut per frame (257 complex data values and 1 exponent)
 
     input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))
-    min_int = -2**31
-    max_int = 2**31
+
     test_frames = 2048
 
     x_data = np.zeros(fp.FRAME_LEN, dtype=np.float64)    
     ref_output = np.empty(0, dtype=np.float64)
     for itt in range(0,test_frames):
         # Generate input data
-        hr = np.random.randint(8)
-        data = np.random.randint(min_int, high=max_int, size=fp.FRAME_ADVANCE)
-        data = np.array(data, dtype=np.int32)
-        data = data >> hr
+        data = rand_int32_arr(rng, fp.FRAME_ADVANCE, 8)
         input_data = np.append(input_data, data)
         new_x_frame = data.astype(np.float64) * (2.0 ** -31) 
 

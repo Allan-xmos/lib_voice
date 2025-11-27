@@ -2,29 +2,26 @@ import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_vs_c_utils as pvc
 from run_dut import run_dut
-import test_utils
+from test_utils import get_model_details, rand_int32_arr, quantise_patch
 
-def test_vnr_priv_feature_quantise(tflite_model, exe_name):
-    np.random.seed(1243)
+def test_vnr_priv_feature_quantise(rng, tflite_model, exe_name):
     input_data = np.empty(0, dtype=np.int32)
     input_words_per_frame = (fp.PATCH_WIDTH * fp.MEL_FILTERS)+1 # 96 mantissas and 1 exponent
     output_words_per_frame = (fp.PATCH_WIDTH * fp.MEL_FILTERS)/4 # 96 int8 values
     input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))
-    model_in_details, _ = test_utils.get_model_details(tflite_model)
+    model_in_details, _ = get_model_details(tflite_model)
 
-    min_int = -2**31
-    max_int = 0 # Normalised features are all negative with a max of 0
     test_frames = 2048
     ref_output = np.empty(0, dtype=np.int8)
     for itt in range(0,test_frames):
         # By setting high=1 we enure no value is greater than 0 since max normalised output is 0
-        data = np.random.randint(min_int, high=max_int+1, size=fp.PATCH_WIDTH * fp.MEL_FILTERS)
-        exp = np.random.randint(-31, high=0) # exp
+        data = rand_int32_arr(rng, fp.PATCH_WIDTH * fp.MEL_FILTERS, max=1)
+        exp = rng.integers(-31, 0) # exp
         input_data = np.append(input_data, exp)
         input_data = np.append(input_data, data)
         # Ref implementation
         this_patch = pvc.int32_to_double(data, exp)
-        quant_patch = test_utils.quantise_patch(this_patch, model_in_details)
+        quant_patch = quantise_patch(this_patch, model_in_details)
         ref_output = np.append(ref_output, quant_patch)
 
     op, _ = run_dut(input_data, "test_vnr_priv_feature_quantise", exe_name)

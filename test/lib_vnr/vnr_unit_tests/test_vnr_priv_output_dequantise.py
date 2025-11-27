@@ -1,28 +1,25 @@
 import numpy as np
 from run_dut import run_dut
-import test_utils
+from test_utils import get_model_details, rand_int32_arr, dequantise_output
 
-def test_vnr_priv_output_dequantise(tflite_model, exe_name):
-    np.random.seed(1243)
+def test_vnr_priv_output_dequantise(rng, tflite_model, exe_name):
 
     input_data = np.empty(0, dtype=np.int32)
     input_words_per_frame = 1 # 1 int32 value out of which only the 1st byte is relevant since inference output is a single byte
     output_words_per_frame = 2 # 1 float_s32_t value
     input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))
-    _, model_out_details = test_utils.get_model_details(tflite_model)
+    _, model_out_details = get_model_details(tflite_model)
 
-    min_int = -128
-    max_int = 127
     test_frames = 2048
     ref_output_double = np.empty(0, dtype=np.float64)
     dut_output_double = np.empty(0, dtype=np.float64)
     for itt in range(0,test_frames):
-        data = np.random.randint(min_int, high=max_int+1, size=1)
+        data = rand_int32_arr(rng, 1, min=np.iinfo(np.int8).min, max=np.iinfo(np.int8).max + 1)
         input_data = np.append(input_data, data)
 
         # Reference dequantise implementation
         data = data.astype(dtype=np.int8)
-        dequant_output = test_utils.dequantise_output(data, model_out_details)
+        dequant_output = dequantise_output(data, model_out_details)
         ref_output_double = np.append(ref_output_double, dequant_output)
 
     op, _ = run_dut(input_data, "test_vnr_priv_output_dequantise", exe_name)

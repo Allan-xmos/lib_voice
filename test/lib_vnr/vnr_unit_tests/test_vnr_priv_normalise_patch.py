@@ -3,9 +3,9 @@ import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
 import py_vs_c_utils as pvc
 from run_dut import run_dut
+from test_utils import rand_int32_arr
 
-def test_vnr_priv_normalise_patch(tflite_model, vnr_conf, exe_name):
-    np.random.seed(1243)
+def test_vnr_priv_normalise_patch(rng, tflite_model, vnr_conf, exe_name):
     vnr_obj = vnr.vnr(vnr_conf, model_file=tflite_model) 
 
     input_data = np.empty(0, dtype=np.int32)
@@ -13,17 +13,13 @@ def test_vnr_priv_normalise_patch(tflite_model, vnr_conf, exe_name):
     output_words_per_frame = (fp.PATCH_WIDTH * fp.MEL_FILTERS)+1
 
     input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))    
-    min_int = -2**31
-    max_int = 2**31
+
     test_frames = 2048
 
     ref_output_float = np.empty(0, dtype=np.float64)
     for itt in range(0,test_frames):
         # Generate input data
-        hr = np.random.randint(8)
-        data = np.random.randint(min_int, high=max_int, size=fp.MEL_FILTERS)
-        data = np.array(data, dtype=np.int32)
-        data = data >> hr
+        data = rand_int32_arr(rng, fp.MEL_FILTERS, 8)
         input_data = np.append(input_data, data)
 
         # Ref form input frame implementation

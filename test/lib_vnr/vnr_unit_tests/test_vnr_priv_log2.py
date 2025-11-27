@@ -3,9 +3,9 @@ import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_vs_c_utils as pvc
 from run_dut import run_dut
+from test_utils import rand_int32_arr
 
-def test_vnr_priv_log2(exe_name):
-    np.random.seed(1243)
+def test_vnr_priv_log2(rng, exe_name):
 
     # No. of int32 values sent to dut as input per frame
     input_words_per_frame = fp.MEL_FILTERS*2 # MEL_FILTERS float_s32_t values 
@@ -15,17 +15,14 @@ def test_vnr_priv_log2(exe_name):
 
     input_data = np.empty(0, dtype=np.int32)
     input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))
-    max_int = 2**31
     test_frames = 2048
 
     ref_output_float = np.empty(0, dtype=np.float64)
     dut_output_float = np.empty(0, dtype=np.float64)
     for itt in range(0,test_frames):
-        hr = np.random.randint(5)
         data = np.zeros(fp.MEL_FILTERS*2, dtype=np.int32)
-        data[0::2] = np.random.randint(1, high=max_int, size=fp.MEL_FILTERS) # mant
-        data[0::2] = data[0::2] >> hr
-        data[1::2] = np.random.randint(-32, high=16) # exp
+        data[0::2] = rand_int32_arr(rng, fp.MEL_FILTERS, 5, min=1)
+        data[1::2] = rand_int32_arr(rng, fp.MEL_FILTERS, min=-32, max=16) # exp
         data = np.array(data, dtype=np.int32)
         input_data = np.append(input_data, data)
 

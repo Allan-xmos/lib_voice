@@ -4,9 +4,9 @@ import py_voice.modules.vnr as vnr
 import matplotlib.pyplot as plt
 import py_vs_c_utils as pvc
 from run_dut import run_dut
+from test_utils import rand_int32_arr
 
-def test_vnr_inference(tflite_model, vnr_conf, exe_name):
-    np.random.seed(1243)
+def test_vnr_inference(rng, tflite_model, vnr_conf, exe_name):
     vnr_obj = vnr.vnr(vnr_conf, model_file=tflite_model)
 
     input_data = np.empty(0, dtype=np.int32)
@@ -14,15 +14,13 @@ def test_vnr_inference(tflite_model, vnr_conf, exe_name):
     output_words_per_frame = 2
     input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))
 
-    min_int = -2**31
-    max_int = 0 # Normalised features are all negative with a max of 0
     test_frames = 4096
     ref_output_double = np.empty(0, dtype=np.float64)
     dut_output_double = np.empty(0, dtype=np.float64)
     for itt in range(0,test_frames):
         # By setting high=1 we enure no value is greater than 0 since max normalised output is 0
-        data = np.random.randint(min_int, high=max_int+1, size=fp.PATCH_WIDTH * fp.MEL_FILTERS)
-        exp = np.random.randint(-31, high=0) # exp
+        data = rand_int32_arr(rng, fp.PATCH_WIDTH * fp.MEL_FILTERS, max=0)
+        exp = rng.integers(-31, 0) # exp
         input_data = np.append(input_data, exp)
         input_data = np.append(input_data, data)
         # Ref implementation

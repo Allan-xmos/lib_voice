@@ -2,15 +2,10 @@
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
-from pathlib import Path
 import py_vs_c_utils as pvc
 from run_dut import run_dut
 
-this_file_dir = Path(__file__).parent
-exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/'
-xe = exe_dir / 'fwk_voice_test_vnr_priv_mel_compute.xe'
-
-def test_vnr_priv_mel_compute(target, tflite_model, vnr_conf):
+def test_vnr_priv_mel_compute(tflite_model, vnr_conf, exe_name):
     np.random.seed(1243)
     vnr_obj = vnr.vnr(vnr_conf, model_file=tflite_model) 
     
@@ -47,10 +42,7 @@ def test_vnr_priv_mel_compute(target, tflite_model, vnr_conf):
 
         ref_output_float = np.append(ref_output_float, out_spect)
 
-    exe_name = xe
-    if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
-        exe_name = xe.with_suffix('')
-    op, _ = run_dut(input_data, "test_vnr_priv_mel_compute", str(exe_name))
+    op, _ = run_dut(input_data, "test_vnr_priv_mel_compute", exe_name)
     mant = op[0::2].astype(np.float64)
     exp = op[1::2]
     dut_output_float = mant * (2.0 ** exp)

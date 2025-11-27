@@ -1,9 +1,8 @@
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set( CONFIG_XSCOPE_PATH ${CMAKE_SOURCE_DIR}/examples/bare-metal/shared_src/etc )
 
-set(COMMON_SOURCES_C ../../lib_vnr/vnr_unit_tests/feature_extraction/src/main.c)
-set(COMMON_SOURCES_XC ../../lib_vnr/vnr_unit_tests/feature_extraction/src/main.xc)
+set(COMMON_SOURCES_C ../../lib_vnr/vnr_unit_tests/src/main.c)
+set(COMMON_SOURCES_XC ../../lib_vnr/vnr_unit_tests/src/main.xc)
 
 file(GLOB TEST_SOURCES src/test_*.c)
 #message(STATUS "${TEST_SOURCES}")

@@ -3,15 +3,10 @@ import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
 import test_utils
 import matplotlib.pyplot as plt
-from pathlib import Path
 import py_vs_c_utils as pvc
 from run_dut import run_dut
 
-this_file_dir = Path(__file__).parent
-exe_dir = this_file_dir / '../../../../build/test/lib_vnr/vnr_unit_tests/feature_extraction/bin/'
-xe = exe_dir / 'fwk_voice_test_vnr_extract_features.xe'
-
-def test_vnr_extract_features(target, tflite_model, vnr_conf, verbose=False):
+def test_vnr_extract_features(tflite_model, vnr_conf, exe_name, verbose=False):
     np.random.seed(1243)
     vnr_obj = vnr.vnr(vnr_conf, model_file=tflite_model) 
 
@@ -51,10 +46,8 @@ def test_vnr_extract_features(target, tflite_model, vnr_conf, verbose=False):
 
     model_in_details, _ = test_utils.get_model_details(tflite_model)
     ref_quantised_output = test_utils.quantise_patch(ref_normalised_output, model_in_details)
-    exe_name = xe
-    if target == "x86":  # Remove the .xe extension from the xe name to get the x86 executable
-        exe_name = xe.with_suffix('')
-    op, _ = run_dut(input_data, "test_vnr_extract_features", str(exe_name))
+
+    op, _ = run_dut(input_data, "test_vnr_extract_features", exe_name)
     # Deinterleave dut output into normalised and quantised patches
     sections = []
     ii = 0

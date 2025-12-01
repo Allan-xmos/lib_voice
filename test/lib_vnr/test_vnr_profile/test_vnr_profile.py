@@ -46,11 +46,11 @@ def run_with_xscope_fileio(input_file, run_x86, parse_profile=False):
 
     input_data, _ = sf.read(input_file, dtype="int32")
 
-    assert len(input_data.shape) == 1, "Input data can be signle channel only"
+    assert len(input_data.shape) == 1, "Input data can be single channel only"
 
     local_exe = exe
     if not run_x86: local_exe = local_exe.with_suffix(".xe")
-    output_data, stdout = run_dut(input_data, "test_vnr_profile", local_exe)
+    output_data, stdout = run_dut(input_data, local_exe)
 
     if not run_x86 and parse_profile:
         src_folder = cwd / 'src'

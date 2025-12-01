@@ -66,7 +66,7 @@ def test_calc_vnr_pred(target, show_plot=False):
     exe_name = xe
     if(target == "x86"): #Remove the .xe extension from the xe name to get the x86 executable
         exe_name = os.path.splitext(xe)[0]
-    op, _ = run_dut(input_data, "test_calc_vnr_pred", exe_name)
+    op, _ = run_dut(input_data, exe_name)
     # Parse Output from DUT. Inteleaved: input_pred_mant, input_pred_exp, output_pred_mant, output_pred_exp, input_pred_mant,..
     mants = op[0::2]
     input_pred_mants = mants[0::2]

@@ -1,7 +1,6 @@
 # Copyright 2025 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-import shutil
 import xscope_fileio
 import xtagctl
 import numpy as np
@@ -10,12 +9,13 @@ import tempfile
 import re
 from pathlib import Path
 
-def run_dut(input_data, test_name, xe):
+def run_dut(input_data, xe):
     target_stdout = []
     output_data = np.empty(0, dtype=np.int32)
-    try:
-        xe_path = Path(xe) if not isinstance(xe, Path) else xe
-        tmp_folder = Path(tempfile.mkdtemp(dir=".", suffix=Path(test_name).name))
+    xe_path = Path(xe) if not isinstance(xe, Path) else xe
+
+    with tempfile.TemporaryDirectory(dir=".", suffix=xe_path.stem) as tmp_folder:
+        tmp_folder = Path(tmp_folder)
 
         input_file = tmp_folder / "input.bin"
         input_data.astype(np.int32).tofile(input_file)
@@ -39,7 +39,5 @@ def run_dut(input_data, test_name, xe):
 
         output_file = tmp_folder / "output.bin"
         output_data = np.fromfile(output_file, dtype=np.int32)
-    finally:
-        shutil.rmtree(tmp_folder)
 
     return output_data, target_stdout

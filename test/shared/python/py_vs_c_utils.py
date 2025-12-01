@@ -39,6 +39,35 @@ def int32_to_double(x, exp):
     y = x.astype(np.float64) * (2.0 ** exp)
     return y
 
+# Convert the flat array, representing float_s32_t
+# of form: mantissa (i32), exponent (i32)
+# to the np.float64 array
+def float_s32_arr_to_double(flat_data):
+    mant = flat_data[0::2].astype(np.float64)
+    exp = flat_data[1::2]
+    ref = mant * (2.0 ** exp)
+    return ref
+
+# Convert the flat array, representing bfp_s32_t
+# of form: exponent (i32), data array (i32)
+# to the np.float64 array
+def bfp_s32_arr_to_double(flat_data, bfp_len, num_frames):
+    # Do cumulative sum to get indexes for exponents and data array starts
+    sections = np.cumsum(np.tile([1, bfp_len], num_frames))[:-1].astype(np.int32)
+    split = np.split(flat_data, sections)
+
+    exps = split[0::2]
+    manths = split[1::2]
+
+    assert len(exps) == len(manths) == num_frames
+
+    out = np.zeros((num_frames * bfp_len), dtype=np.float64)
+    for i in range(num_frames):
+        indx = bfp_len * i
+        out[indx : indx + bfp_len] = int32_to_double(manths[i], exps[i])
+
+    return out
+
 def get_closeness_metric(ref, dut):
     data = np.zeros((2, len(ref)))
     data[0,:] = ref

@@ -1,36 +1,29 @@
 import numpy as np
-from run_dut import run_dut
-from test_utils import get_model_details, rand_int32_arr, dequantise_output
+from test_utils import rand_int32_arr
+import py_vs_c_utils as pvc
 
-def test_vnr_priv_output_dequantise(rng, tflite_model, exe_name):
+def test_vnr_priv_output_dequantise(rng, dequantise, dut_runner):
 
-    input_data = np.empty(0, dtype=np.int32)
     input_words_per_frame = 1 # 1 int32 value out of which only the 1st byte is relevant since inference output is a single byte
     output_words_per_frame = 2 # 1 float_s32_t value
-    input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))
-    _, model_out_details = get_model_details(tflite_model)
+    input_data = np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32)
 
     test_frames = 2048
     ref_output_double = np.empty(0, dtype=np.float64)
-    dut_output_double = np.empty(0, dtype=np.float64)
-    for itt in range(0,test_frames):
+
+    for _ in range(test_frames):
         data = rand_int32_arr(rng, 1, min=np.iinfo(np.int8).min, max=np.iinfo(np.int8).max + 1)
         input_data = np.append(input_data, data)
 
         # Reference dequantise implementation
         data = data.astype(dtype=np.int8)
-        dequant_output = dequantise_output(data, model_out_details)
+        dequant_output = dequantise(data)
         ref_output_double = np.append(ref_output_double, dequant_output)
 
-    op, _ = run_dut(input_data, "test_vnr_priv_output_dequantise", exe_name)
-    dut_mant = op[0::2]
-    dut_exp = op[1::2]
-    d = dut_mant.astype(np.float64) * (2.0 ** dut_exp)
-    dut_output_double = np.append(dut_output_double, d)
-    for fr in range(0,test_frames):
-        dut = dut_mant[fr]
-        ref = int(ref_output_double[fr] * (2.0 ** -dut_exp[fr]))
-        diff = np.abs(ref-dut)
-        assert(diff < 1), "ERROR: test_vnr_priv_output_dequantise frame {fr}. diff exceeds threshold"
-    
-    print("max_diff = ",np.max(np.abs(ref_output_double - dut_output_double)))
+    op = dut_runner(input_data)
+
+    dut_out = pvc.float_s32_arr_to_double(op)
+    np.testing.assert_allclose(dut_out, ref_output_double, rtol=0, atol=0)
+
+    max_diff = np.max(np.abs(dut_out - ref_output_double))
+    print("max_diff = ", max_diff)

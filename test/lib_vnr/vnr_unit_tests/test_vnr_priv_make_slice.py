@@ -1,57 +1,43 @@
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
-import py_voice.modules.vnr as vnr
-import matplotlib.pyplot as plt
 import py_vs_c_utils as pvc
-from run_dut import run_dut
-from test_utils import rand_int32_arr
+from test_utils import rand_int32_arr, stft
 
-def test_vnr_priv_make_slice(rng, tflite_model, vnr_conf, exe_name):
-    vnr_obj = vnr.vnr(vnr_conf, model_file=tflite_model) 
+def test_vnr_priv_make_slice(rng, vnr_obj, dut_runner):
 
-    input_data = np.empty(0, dtype=np.int32)
     input_words_per_frame = fp.FRAME_ADVANCE + 1 #No. of int32 values sent to dut as input per frame
     output_words_per_frame = fp.MEL_FILTERS # MEL_FILTERS uq8_24 values. Exponent fixed to -24
 
-    input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))    
+    input_data = np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32)    
 
     test_frames = 2048
 
     x_data = np.zeros(fp.FRAME_LEN, dtype=np.float64)    
     ref_output_float = np.empty(0, dtype=np.float64)
-    dut_output_float = np.empty(0, dtype=np.float64)
-    for itt in range(0,test_frames):
+
+    for _ in range(test_frames):
         enable_highpass = rng.integers(2)
         # Generate input data
         data = rand_int32_arr(rng, fp.FRAME_ADVANCE, 8)
         input_data = np.append(input_data, data)
-        input_data = np.append(input_data, enable_highpass);
+        input_data = np.append(input_data, enable_highpass)
 
         # Ref form input frame implementation
-        new_x_frame = data.astype(np.float64) * (2.0 ** -31) 
-        x_data = np.roll(x_data, -fp.FRAME_ADVANCE, axis = 0)
-        x_data[fp.FRAME_LEN - fp.FRAME_ADVANCE:] = new_x_frame
-        X_spect = np.fft.rfft(x_data, fp.NFFT)
+        new_x_frame = pvc.int32_to_double(data, -31)
+        X_spect, x_data = stft(x_data, new_x_frame, fp.FRAME_LEN, fp.FRAME_ADVANCE, fp.NFFT)
         new_slice = vnr_obj.make_slice(X_spect, enable_highpass)
 
         ref_output_float = np.append(ref_output_float, new_slice)
         
-    op, _ = run_dut(input_data, "test_vnr_priv_make_slice", exe_name)
+    op = dut_runner(input_data)
     dut_mant = op.astype(np.float64)
     dut_exp = -24 # dut output is always 8.24
-    d = pvc.int32_to_double(dut_mant, dut_exp)
-    dut_output_float = np.append(dut_output_float, d)
-    for fr in range(0, test_frames):
-        dut = dut_output_float[fr*fp.MEL_FILTERS : (fr+1)*fp.MEL_FILTERS]
-        ref = ref_output_float[fr*fp.MEL_FILTERS : (fr+1)*fp.MEL_FILTERS]
-        percent_diff = np.abs((dut_output_float - ref_output_float)/ref_output_float)
-        assert(np.allclose(dut, ref, rtol=0.05)), "ERROR: test_vnr_priv_make_slice relative diff exceeds rtol=0.05"
-        assert(np.max(np.abs(dut-ref)) < 0.005), f"ERROR: test_vnr_priv_make_slice frame {fr}. make_slice diff exceeds 0.005"
+
+    dut_output_float = pvc.int32_to_double(dut_mant, dut_exp)
+
+    np.testing.assert_allclose(dut_output_float, ref_output_float, rtol=0, atol=0.005)
+    np.testing.assert_allclose(dut_output_float, ref_output_float, rtol=0.05, atol=0)
 
     percent_diff = np.abs((dut_output_float - ref_output_float)/ref_output_float)
     print(f"max make_slice output diff = {np.max(np.abs(dut_output_float - ref_output_float))}")
-    print(f"max diff percent = {np.max(percent_diff)*100}%", " max int diff = ", "all_close = ",np.allclose(dut_output_float, ref_output_float, rtol=0.05))
-    plt.plot(ref_output_float)
-    plt.plot(dut_output_float)
-    #plt.show()
-
+    print(f"max diff percent = {np.max(percent_diff)*100}%")

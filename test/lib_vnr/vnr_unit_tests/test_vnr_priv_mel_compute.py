@@ -1,15 +1,10 @@
 
 import numpy as np
 import py_voice.modules.vnr.frame_preprocessor as fp
-import py_voice.modules.vnr as vnr
 import py_vs_c_utils as pvc
-from run_dut import run_dut
 from test_utils import rand_int32_arr
 
-def test_vnr_priv_mel_compute(rng, tflite_model, vnr_conf, exe_name):
-    vnr_obj = vnr.vnr(vnr_conf, model_file=tflite_model) 
-    
-    input_data = np.empty(0, dtype=np.int32)
+def test_vnr_priv_mel_compute(rng, vnr_obj, dut_runner):
 
     fd_frame_len = int(fp.NFFT/2 + 1)
     # No. of int32 values sent to dut as input per frame
@@ -18,12 +13,12 @@ def test_vnr_priv_mel_compute(rng, tflite_model, vnr_conf, exe_name):
     # No. of int32 output values expected from dut per frame (257 complex data values and 1 exponent)
     output_words_per_frame = fp.MEL_FILTERS*2 #float_s32_t y[MEL_FILTERS]
 
-    input_data = np.append(input_data, np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32))
+    input_data = np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32)
 
     test_frames = 2048
     
     ref_output_float = np.empty(0, dtype=np.float64)
-    for itt in range(0,test_frames):
+    for _ in range(test_frames):
         exp = rng.integers(-32, -8)
         data = rand_int32_arr(rng, fd_frame_len*2, 5)
         input_data = np.append(input_data, exp)
@@ -38,19 +33,11 @@ def test_vnr_priv_mel_compute(rng, tflite_model, vnr_conf, exe_name):
 
         ref_output_float = np.append(ref_output_float, out_spect)
 
-    op, _ = run_dut(input_data, "test_vnr_priv_mel_compute", exe_name)
-    mant = op[0::2].astype(np.float64)
-    exp = op[1::2]
-    dut_output_float = mant * (2.0 ** exp)
-    dut_output_int = mant
-    ref_output_int = (ref_output_float * (2.0 ** -exp)).astype(np.int32)
-    for fr in range(0, test_frames):
-        ref = ref_output_int[fr*fp.MEL_FILTERS : (fr+1)*fp.MEL_FILTERS] 
-        dut = dut_output_int[fr*fp.MEL_FILTERS : (fr+1)*fp.MEL_FILTERS]
-        diff = np.max(np.abs(ref - dut))
-        assert(diff<16), f"ERROR: test_vnr_priv_mel_compute diff {diff} exceeds threshold"
-    
-    assert(np.allclose(dut_output_float, ref_output_float))
-    print(f"allclose = {np.allclose(dut_output_float, ref_output_float)}")
-    print(f"Max diff = {np.max(np.abs(dut_output_int - ref_output_int))}")
+    op = dut_runner(input_data)
+
+    dut_output_float = pvc.float_s32_arr_to_double(op)
+
+    np.testing.assert_allclose(dut_output_float, ref_output_float, rtol=1e-8, atol=0)
+
+    print(f"Max diff = {np.max(np.abs(dut_output_float - ref_output_float))}")
 

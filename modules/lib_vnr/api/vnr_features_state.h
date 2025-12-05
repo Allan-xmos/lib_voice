@@ -68,4 +68,15 @@ typedef struct {
     int32_t DWORD_ALIGNED feature_buffers[VNR_PATCH_WIDTH][VNR_MEL_FILTERS];
     vnr_feature_config_t config;
 }vnr_feature_state_t;
+
+/**
+ * @brief State structure used for the VNR
+ *
+ * @ingroup vnr_features_state
+ */
+typedef struct {
+    vnr_input_state_t input_state;
+    vnr_feature_state_t feature_state;
+} vnr_state_t;
+
 #endif

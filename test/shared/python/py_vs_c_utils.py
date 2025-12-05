@@ -2,8 +2,8 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import numpy as np
-import scipy.io.wavfile
-import audio_wav_utils as awu
+import soundfile as sf
+from pathlib import Path
 import sys
 
 # Turn a float32 from C into an np float scalar
@@ -30,14 +30,68 @@ def float_to_uint8(array_float):
     array_uint8 = np.clip((np.array(array_float) * (2**8)), np.iinfo(np.uint8).min, np.iinfo(np.uint8).max).astype(np.uint8)
     return array_uint8
 
+def double_to_int32(x, exp):
+    y = x.astype(np.float64) * (2.0 ** -exp)
+    y = y.astype(np.int32)
+    return y
+
+def int32_to_double(x, exp):
+    y = x.astype(np.float64) * (2.0 ** exp)
+    return y
+
+# Convert the flat array, representing float_s32_t
+# of form: mantissa (i32), exponent (i32)
+# to the np.float64 array
+def float_s32_arr_to_double(flat_data):
+    mant = flat_data[0::2].astype(np.float64)
+    exp = flat_data[1::2]
+    ref = mant * (2.0 ** exp)
+    return ref
+
+# Convert the flat array, representing bfp_s32_t
+# of form: exponent (i32), data array (i32)
+# to the np.float64 array
+def bfp_s32_arr_to_double(flat_data, bfp_len, num_frames):
+    # Do cumulative sum to get indexes for exponents and data array starts
+    sections = np.cumsum(np.tile([1, bfp_len], num_frames))[:-1].astype(np.int32)
+    split = np.split(flat_data, sections)
+
+    exps = split[0::2]
+    manths = split[1::2]
+
+    assert len(exps) == len(manths) == num_frames
+
+    out = np.zeros((num_frames * bfp_len), dtype=np.float64)
+    for i in range(num_frames):
+        indx = bfp_len * i
+        out[indx : indx + bfp_len] = int32_to_double(manths[i], exps[i])
+
+    return out
+
+def get_closeness_metric(ref, dut):
+    data = np.zeros((2, len(ref)))
+    data[0,:] = ref
+    data[1,:] = dut
+    arith_closeness, geo_closeness, _, _ = pcm_closeness_metric(data, verbose=False)
+    return arith_closeness, geo_closeness
 
 # compare a two channel wav file and quantify how close they are
 # Any file that is 1 sample out in delay will show low results of 0.20 or worse
 # Arithmetic closeness is more sensitive than geo_closeness
 # Anything in the 0.90 region or more is extremely close indeed
 def pcm_closeness_metric(input_file, verbose=True):
-    input_rate, input_wav_file = scipy.io.wavfile.read(input_file, 'r')
-    input_wav_data, input_channel_count, file_length = awu.parse_audio(input_wav_file)
+    if isinstance(input_file, str) or isinstance(input_file, Path):
+        input_wav_data, _ = sf.read(input_file, always_2d=True)
+        input_wav_data = input_wav_data.T
+        input_channel_count = input_wav_data.shape[0]
+        file_length = input_wav_data.shape[1]
+    elif isinstance(input_file, np.ndarray):
+        input_wav_data = input_file
+        input_channel_count = input_wav_data.shape[0]
+        file_length = input_wav_data.shape[1]
+    else:
+        assert 0, "Not an expected input format"
+
     assert input_channel_count == 2, f"This function works on a 2 channel file only, you supplied {input_channel_count}.."
 
     dtype = type(input_wav_data[0][0])

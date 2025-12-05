@@ -167,8 +167,8 @@ pipeline {
                     sh "python build_ic_frame_proc.py"
                   }
                   // We do this again on the NUCs for verification later, but this just checks we have no build error
-                  dir("test/lib_vnr/py_c_feature_compare") {
-                    sh "python build_vnr_feature_extraction.py"
+                  dir("test/lib_vnr/test_vnr_cffi") {
+                    sh "python build_vnr_cffi.py"
                   }
                   dir("test/stage_b") {
                     sh "python build_c_code.py"
@@ -228,11 +228,6 @@ pipeline {
                     dir("examples/bare-metal/agc") {
                       sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/agc/bin/fwk_voice_example_bare_metal_agc.xe --input ../shared_src/test_streams/agc_example_input.wav"
                     }
-                    dir("examples/bare-metal/vnr") {
-                      sh "python host_app.py test_stream_1.wav vnr_out2.bin --run-with-xscope-fileio" // With xscope host in lib xscope_fileio
-                      sh "python host_app.py test_stream_1.wav vnr_out1.bin" // With xscope host in python
-                      sh "diff vnr_out1.bin vnr_out2.bin"
-                    }
                   }
                 }
               }
@@ -247,16 +242,16 @@ pipeline {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
                     withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                      dir("test_wav_vnr") {
-                        sh "pytest -n 1 --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
                       dir("vnr_unit_tests") {
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
-                      dir("py_c_feature_compare") {
-                        sh "python build_vnr_feature_extraction.py"
+                      dir("test_vnr_cffi") {
+                        sh "python build_vnr_cffi.py"
+                        sh "pytest -n 4 --junitxml=pytest_result.xml"
+                        junit "pytest_result.xml"
+                      }
+                      dir("test_vnr_profile") {
                         sh "pytest -s --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
@@ -530,10 +525,8 @@ pipeline {
           // NS artefacts
           archiveArtifacts artifacts: "${REPO}/test/lib_ns/test_ns_profile/ns_prof.log", fingerprint: true
           // VNR artifacts
-          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_wav_vnr/*.png", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_wav_vnr/*.csv", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/examples/bare-metal/vnr/*.png", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/examples/bare-metal/vnr/vnr_prof.log", fingerprint: true
+          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_vnr_profile/*.png", fingerprint: true
+          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_vnr_profile/vnr_prof.log", fingerprint: true
           // Pipelines tests
           archiveArtifacts artifacts: "${REPO}/test/pipeline/**/results_*.csv", fingerprint: true
           archiveArtifacts artifacts: "${REPO}/test/pipeline/**/results_*.png", fingerprint: true, allowEmptyArchive: true

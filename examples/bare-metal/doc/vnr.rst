@@ -1,1 +1,0 @@
-.. include::  ../vnr/README.rst

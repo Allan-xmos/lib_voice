@@ -25,6 +25,7 @@ filesystem_support/target-xn*
 **/.python-version
 **/*.pyc
 **/__pycache__/*
+**/*egg-info
 
 # venv
 .venv

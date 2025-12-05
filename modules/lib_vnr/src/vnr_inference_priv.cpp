@@ -4,9 +4,14 @@
 #include <string.h>
 #include "vnr_defines.h"
 #include "vnr_inference_priv.h"
+#include "vnr_features_priv.h"
 #include "xmath/xmath.h"
 
 #define Q24_EXP (-24)
+
+#if Q24_EXP != VNR_LOG2_OUTPUT_EXP
+#error "The quantisation exponents don't match"
+#endif
 
 void vnr_priv_feature_quantise(int8_t *quantised_patch, bfp_s32_t *normalised_patch, const vnr_model_quant_spec_t *quant_spec) {
     // this_patch = this_patch / input_scale + input_zero_point        

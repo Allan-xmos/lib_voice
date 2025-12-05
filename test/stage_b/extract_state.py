@@ -69,7 +69,7 @@ def extract_pre_defs():
                 end_of_file = True
                 break 
             if line.startswith("#"):
-                line = extract_section(line, pp, ["ic_state.h", "vnr_features_state.h", "vnr_inference_state.h"])
+                line = extract_section(line, pp, ["ic_state.h", "vnr_state.h"])
                 continue
             line = pp.readline()
 

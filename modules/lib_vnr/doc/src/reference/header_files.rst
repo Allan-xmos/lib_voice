@@ -25,12 +25,12 @@
 .. doxygenpage:: page_vnr_defines_h
   
 
-.. _vnr_features_state_h:
+.. _vnr_state_h:
 
-`vnr_features_state.h`
+`vnr_state.h`
 ----------------------
 
-.. doxygenpage:: page_vnr_features_state_h
+.. doxygenpage:: page_vnr_state_h
   
 
 

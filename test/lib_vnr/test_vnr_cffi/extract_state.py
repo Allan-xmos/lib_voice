@@ -15,9 +15,7 @@ vnr_state = []
 
 def extract_section_vnr(line, pp):
     log_state = False
-    if "vnr_features_state.h" in line:
-        log_state = True
-    elif "vnr_inference_state.h" in line:
+    if "vnr_state.h" in line:
         log_state = True
 
     while True:

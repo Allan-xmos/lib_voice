@@ -15,9 +15,8 @@ lib_vnr_src_dir = "../../../modules/lib_vnr/src/"
 ic_state = []
 
 def extract_section(line, pp):
-    #log_ic_state = True if ("ic_state.h" or "vnr_features_state.h" or "vnr_inference_state.h") in line else False
     log_ic_state = False
-    if  ("ic_state.h" in line) or ("vnr_features_state.h" in line) or ("vnr_inference_state.h" in line):
+    if  ("ic_state.h" in line) or ("vnr_state.h" in line):
         log_ic_state = True
     
     if log_ic_state:

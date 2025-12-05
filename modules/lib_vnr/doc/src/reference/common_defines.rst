@@ -1,7 +1,7 @@
 .. _vnr_common_defines:
 
-`lib_vnr` #defines common to feature extraction and inference
-=============================================================
+`lib_vnr` Defines
+=================
 
 .. doxygengroup:: vnr_defines
     :members:

@@ -1,7 +1,7 @@
 #ifndef __VNR_FEATURES_API_H__
 #define __VNR_FEATURES_API_H__
 
-#include "vnr_features_state.h"
+#include "vnr_state.h"
 
 /**
  * @page page_vnr_features_api_h vnr_features_api.h

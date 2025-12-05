@@ -19,9 +19,7 @@ INPUT += ../modules/lib_adec/api
 INPUT += ../modules/lib_ic/api
 
 # VNR module
-INPUT += ../modules/lib_vnr/api/common
-INPUT += ../modules/lib_vnr/api/features
-INPUT += ../modules/lib_vnr/api/inference
+INPUT += ../modules/lib_vnr/api
 
 PREDEFINED             = C_API= EXTERN_C= DWORD_ALIGNED=
 

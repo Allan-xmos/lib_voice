@@ -24,7 +24,7 @@ There's no support for providing a new model to the inference engine at run time
 Basic Usage
 ***********
 
-To use the high-level API, the user would need to intialise the VNR state by calling ``vnr_state_init()``.
+To use the high-level API, the user would need to initialise the VNR state by calling ``vnr_state_init()``.
 Then for each frame, ``vnr_process_frame()`` will update VNR's internal state and produce an output prediction.
 
 Advanced Usage

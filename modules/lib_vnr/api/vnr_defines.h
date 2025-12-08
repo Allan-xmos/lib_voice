@@ -16,7 +16,7 @@
 /** @brief Time domain samples block length used internally in VNR DFT computation. 
  * NOT USER MODIFIABLE.
  *
- * @ingroup vnr_defines   
+ * @ingroup vnr_defines
  */
 #define VNR_PROC_FRAME_LENGTH (512)
 

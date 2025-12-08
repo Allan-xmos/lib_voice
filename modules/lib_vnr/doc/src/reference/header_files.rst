@@ -5,6 +5,11 @@
 
 .. _vnr_api_h:
 
+`vnr_api.h`
+-----------
+
+.. doxygenpage:: page_vnr_api_h
+
 `vnr_features_api.h`
 --------------------
 

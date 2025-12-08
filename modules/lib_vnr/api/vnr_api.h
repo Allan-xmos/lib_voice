@@ -30,14 +30,14 @@
 void vnr_state_init(vnr_state_t *vnr);
 
 /**
- * @brief Calculate the Voice-to-Noise Ratio estimation from a frame of input data
+ * @brief Calculate the Voice to Noise Ratio estimation from a frame of input data
  *
  * This function takes a frame of new samples, converts them to features and passes those to the inference engine. 
  * The VNR output is a single value ranging between 0 and 1 returned in float_s32_t format, with 0 being the lowest SNR
  * and 1 being the strongest possible SNR in speech compared to noise. 
  *
  * @param[inout] vnr     VNR state structure
- * @param[out] output    Pointer to return the resulting ration
+ * @param[out] output    Pointer to return the resulting ratio
  * @param[in] input      Array of frame data on which to perform the VNR
  * 
  * @ingroup vnr_api

@@ -27,10 +27,9 @@ To run the example, run the following from the root of the repository:
 Output
 ******
 
-Upon execution, the exapmle will use the pseudo-random generator to get an input data.
+Upon execution, the example will use the pseudo-random generator to get an input data.
 This data will be run through the VNR and the score will be printed in the terminal.
 It outputs a number between 0 and 1, 1 being the strongest voice with respect to noise
 and 0 being the lowest voice compared to noise ratio.
 The pseudo-random data is not representative of a real signal,
 so the VNR scores in this example tend to be zero.
-It outputs a number between 0 and 1, 1 being the strongest voice with respect to noise and 0 being the lowest voice compared to noise ratio.

@@ -20,7 +20,7 @@ print(hydra_audio_path)
 streams = (hydra_audio_path / "test_wav_vnr_streams").glob("*wav")
 streams = [str(s) for s in streams]
 
-vnr_model_path = str(Path(__file__).parents[3] / "modules" / "lib_vnr" / "python" / "model" / "model_output" / "trained_model.tflite")
+vnr_model_path = str(Path(__file__).parents[3] / "modules" / "lib_vnr" / "python" / "model" / "trained_model.tflite")
 vnr_conf_path = Path(__file__).parents[4] / "py_voice" / "py_voice" / "config" / "components" / "vnr_only.json"
 
 def bfp_s32_to_float(bfp_struct, data):

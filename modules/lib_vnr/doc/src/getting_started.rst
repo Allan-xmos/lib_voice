@@ -50,7 +50,7 @@ Integrating a TensorFlow Lite model into the VNR module
 
 To integrate the new TensorFlow Lite model into the VNR module:
 
-#. Put an unoptimised model into ``fwk_voice/modules/lib_vnr/python/model/model_output/trained_model.tflite``
+#. Put an unoptimised model into ``fwk_voice/modules/lib_vnr/python/model/trained_model.tflite``
 
 #. Rerun the build tool of our choice (``make`` or ``ninja``, for example)
 

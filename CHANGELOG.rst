@@ -1,6 +1,11 @@
 XMOS Voice Framework Change Log
 ===============================
 
+UNRELEASED
+----------
+
+  * CHANGED: Merged `fwk_voice::vnr::features` and `fwk_voice::vnr::inference` cmake targets into `fwk_voice::vnr`
+
 0.9.0
 -----
   * CHANGED: Updated AGC and Loss Control algorithms

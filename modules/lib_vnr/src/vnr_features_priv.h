@@ -1,7 +1,7 @@
 #ifndef __VNR_PRIV_H__
 #define __VNR_PRIV_H__
 
-#include "vnr_features_state.h"
+#include "vnr_state.h"
 
 /** Exponent of VNR input data. 
  * NOT USER MODIFIABLE.

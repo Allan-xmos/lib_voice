@@ -33,7 +33,7 @@ endif()
 
 ## Export model
 set(MODEL_IN_PATH ${CMAKE_CURRENT_LIST_DIR}/python/model/model_output/trained_model.tflite)
-set(MODEL_OUT_PATH ${CMAKE_CURRENT_LIST_DIR}/src/inference/model/trained_model_xcore.tflite)
+set(MODEL_OUT_PATH ${CMAKE_CURRENT_LIST_DIR}/src/model/trained_model_xcore.tflite)
 set(MODEL_N_CORES 1)
 set(MODEL_TH 0.50)
 
@@ -44,46 +44,38 @@ add_custom_command(
 )
 
 ## VNR Inference
-add_library(fwk_voice_module_lib_vnr_inference STATIC)
+add_library(fwk_voice_module_lib_vnr STATIC)
 
-file(GLOB_RECURSE VNR_INFERENCE_SOURCES src/inference/*.cpp)
 
-target_sources(fwk_voice_module_lib_vnr_inference PRIVATE ${MODEL_OUT_PATH}.cpp ${VNR_INFERENCE_SOURCES})
+file(GLOB_RECURSE VNR_C_SOURCES src/*.c)
+file(GLOB_RECURSE VNR_CXX_SOURCES src/*.cpp)
 
-target_include_directories(fwk_voice_module_lib_vnr_inference PUBLIC api/common api/inference)
+target_sources(fwk_voice_module_lib_vnr 
+    PRIVATE 
+        ${MODEL_OUT_PATH}.cpp 
+        ${VNR_CXX_SOURCES}
+        ${VNR_C_SOURCES}
+)
 
-target_link_libraries(fwk_voice_module_lib_vnr_inference
+target_include_directories(fwk_voice_module_lib_vnr PUBLIC api)
+
+target_link_libraries(fwk_voice_module_lib_vnr
     PUBLIC
         lib_xcore_math
 )
 
-target_link_libraries(fwk_voice_module_lib_vnr_inference
+target_link_libraries(fwk_voice_module_lib_vnr
     PRIVATE
 	    tflite_micro
 )
 
-add_library(fwk_voice::vnr::inference ALIAS fwk_voice_module_lib_vnr_inference)
+target_compile_definitions(fwk_voice_module_lib_vnr PRIVATE HEADROOM_CHECK=0)
 
-## VNR Feature extraction
-add_library(fwk_voice_module_lib_vnr_features STATIC)
 
-file(GLOB_RECURSE VNR_FEATURES_SOURCES src/features/*.c)
-
-target_sources(fwk_voice_module_lib_vnr_features PRIVATE ${VNR_FEATURES_SOURCES})
-
-target_include_directories(fwk_voice_module_lib_vnr_features PUBLIC api/features api/common)
-
-target_compile_definitions(fwk_voice_module_lib_vnr_features PRIVATE HEADROOM_CHECK=0)
-
-target_compile_options(fwk_voice_module_lib_vnr_features
+target_compile_options(fwk_voice_module_lib_vnr
     PRIVATE
         -Os
         -g
 )
 
-target_link_libraries(fwk_voice_module_lib_vnr_features
-    PUBLIC
-        lib_xcore_math
-)
-
-add_library(fwk_voice::vnr::features ALIAS fwk_voice_module_lib_vnr_features)
+add_library(fwk_voice::vnr ALIAS fwk_voice_module_lib_vnr)

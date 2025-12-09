@@ -8,18 +8,14 @@
 import subprocess
 
 xcore_math_types_api_dir = "../../../build/fwk_voice_deps/lib_xcore_math/lib_xcore_math/api"
-lib_vnr_api_dir = "../../../modules/lib_vnr/api/features/"
-lib_vnr_defines_dir = "../../../modules/lib_vnr/api/common/"
-lib_vnr_inference_api_dir = "../../../modules/lib_vnr/api/inference/"
-lib_vnr_inference_model_dir = "../../../modules/lib_vnr/src/inference/model"
-lib_vnr_inference_src_dir = "../../../modules/lib_vnr/src/inference/"
+lib_vnr_api_dir = "../../../modules/lib_vnr/api/"
+lib_vnr_model_dir = "../../../modules/lib_vnr/src/model"
+lib_vnr_src_dir = "../../../modules/lib_vnr/src/"
 vnr_state = []
 
 def extract_section_vnr(line, pp):
     log_state = False
-    if "vnr_features_state.h" in line:
-        log_state = True
-    elif "vnr_inference_state.h" in line:
+    if "vnr_state.h" in line:
         log_state = True
 
     while True:
@@ -55,7 +51,7 @@ def extract_pre_defs_vnr():
     extract_xcore_math_vnr()
 
     #Grab just vnr_feature_state related lines from the C pre-processed 
-    subprocess.call(f"gcc -E vnr_test.c -o vnr_test.i -I {lib_vnr_api_dir} -I {lib_vnr_defines_dir} -I {lib_vnr_inference_api_dir} -I {lib_vnr_inference_model_dir} -I {lib_vnr_inference_src_dir} -I {xcore_math_types_api_dir}".split())
+    subprocess.call(f"gcc -E vnr_test.c -o vnr_test.i -I {lib_vnr_api_dir} -I {lib_vnr_model_dir} -I {lib_vnr_src_dir} -I {xcore_math_types_api_dir}".split())
 
     with open("vnr_test.i") as pp:
         end_of_file = False
@@ -73,7 +69,7 @@ def extract_pre_defs_vnr():
     return "".join(vnr_state)
  
 if __name__ == "__main__":
-    extract_pre_defs()
+    extract_pre_defs_vnr()
     for line in vnr_state:
         print(line, end="")
         

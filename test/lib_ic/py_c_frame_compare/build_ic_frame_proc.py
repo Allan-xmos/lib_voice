@@ -29,12 +29,9 @@ FLAGS = [
 INCLUDE_DIRS=[
     f"{MODULE_ROOT}/lib_ic/api/",
     f"{MODULE_ROOT}/lib_ic/src/",
-    f"{MODULE_ROOT}/lib_vnr/api/common",
-    f"{MODULE_ROOT}/lib_vnr/api/features",
-    f"{MODULE_ROOT}/lib_vnr/src/features",
-    f"{MODULE_ROOT}/lib_vnr/api/inference",
-    f"{MODULE_ROOT}/lib_vnr/src/inference/model",
-    f"{MODULE_ROOT}/lib_vnr/src/inference",
+    f"{MODULE_ROOT}/lib_vnr/api/",
+    f"{MODULE_ROOT}/lib_vnr/src/",
+    f"{MODULE_ROOT}/lib_vnr/src/model/",
     f"{XCORE_MATH}/lib_xcore_math/api",
     TFLITE_MICRO_INCLUDE
 ]
@@ -50,8 +47,7 @@ LIBRARY_DIRS = [
 LIBRARIES = [
     'fwk_voice_module_lib_ic', 
     'fwk_voice_module_lib_aec',
-    'fwk_voice_module_lib_vnr_features', 
-    'fwk_voice_module_lib_vnr_inference', 
+    'fwk_voice_module_lib_vnr',
     'lib_xcore_math', 
     TFLITE_MICRO_LIB,
     'm', 

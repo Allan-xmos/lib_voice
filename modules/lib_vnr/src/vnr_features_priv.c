@@ -5,6 +5,14 @@
 #include "vnr_features_priv.h"
 #include "mel_filter_512_24_compact.h"
 
+#if AUDIO_FEATURES_NUM_MELS !=  VNR_MEL_FILTERS
+#error "Gerenrated number of mel features is incorrect"
+#endif
+
+#if AUDIO_FEATURES_NUM_BINS != VNR_FD_FRAME_LENGTH
+#error "Gerenrated freqency domain lenght for mel filter is incorrect"
+#endif
+
 void vnr_priv_forward_fft(bfp_complex_s32_t *X, int32_t *x_data) {
     bfp_s32_t x;
     bfp_s32_init(&x, x_data, VNR_INPUT_EXP, VNR_PROC_FRAME_LENGTH, 1);

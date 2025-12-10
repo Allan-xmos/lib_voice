@@ -14,7 +14,7 @@ target_sources(fwk_voice_module_lib_vnr
         ${VNR_C_SOURCES}
 )
 
-target_include_directories(fwk_voice_module_lib_vnr PUBLIC api)
+target_include_directories(fwk_voice_module_lib_vnr PUBLIC api ${MODEL_OUT_DIR})
 
 target_link_libraries(fwk_voice_module_lib_vnr
     PUBLIC

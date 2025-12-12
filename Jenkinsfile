@@ -173,6 +173,10 @@ pipeline {
                   dir("test/stage_b") {
                     sh "python build_c_code.py"
                   }
+                  // test VNR xcommon_cmake build
+                  dir("test/lib_vnr/test_vnr_xccm") {
+                    xcoreBuild()
+                  }
                   unstash 'cmake_build_xcore'
                 }
               }

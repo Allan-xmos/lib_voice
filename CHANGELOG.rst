@@ -4,10 +4,10 @@ XMOS Voice Framework Change Log
 UNRELEASED
 ----------
 
+  * ADDED: `xcommon_cmake` support for `lib_vnr`
   * CHANGED: Merged `fwk_voice::vnr::features` and `fwk_voice::vnr::inference` cmake targets into `fwk_voice::vnr`
-
-0.9.0
------
+  * CHANGED: Moved the VNR model into `modules/lib_vnr/python/model/trained_model.tflite`
+  * CHANGED: Moved the VNR MEL generation script into `modules/lib_vnr/python/gen_mel_filters.py`
   * CHANGED: Updated AGC and Loss Control algorithms
 
 0.8.1

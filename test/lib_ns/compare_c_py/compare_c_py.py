@@ -1,23 +1,17 @@
 # Copyright 2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
-from builtins import range
-import os
 from audio_generation import get_band_limited_noise
 import time
 import numpy as np
 import argparse
-import xtagctl
-import xscope_fileio
 from pathlib import Path
 import soundfile as sf
 from py_voice.modules.ns import ns
 import shutil
+from run_dut import run_dut
 
-c_ns_xe_path = Path(__file__).parents[3] / "build" / "test" / "lib_ns" / "test_wav_ns" / "bin" / "fwk_voice_test_wav_ns.xe"
+c_ns_xe_path = Path(__file__).parents[3] / "build" / "test" / "lib_ns" / "test_ns_profile" / "bin" / "fwk_voice_test_ns_profile"
 ns_conf_path = Path(__file__).parents[4] / "py_voice" / "py_voice" / "config" / "components" / "ns_only.json"
-
-X_CH_COUNT = 0
-Y_CH_COUNT = 1
 
 SAMPLE_RATE = 16000
 SAMPLE_COUNT = 160080
@@ -27,21 +21,17 @@ def generate_test_audio(filename, audio_dir, max_freq, db=-20, samples=SAMPLE_CO
     noise = get_band_limited_noise(0, max_freq, samples=samples, db=db, sample_rate=SAMPLE_RATE)
     sf.write(audio_dir / filename, noise, SAMPLE_RATE, "PCM_32")
 
-def process_xe(output_file, audio_dir, ns_xe):
+def process_xe(output_file, audio_dir, ns_xe, run_native = False):
+    input_data, _ = sf.read(audio_dir / "input.wav", dtype=np.int32)
 
-    prev_path = Path(__file__).parent
-    old_file = prev_path / audio_dir / "output.wav"
-    new_file = prev_path / audio_dir / output_file
+    assert len(input_data.shape) == 1, "Input data can be single channel only"
 
-    os.chdir(str(audio_dir))
+    local_exe = ns_xe
+    if not run_native: local_exe = local_exe.with_suffix(".xe")
 
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-        xscope_fileio.run_on_target(adapter_id, ns_xe)
+    output_data, _ = run_dut(input_data, local_exe)
 
-    os.rename(str(old_file), str(new_file))
-
-    os.chdir(str(prev_path))
-
+    sf.write(audio_dir / output_file, output_data, SAMPLE_RATE)
 
 def process_py(input_file, output_file, audio_dir):
     ns_obj = ns(ns_conf_path)

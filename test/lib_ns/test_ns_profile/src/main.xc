@@ -18,8 +18,8 @@ void ns_task(const char *input_file_name, const char *output_file_name);
 #endif
 }
 
-#define IN_WAV_FILE_NAME    "input.wav"
-#define OUT_WAV_FILE_NAME   "output.wav"
+#define IN_WAV_FILE_NAME    "input.bin"
+#define OUT_WAV_FILE_NAME   "output.bin"
 int main (void)
 {
   chan xscope_chan;

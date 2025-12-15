@@ -1,53 +1,33 @@
 # Copyright 2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
-import os
-import tempfile
-import shutil
-import xscope_fileio
-import xtagctl
 import glob
 import re
-import pytest
-import glob
-from audio_generation import get_band_limited_noise, write_data
+from audio_generation import get_band_limited_noise
+import soundfile as sf
+from run_dut import run_dut
+from pathlib import Path
+import numpy as np
 
-ns_src_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), *"../test_wav_ns/src".split("/"))
-thread_speed_mhz = (600 / 5)
+SAMPLE_RATE = 16000
+ns_xe = Path(__file__).parents[3] / "build" / "test" / "lib_ns" / "test_ns_profile" / "bin" / "fwk_voice_test_ns_profile"
+ns_src_folder = Path(__file__).parent / "src"
+ns_src_folder = str(ns_src_folder)
 
-in_file_name = "input.wav"
-out_file_name = "output.wav"
-def run_ns_xe(ns_xe, audio_in, audio_out, profile_dump_file=None):
+def run_ns_xe(ns_xe, audio_in, audio_out, run_native, profile=False):
     
-    tmp_folder = tempfile.mkdtemp()
-    shutil.copy2(audio_in, os.path.join(tmp_folder, in_file_name))
-    
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)    
-        
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-        print(f"Running on {adapter_id} binary {ns_xe}")
-        with open("sup_stdo.txt", "w+") as ff:
-            xscope_fileio.run_on_target(adapter_id, ns_xe, stdout=ff)
-            ff.seek(0)
-            stdout = ff.readlines()
+    input_data, _ = sf.read(audio_in, dtype=np.int32)
 
-        xcore_stdo = []
-        #ignore lines that don't contain [DEVICE]. Remove everything till and including [DEVICE] if [DEVICE] is present
-        for line in stdout:
-            m = re.search(r'^\s*\[DEVICE\]', line)
-            if m is not None:
-                xcore_stdo.append(re.sub(r'\[DEVICE\]\s*', '', line))
+    assert len(input_data.shape) == 1, "Input data can be single channel only"
 
-    os.chdir(prev_path)
-    #Save output file
-    shutil.copy2(os.path.join(tmp_folder, audio_out), audio_out)
+    local_exe = ns_xe
+    if not run_native: local_exe = local_exe.with_suffix(".xe")
 
-    with open(profile_dump_file, 'w') as fp:
-        for line in xcore_stdo:
-            fp.write(f"{line}\n")
-    parse_profile_log(xcore_stdo, worst_case_file=f"ns_prof.log")
+    output_data, xcore_stdo = run_dut(input_data, local_exe)
 
-    shutil.rmtree(tmp_folder, ignore_errors=True)    
+    sf.write(audio_out, output_data, SAMPLE_RATE)
+
+    if not run_native and profile: 
+        parse_profile_log(xcore_stdo, worst_case_file=f"ns_prof.log")
 
 '''
 output: profile_file contains profiling info for all frames.
@@ -135,6 +115,7 @@ def parse_profile_log(prof_stdo, profile_file="parsed_profile.log", worst_case_f
                     worst_case_frame = this_frame
             frame_num += 1
 
+        thread_speed_mhz = (600 / 5)
         with open(worst_case_file, 'w') as fp:
             fp.write(f"Worst case frame = {worst_case_frame[2]}\n")
             fp.write(f"{'init':<44} {init_frame:<12}\n")
@@ -152,26 +133,17 @@ def parse_profile_log(prof_stdo, profile_file="parsed_profile.log", worst_case_f
             mips = "{:.2f}".format((worst_case_processor_cycles / 0.015) / (thread_speed_mhz * 1000000) * thread_speed_mhz)
             fp.write(f'{"MCPS":<44} {mips} MIPS\n')
   
-def generate_test_audio(max_freq = 8000, db=-20):
-    SAMPLE_RATE = 16000
+def generate_test_audio(max_freq = SAMPLE_RATE // 2, db=-20):
     SAMPLE_COUNT = 2400
 
     noise = get_band_limited_noise(0, max_freq, samples=SAMPLE_COUNT, db=db, sample_rate=SAMPLE_RATE)
-    write_data(noise, "input.wav", sample_rate=SAMPLE_RATE)
 
-xe_files = glob.glob('../../../build/test/lib_ns/test_ns_profile/bin/*.xe')
-assert xe_files, "xe binary not found"
-generate_test_audio()
+    sf.write("input.wav", noise, SAMPLE_RATE)
 
+def test_ns_profile():
+    generate_test_audio()
+    run_ns_xe(ns_xe, "input.wav", "output.wav", False, True)
 
-@pytest.fixture(scope="session", params=xe_files)
-def setup(request):
-    xe = os.path.abspath(request.param) #get .xe filename including path
-    #extract stem part of filename
-    name = os.path.splitext(os.path.basename(xe))[0] #This should give a string of the form test_ic_profile_<threads>_<ychannels>_<xchannels>_<mainphases>_<shadowphases>
-    return xe
-
-def test_profile(setup):
-    ns_xe = setup
-    run_ns_xe(ns_xe, "input.wav", "output.wav", "profile.log")
-
+if __name__ == "__main__":
+    generate_test_audio()
+    run_ns_xe(ns_xe, "input.wav", "output.wav", True, True)

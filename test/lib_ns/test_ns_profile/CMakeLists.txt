@@ -1,32 +1,22 @@
-if( NOT ${Python3_FOUND} )
-  message(FATAL_ERROR "Python3 not found for running . ") 
-endif()
-#########
-## executable output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
 add_executable(fwk_voice_test_ns_profile)
 
-file( GLOB_RECURSE SOURCES_C  ../test_wav_ns/src/*.c )
-target_sources(fwk_voice_test_ns_profile
-    PRIVATE
-        ${SOURCES_C})
-
-target_include_directories(fwk_voice_test_ns_profile
-    PRIVATE
-        src)
+target_sources(fwk_voice_test_ns_profile PRIVATE src/ns_app.c)
 
 target_link_libraries(fwk_voice_test_ns_profile
-    PRIVATE
+    PUBLIC
         fwk_voice::ns
-        fwk_voice::example::profile_xcore
         fwk_voice::example::fileutils
-        )
+    )
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    target_sources(fwk_voice_test_ns_profile
-        PRIVATE ../test_wav_ns/src/main.xc)
+    target_sources(fwk_voice_test_ns_profile PRIVATE src/main.xc)
 
+    target_link_libraries(fwk_voice_test_ns_profile
+        PRIVATE
+            fwk_voice::example::profile_xcore
+    )
     target_compile_options(fwk_voice_test_ns_profile
         PRIVATE
             "-DPROFILE_PROCESSING=1"
@@ -39,5 +29,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
             "${CMAKE_CURRENT_SOURCE_DIR}/config.xscope")
 else()
     target_link_libraries(fwk_voice_test_ns_profile
-        PRIVATE m)
+        PRIVATE 
+            # need to explicitly link m after lib_xcore_math
+            lib_xcore_math
+            m)
 endif()

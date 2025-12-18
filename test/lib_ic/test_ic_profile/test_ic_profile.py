@@ -9,7 +9,7 @@ import soundfile as sf
 from run_dut import run_dut
 import py_vs_c_utils as pvc
 
-ic_src_folder = Path(__file__).parents[3] / "examples" / "bare-metal" / "ic" / "src"
+ic_src_folder = Path(__file__).parent / "src"
 ic_src_folder = str(ic_src_folder)
 ic_xe = Path(__file__).parents[3] / "build" / "test" / "lib_ic" / "test_ic_profile" / "bin" / "fwk_voice_test_ic_profile"
 SAMPLE_RATE = 16000

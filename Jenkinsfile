@@ -209,10 +209,6 @@ pipeline {
                       // Make sure 1 thread and 2 threads output is bitexact
                       sh "diff output.wav ../aec_1_thread/output.wav"
                     }
-                    dir("examples/bare-metal/ic") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/ic/bin/fwk_voice_example_bare_metal_ic.xe"
-                      sh "mv output.wav ic_example_output.wav"
-                    }
                     dir("examples/bare-metal/pipeline_single_threaded") {
                       sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_single_threaded/bin/fwk_voice_example_bare_metal_pipeline_single_thread.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
                     }
@@ -329,7 +325,7 @@ pipeline {
                       dir("characterise_c_py"){
                         // This test compares the suppression performance across angles between model and C implementation
                         // and fails if they differ significantly. It requires that the C implementation run with fixed mu
-                        sh "pytest -s --junitxml=pytest_result.xml" // -n 2 fails often so run single threaded and also print result
+                        sh "pytest -s --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                         // This script sweeps the y_delay value to find what the optimum suppression is across RT60 and angle.
                         // It's more of a model develpment tool than testing the implementation so not run. It take a few minutes.

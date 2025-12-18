@@ -3,7 +3,6 @@
 
 ## The unit test apps
 
-add_subdirectory( test_wav_ic )
 add_subdirectory( test_calc_vnr_pred )
 add_subdirectory( characterise_c_py )
 add_subdirectory( test_ic_profile )

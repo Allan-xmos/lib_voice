@@ -16,11 +16,10 @@ target_link_libraries(fwk_voice_test_ic_profile
         fwk_voice::example::test_wav_ic
         )
 
-target_compile_definitions(fwk_voice_test_ic_profile
-    PRIVATE
-        PROFILE_PROCESSING=1)
-
 if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
+    target_compile_definitions(fwk_voice_test_ic_profile
+        PRIVATE
+            PROFILE_PROCESSING=1)
     target_compile_options(fwk_voice_test_ic_profile
         PRIVATE "-target=${XCORE_TARGET}")
 

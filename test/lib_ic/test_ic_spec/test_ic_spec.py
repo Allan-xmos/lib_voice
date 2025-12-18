@@ -1,32 +1,23 @@
 # Copyright 2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
-from __future__ import division
-from __future__ import print_function
-from builtins import object
-import xscope_fileio
-import xtagctl
-import tempfile
-import os
 import warnings
-
-import scipy.io.wavfile
 import audio_generation
-import audio_wav_utils as awu
 import pytest
 import numpy as np
+import scipy
 import filters
 from py_voice.modules import ic
 from py_voice.config import config
 from pathlib import Path
+import py_vs_c_utils as pvc
+from run_dut import run_dut
+import soundfile as sf
 
-input_folder = os.path.abspath("input_wavs")
-output_folder = os.path.abspath("output_wavs")
+output_folder = Path(__file__).parent / "output_wavs"
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_no_adapt_control.json"
 ap_conf = config.get_config_dict(ap_config_file)
 
-this_file_dir = os.path.dirname(os.path.realpath(__file__))
-xe_path = os.path.join(this_file_dir, '../../../build/test/lib_ic/test_ic_spec/bin/fwk_voice_test_ic_spec.xe')
-xe_files = ['py', xe_path]
+xe_path = Path(__file__).parents[3] / "build" / "test" / "lib_ic" / "test_ic_spec" / "bin" / "fwk_voice_test_ic_spec"
 
 sample_rate = ap_conf["general"]["fs"]
 proc_frame_length = ap_conf["general"]["proc_frame_length"]
@@ -99,43 +90,27 @@ test_vectors = [
 ]
 
 
-def write_output(test_name, output, c_or_py):
-    output_32bit = awu.convert_to_32_bit(output)
-    output_filename = os.path.abspath(os.path.join(output_folder, test_name + "-output-{}.wav".format(c_or_py)))
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-    scipy.io.wavfile.write(output_filename, sample_rate, output_32bit.T)
+def process_py(input_data):
+
+    ic_obj = ic.ic(ap_conf)
+    output_data, _ = ic_obj.process_array(input_data)
+
+    return np.reshape(output_data, output_data.shape[1])
 
 
-def process_py(ic_obj, input_data, test_name):
+def process_c(input_data, xe_name, run_native=False):
+    input_data = pvc.float_to_int32(input_data)
 
-    output, metadata = ic_obj.process_array(input_data)
+    assert input_data.ndim == 2
+    assert input_data.shape[0] == 2
 
-    write_output(test_name, output, 'py')
-    return output
+    input_data = pvc.interleave_channel_frames(input_data, frame_advance)
+    
+    local_exe = xe_name
+    if not run_native: local_exe = local_exe.with_suffix(".xe")
+    output_data, _ = run_dut(input_data, local_exe)
 
-
-def process_c(input_data, test_name, xe_name):
-    tmp_folder = tempfile.mkdtemp(suffix=os.path.basename(test_name))
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
-    # Write input data to file
-    input_32bit = awu.convert_to_32_bit(input_data)
-    scipy.io.wavfile.write('input.wav', sample_rate, input_32bit.T)
-    err = 0
-
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-        xscope_fileio.run_on_target(adapter_id, xe_name)
-
-    try:
-        assert err == 0
-        rate, output = scipy.io.wavfile.read('output.wav', 'r')
-        write_output(test_name, output.T, 'c')
-        os.system("rm input.wav output.wav")
-    finally:
-        os.chdir(prev_path)
-        os.system("rm -d {}".format(tmp_folder))
-    return output.T
+    return pvc.int32_to_float(output_data)
 
 
 @pytest.fixture
@@ -147,6 +122,9 @@ def test_input(request):
                                         test_case.h_x, test_case.h_y)
     # Last two channels are not used
     combined_data = np.vstack((audio_y, audio_x))
+    # crop to have full frames
+    inx = combined_data.shape[1] // frame_advance * frame_advance
+    combined_data = combined_data[:, :inx]
     if np.max(np.abs(audio_x)) > 1:
         warnings.warn("{}: max(abs(Mic 1)) == {}".format(test_name, np.max(np.abs(audio_x))))
     if np.max(np.abs(audio_y)) > 1:
@@ -156,11 +134,18 @@ def test_input(request):
     return (test_case, combined_data)
 
 
-def process_audio(ic_obj, model, input_audio, test_name):
+def process_audio(model, input_audio, test_name):
     if model == 'py':
-        return process_py(ic_obj, input_audio, test_name)
+        output_file = output_folder / f"out_{test_name}_py.wav"
+        output_data = process_py(input_audio)
+    elif model == "c":
+        output_file = output_folder / f"out_{test_name}_c.wav"
+        output_data = process_c(input_audio, xe_path)
     else:
-        return process_c(input_audio, test_name, model)
+        assert 0, f"model {model} not supported"
+    
+    sf.write(output_file, output_data, sample_rate)
+    return output_data
 
 
 def rms(a):
@@ -266,13 +251,13 @@ def check_delay(record_property, test_case, input_audio, output_audio):
 
 
 @pytest.mark.parametrize('test_input', test_vectors, indirect=True)
-@pytest.mark.parametrize('model', xe_files)
+@pytest.mark.parametrize('model', ["py", "c"])
 def test_all(test_input, model, record_property):
     test_case, input_audio = test_input
     print("\n{}: {}\n".format(test_case.name, model))
+    output_folder.mkdir(exist_ok=True)
 
-    ic_obj = ic.ic(ap_conf)
-    output_audio = process_audio(ic_obj, model, input_audio, test_case.get_test_name())
+    output_audio = process_audio(model, input_audio, test_case.get_test_name())
     suppression_arr = get_suppression_arr(input_audio, output_audio)
 
     record_property('Test name', test_case.get_test_name())

@@ -1,55 +1,39 @@
 # Copyright 2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import numpy as np
-import os
-import tempfile
-import shutil
-import scipy.io.wavfile
 import scipy.signal as spsig
-import xscope_fileio
-import xtagctl
 import glob
 import re
-import pytest
-import glob
+from pathlib import Path
+import soundfile as sf
+from run_dut import run_dut
+import py_vs_c_utils as pvc
 
-ic_src_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), *"../../../examples/bare-metal/ic/src".split("/"))
-thread_speed_mhz = (600 / 5)
+ic_src_folder = Path(__file__).parents[3] / "examples" / "bare-metal" / "ic" / "src"
+ic_src_folder = str(ic_src_folder)
+ic_xe = Path(__file__).parents[3] / "build" / "test" / "lib_ic" / "test_ic_profile" / "bin" / "fwk_voice_test_ic_profile"
+SAMPLE_RATE = 16000
+FRAME_ADVANCE = 240
 
-in_file_name = "input.wav"
-out_file_name = "output.wav"
-def run_ic_xe(ic_xe, audio_in, audio_out, profile_dump_file=None):
+def run_ic_xe(ic_xe, audio_in, audio_out, run_native, profile):
     
-    tmp_folder = tempfile.mkdtemp()
-    shutil.copy2(audio_in, os.path.join(tmp_folder, in_file_name))
+    input_data, _ = sf.read(audio_in, dtype=np.int32)
     
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)    
-        
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-        print(f"Running on {adapter_id} binary {ic_xe}")
-        with open("ic_prof.txt", "w+") as ff:
-            xscope_fileio.run_on_target(adapter_id, ic_xe, stdout=ff)
-            ff.seek(0)
-            stdout = ff.readlines()
-
-        xcore_stdo = []
-        #ignore lines that don't contain [DEVICE]. Remove everything till and including [DEVICE] if [DEVICE] is present
-        for line in stdout:
-            m = re.search(r'^\s*\[DEVICE\]', line)
-            if m is not None:
-                xcore_stdo.append(re.sub(r'\[DEVICE\]\s*', '', line))
-
-    os.chdir(prev_path)
-    #Save output file
-    shutil.copy2(os.path.join(tmp_folder, audio_out), audio_out)
-
-    with open(profile_dump_file, 'w') as fp:
-        for line in xcore_stdo:
-            fp.write(f"{line}\n")
-    parse_profile_log(xcore_stdo, worst_case_file=f"ic_prof.log")
-
-    shutil.rmtree(tmp_folder, ignore_errors=True)    
+    assert input_data.ndim == 2
+    assert input_data.shape[1] == 2
+    
+    input_data = input_data.T
+    
+    input_data = pvc.interleave_channel_frames(input_data, FRAME_ADVANCE)
+    
+    local_exe = ic_xe
+    if not run_native: local_exe = local_exe.with_suffix(".xe")
+    output_data, xcore_stdo = run_dut(input_data, local_exe)
+    
+    sf.write(audio_out, output_data, SAMPLE_RATE)
+    
+    if not run_native and profile:
+        parse_profile_log(xcore_stdo, worst_case_file=f"ic_prof.log")
 
 '''
 output: profile_file contains profiling info for all frames.
@@ -137,6 +121,7 @@ def parse_profile_log(prof_stdo, profile_file="parsed_profile.log", worst_case_f
                     worst_case_frame = this_frame
             frame_num += 1
 
+        thread_speed_mhz = (600 / 5)
         with open(worst_case_file, 'w') as fp:
             fp.write(f"Worst case frame = {worst_case_frame[2]}\n")
             fp.write(f"{'init':<44} {init_frame:<12}\n")
@@ -153,22 +138,6 @@ def parse_profile_log(prof_stdo, profile_file="parsed_profile.log", worst_case_f
             #processor_cycles_per_frame * frames_per_sec = processor_cycles_per_sec. processor_cycles_per_sec/1000000 => MCPS
             mips = "{:.2f}".format((worst_case_processor_cycles / 0.015) / (thread_speed_mhz * 1000000) * thread_speed_mhz)
             fp.write(f'{"MCPS":<44} {mips} MIPS\n')
-
-
-
-
-def leq_smooth(x, fs, T):
-    len_x = x.shape[0]
-    win_len = int(fs * T)
-    win_count = len_x // win_len
-    len_y = win_len * win_count
-
-    y = np.reshape(x[:len_y], (win_len, win_count), 'F')
-
-    leq = 10 * np.log10(np.mean(y ** 2.0, axis=0))
-    t = np.arange(win_count) * T
-
-    return t, leq
 
 def make_impulse(RT, t=None, fs=None):
     scale = 0.005
@@ -191,8 +160,7 @@ def make_impulse(RT, t=None, fs=None):
     return h
 
 def create_wav_input():
-    fs = 16000
-    N = fs * 10
+    N = SAMPLE_RATE * 10
     np.random.seed(500)    
 
     phases = 10
@@ -200,7 +168,7 @@ def create_wav_input():
 
     # build impulse response
     RT = 0.15
-    h = make_impulse(RT, fs=fs)
+    h = make_impulse(RT, fs=SAMPLE_RATE)
     h = h/h.max()
     hN = len(h)
 
@@ -216,31 +184,16 @@ def create_wav_input():
     d = d * sig_level
     u = u * sig_level
     
-    # ideal results
-    f_ideal = h[:fN]
-    y_ideal = spsig.convolve(f_ideal, u, 'full')[hN-1:N]
-    _, in_leq = leq_smooth(y_ideal, fs, 0.05)
-
-    # run IC
     in_data = np.stack((d, u[hN-1:N]), axis=0)
-    in_data_32bit = (np.asarray(in_data * np.iinfo(np.int32).max, dtype=np.int32)).T
-    scipy.io.wavfile.write("input.wav", 16000, in_data_32bit)
+    # crop to have full frames
+    inx = in_data.shape[1] // FRAME_ADVANCE * FRAME_ADVANCE
+    in_data = in_data[:, :inx]
+    sf.write("input.wav", in_data.T, SAMPLE_RATE)
     
+def test_ic_profile():
+    create_wav_input()
+    run_ic_xe(ic_xe, "input.wav", "output.wav", False, True)
 
-
-xe_files = glob.glob('../../../build/test/lib_ic/test_ic_profile/bin/*.xe')
-assert xe_files, "xe binary not found"
-create_wav_input()
-
-
-@pytest.fixture(scope="session", params=xe_files)
-def setup(request):
-    xe = os.path.abspath(request.param) #get .xe filename including path
-    #extract stem part of filename
-    name = os.path.splitext(os.path.basename(xe))[0] #This should give a string of the form test_ic_profile_<threads>_<ychannels>_<xchannels>_<mainphases>_<shadowphases>
-    return xe
-
-def test_profile(setup):
-    ic_xe = setup
-    run_ic_xe(ic_xe, "input.wav", "output.wav", "profile.log")
-
+if __name__ == "__main__":
+    create_wav_input()
+    run_ic_xe(ic_xe, "input.wav", "output.wav", True, False)

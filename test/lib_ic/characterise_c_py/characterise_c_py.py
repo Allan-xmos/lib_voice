@@ -1,32 +1,24 @@
 # Copyright 2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
-from __future__ import division
-from __future__ import print_function
-from builtins import range
-import os
-import shutil
-import tempfile
-
-from audio_generation import get_band_limited_noise
 import time
 import numpy as np
-import scipy.io.wavfile as wavfile
-import audio_wav_utils as awu
 import argparse
 import pyroomacoustics as pra
-import scipy
-
-from py_voice.modules import ic
-from py_voice.config import config
+import soundfile as sf
 from pathlib import Path
 
-import xtagctl, xscope_fileio
+from audio_generation import get_band_limited_noise
+from py_voice.modules import ic
+from py_voice.config import config
+from run_dut import run_dut
+import py_vs_c_utils as pvc
 
 NOISE_FLOOR_dBFS = -63.0
 SIGMA2_AWGN = ((10 ** (float(NOISE_FLOOR_dBFS)/20)) * np.iinfo(np.int32).max) ** 2
 
 SAMPLE_RATE = 16000
 SAMPLE_COUNT = 160080
+FRAME_ADVANCE = 240
 
 MIN_NOISE_FREQ = 0
 
@@ -44,9 +36,8 @@ MIC_1_X = MIC_X_POINT + MIC_SPACING / 2
 
 NOISE_DISTANCE = 1.5
 
-this_file_dir = os.path.dirname(os.path.realpath(__file__))
-IC_XE = os.path.join(this_file_dir, '../../../build/test/lib_ic/characterise_c_py/bin/fwk_voice_characterise_c_py.xe')
-
+IC_XE = Path(__file__).parents[3] / "build/test/lib_ic/characterise_c_py/bin/fwk_voice_characterise_c_py"
+audio_dir = Path(__file__).parent / "pytest_audio"
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_big_delta.json"
 ap_conf = config.get_config_dict(ap_config_file)
 
@@ -57,12 +48,7 @@ def get_absorption(x, y, z, rt60):
     absorption = 0.1611 * V/(S * rt60)
     return absorption
 
-def generate_test_audio(filename, audio_dir, max_freq, db, angle_theta, rt60, samples=SAMPLE_COUNT):
-    file_path = os.path.join(audio_dir, filename)
-    try:
-        os.makedirs(audio_dir)
-    except os.error as e:
-        pass
+def generate_test_audio(max_freq, db, angle_theta, rt60, samples=SAMPLE_COUNT):
 
     noise = get_band_limited_noise(MIN_NOISE_FREQ, max_freq, samples=samples, db=db, sample_rate=SAMPLE_RATE)
     audio_anechoic = np.asarray(noise * np.iinfo(np.int32).max, dtype=np.int32)
@@ -81,56 +67,41 @@ def generate_test_audio(filename, audio_dir, max_freq, db, angle_theta, rt60, sa
     shoebox.add_microphone_array(pra.MicrophoneArray(mics, shoebox.fs))
     shoebox.simulate()
 
-    mic_output = shoebox.mic_array.signals.T
-    # z = np.zeros((len(mic_output), 2), dtype=np.float64)
-    # combined = np.append(mic_output, z, axis=1)
-    # output = np.array(combined, dtype=np.int32)
+    mic_output = shoebox.mic_array.signals
     output = np.array(mic_output, dtype=np.int32)
-    scipy.io.wavfile.write(file_path, SAMPLE_RATE, output)
+    # crop to have full frames
+    inx = output.shape[1] // FRAME_ADVANCE * FRAME_ADVANCE
+    output = output[:, :inx]
+    return pvc.int32_to_float(output)
 
-
-def process_py(input_file, output_file, audio_dir="."):
-    output_file = os.path.abspath(os.path.join(audio_dir, output_file))
-    input_file = os.path.abspath(os.path.join(audio_dir, input_file))
+def process_py(input_data):
 
     ic_obj = ic.ic(ap_conf)
-    ic_obj.process_file(input_file, output_file)
+    output_data, _ = ic_obj.process_array(input_data)
+    return np.reshape(output_data, output_data.shape[1])
 
+def process_c(input_data, run_native=False):
 
-def process_c(input_file, output_file, audio_dir="."):
-    output_file = os.path.abspath(os.path.join(audio_dir, output_file))
-    input_file = os.path.abspath(os.path.join(audio_dir, input_file))
+    assert input_data.ndim == 2
+    assert input_data.shape[0] == 2
 
-    tmp_folder = tempfile.mkdtemp(suffix=os.path.basename(__file__))
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
+    input_data = pvc.float_to_int32(input_data)
 
-    shutil.copyfile(input_file, "input.wav")
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-        # print(f"Running on {adapter_id}")
-        xscope_fileio.run_on_target(adapter_id, IC_XE)
-        shutil.copyfile("output.wav", output_file)
+    input_data = pvc.interleave_channel_frames(input_data, FRAME_ADVANCE)
+
+    local_exe = IC_XE
+    if not run_native: local_exe = local_exe.with_suffix(".xe")
+    output_data, _ = run_dut(input_data, local_exe)
     
-    os.chdir(prev_path)
-    shutil.rmtree(tmp_folder)
+    return pvc.int32_to_float(output_data)
 
-def get_attenuation(input_file, output_file, audio_dir="."):
-    in_rate, in_wav_file = wavfile.read(os.path.join(audio_dir, input_file))
-    out_rate, out_wav_file = wavfile.read(os.path.join(audio_dir, output_file))
-
-    in_wav_data, in_channel_count, in_file_length = awu.parse_audio(in_wav_file)
-    out_wav_data, out_channel_count, out_file_length = awu.parse_audio(out_wav_file)
-
+def get_attenuation(in_data, out_data):
     # Calculate EWM of audio power in 1s window
-    #print(input_file, ' has ', in_channel_count, ' channels and ', in_wav_data.shape, 'shape')
-    #print(output_file, ' has ', out_channel_count, 'channels and ', out_wav_data.shape, 'shape')
-    in_power = np.power(in_wav_data[0, :], 2)
-    if len(out_wav_data.shape) > 1:
-        out_power = np.power(out_wav_data[0, :], 2)
-    else:
-        out_power = np.power(out_wav_data, 2)
-    #out_power = np.power(out_wav_data[0, :], 2)
+    in_power = np.power(in_data[0, :], 2)
+    out_power = np.power(out_data, 2)
 
+    assert in_power.shape == out_power.shape
+    assert in_power.ndim == out_power.ndim == 1
     attenuation = []
 
     for i in range(len(in_power) // SAMPLE_RATE):
@@ -145,19 +116,24 @@ def get_attenuation(input_file, output_file, audio_dir="."):
 
     return attenuation
 
-def get_attenuation_c_py(test_id, noise_band, noise_db, angle_theta, rt60):
-    input_file = "input_{}.wav".format(test_id) # Required by test_wav_suppression.xe
-    output_file_py = "output_{}_py.wav".format(test_id)
-    output_file_c = "output_{}_c.wav".format(test_id)
+def get_attenuation_c_py(test_id, noise_band, noise_db, angle, rt60):
+    audio_dir.mkdir(exist_ok=True)
+    test_name = f"{test_id}_{angle}"
+    input_file = audio_dir / f"in_{test_name}.wav"
+    output_file_py = audio_dir / f"out_{test_name}_py.wav"
+    output_file_c = audio_dir / f"out_{test_name}_c.wav"
 
-    audio_dir = test_id
-    generate_test_audio(input_file, audio_dir, noise_band, noise_db, angle_theta, rt60)
+    angle_theta = angle * np.pi/180
+    input_data = generate_test_audio(noise_band, noise_db, angle_theta, rt60)
+    sf.write(input_file, input_data.T, SAMPLE_RATE)
 
-    process_py(input_file, output_file_py, audio_dir)
-    process_c(input_file, output_file_c, audio_dir)
+    out_py = process_py(input_data)
+    sf.write(output_file_py, out_py, SAMPLE_RATE)
+    out_c = process_c(input_data)
+    sf.write(output_file_c, out_c, SAMPLE_RATE)
 
-    attenuation_py = get_attenuation(input_file, output_file_py, audio_dir)
-    attenuation_c = get_attenuation(input_file, output_file_c, audio_dir)
+    attenuation_py = get_attenuation(input_data, out_py)
+    attenuation_c = get_attenuation(input_data, out_c)
 
     print("PYTHON SUP: {}".format(["%.2f"%item for item in attenuation_py]))
     print("     C SUP: {}".format(["%.2f"%item for item in attenuation_c]))
@@ -193,8 +169,7 @@ def parse_arguments():
 def main():
     start_time = time.time()
     args = parse_arguments()
-    angle_theta = args.angle * np.pi/180
-    get_attenuation_c_py("test", args.noise_band, args.noise_level, angle_theta, args.rt60)
+    get_attenuation_c_py("test", args.noise_band, args.noise_level, args.angle, args.rt60)
     print("--- {0:.2f} seconds ---".format(time.time() - start_time))
 
 

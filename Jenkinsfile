@@ -311,7 +311,7 @@ pipeline {
                         junit "pytest_result.xml"
                       }
                       dir("test_ic_profile"){
-                        sh "pytest --junitxml=pytest_result.xml"
+                        sh "pytest -s --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
                       dir("test_ic_spec"){

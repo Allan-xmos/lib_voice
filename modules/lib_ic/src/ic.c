@@ -4,10 +4,6 @@
 #include "ic_low_level.h"
 #include "xmath/xmath.h"
 
-// For use when dumping variables for debug
-void ic_dump_var_2d(ic_state_t *state);
-void ic_dump_var_3d(ic_state_t *state);
-
 static int32_t ic_init_vnr_pred_state(vnr_pred_state_t *vnr_pred_state){
     vnr_feature_state_init(&vnr_pred_state->feature_state[0]);
     vnr_feature_state_init(&vnr_pred_state->feature_state[1]);

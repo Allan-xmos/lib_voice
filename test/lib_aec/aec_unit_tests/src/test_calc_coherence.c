@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 typedef struct {
     double coh_alpha;
@@ -35,7 +34,7 @@ static void init_coherence_mu_config_fp(coherence_mu_params_fp *cfg, int channel
     cfg->coh_thresh_abs = 0.65;
     cfg->mu_scalar = 1;
     cfg->eps = 1e-100;
-    
+
     cfg->x_energy_thresh = -40;
     cfg->mu_coh_time = 2;
     cfg->mu_shad_time = 30;
@@ -77,7 +76,7 @@ void aec_calc_coherence_fp(
         //# moving average coherence
         //self.coh = self.coh_alpha*self.coh + (1.0 - self.coh_alpha)*this_coh
         cfg->coh[ch] = (cfg->coh_alpha * cfg->coh[ch]) + ((1.0 - cfg->coh_alpha) * this_coh);
-        
+
         //# update slow moving averages used for thresholding
         //self.coh_slow = self.coh_slow_alpha*self.coh_slow + (1.0 - self.coh_slow_alpha)*self.coh
         cfg->coh_slow[ch] = (cfg->coh_slow_alpha * cfg->coh_slow[ch]) + ((1.0 - cfg->coh_slow_alpha) * cfg->coh[ch]);
@@ -93,15 +92,15 @@ void test_calc_coherence() {
     aec_state_t state;
     aec_shared_state_t aec_shared_state;
     aec_init(&state, NULL, &aec_shared_state, (uint8_t*)&aec_memory_pool, NULL, num_y_channels, num_x_channels, num_phases, 0);
-    
+
     //Initialize floating point
     coherence_mu_params_fp coh_params_fp;
     init_coherence_mu_config_fp(&coh_params_fp, num_y_channels);
     double y_fp[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH], y_hat_fp[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH];
-    
+
     int32_t new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
     unsigned seed = 10;
-    int32_t max_diff = 0; 
+    int32_t max_diff = 0;
     for(int iter=0; iter<(1<<12)/F; iter++) {
         state.shared_state->config_params.aec_core_conf.bypass = pseudo_rand_uint32(&seed) % 2;
         aec_frame_init(&state, NULL, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]); //frame init will copy y[240:480] into output
@@ -138,7 +137,7 @@ void test_calc_coherence() {
 
         for(int ch=0; ch<num_y_channels; ch++) {
             aec_calc_coherence(&state, ch);
-            
+
         }
         for(int ch=0; ch<num_y_channels; ch++) {
             coherence_mu_params_t *coh_mu_state_ptr = &state.shared_state->coh_mu_state[ch];
@@ -157,7 +156,7 @@ void test_calc_coherence() {
             if(diff > max_diff) max_diff = diff;
             TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(1<<13, diff, "coh slow diff too large.");
         }
-        
+
     }
     printf("max_diff = %ld\n",max_diff);
 }

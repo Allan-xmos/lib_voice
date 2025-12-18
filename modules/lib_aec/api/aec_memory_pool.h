@@ -4,6 +4,7 @@
 #define AEC_MEMORY_POOL_H
 
 #include "xmath/xmath.h"
+#include "aec_defines.h"
 
 //Memory pool definition
 typedef struct {

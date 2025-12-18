@@ -1,5 +1,7 @@
-#ifndef aec_task_distribution_h_
-#define aec_task_distribution_h_
+#ifndef AEC_SCHEDULE_H
+#define AEC_SCHEDULE_H
+
+#include "aec_defines.h"
 
 /**
  * @page This header defines the data structures used when distributing tasks across hardware threads.
@@ -16,14 +18,14 @@
 
 /**
  * @brief Structure used when distributing tasks across hardware threads.
- */ 
+ */
 typedef struct {
     /** Task index.*/
     int task;
     /** Flag indicating whether the task is active on that core. The task is run on the core only when is_active is set
      * to 1*/
     int is_active;
-}par_tasks_t;
+}aec_par_tasks_t;
 
 /**
  * @brief Structure used when distributing (task, channel) pairs across hardware threads.
@@ -36,43 +38,38 @@ typedef struct {
     /** Flag indicating whether the (task, channel) pair is active on that core. The (task, channel) pair is run on the
      * core only when is_active is set to 1*/
     int is_active;
-}par_tasks_and_channels_t;
+}aec_par_tasks_and_channels_t;
 
+#define AEC_MAX(a,b) (((a)>(b))?(a):(b))
 
-#define AEC_THREAD_COUNT   (2) /// <Number of hardware threads available
-
-/** Number of iterations run on a given thread when distributing 2 tasks across AEC_THREAD_COUNT threads*/
-#define AEC_2_TASKS_PASSES   (1)
-
-/** Number of iterations run on a given thread when distributing 3 tasks across AEC_THREAD_COUNT threads*/
-#define AEC_3_TASKS_PASSES   (2)
-
-/** Number of iterations run on a given thread when distributing 3 tasks, max(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS)
- * channels across AEC_THREAD_COUNT number of threads*/
-#define AEC_3_TASKS_AND_CHANNELS_PASSES   (3)
-
-/** Number of iterations run on a given thread when distributing 2 tasks, max(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS)
- * channels across AEC_THREAD_COUNT number of threads*/
-#define AEC_2_TASKS_AND_CHANNELS_PASSES   (2)
-
-/** Number of iterations run on a given thread when distributing 1 task, max(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS)
- * channels across AEC_THREAD_COUNT number of threads*/
-#define AEC_1_TASKS_AND_CHANNELS_PASSES   (1)
+#define AEC_LIB_MAX_CHANNELS AEC_MAX(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS)
 
 typedef struct {
+    unsigned thread_count;
+
+    unsigned passes_for_3_tasks_and_channels;
     /** task distribution definition for 3 tasks, max(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS) channels, scheduled across
      * AEC_THREAD_COUNT threads */
-    par_tasks_and_channels_t par_3_tasks_and_channels[AEC_THREAD_COUNT][AEC_3_TASKS_AND_CHANNELS_PASSES];
+    aec_par_tasks_and_channels_t par_3_tasks_and_channels[AEC_LIB_MAX_THREADS][3 * AEC_LIB_MAX_CHANNELS];
+
+    unsigned passes_for_2_tasks_and_channels;
     /** task distribution definition for 2 tasks, max(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS) channels, scheduled across
      * AEC_THREAD_COUNT threads */
-    par_tasks_and_channels_t par_2_tasks_and_channels[AEC_THREAD_COUNT][AEC_2_TASKS_AND_CHANNELS_PASSES];
+    aec_par_tasks_and_channels_t par_2_tasks_and_channels[AEC_LIB_MAX_THREADS][2 * AEC_LIB_MAX_CHANNELS];
+
+    unsigned passes_for_1_tasks_and_channels;
     /** task distribution definition for 1 task, max(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS) channels, scheduled across
      * AEC_THREAD_COUNT threads */
-    par_tasks_and_channels_t par_1_tasks_and_channels[AEC_THREAD_COUNT][AEC_1_TASKS_AND_CHANNELS_PASSES];
-    /** task distribution definition for 2 tasks, scheduled across AEC_THREAD_COUNT threads */
-    par_tasks_t par_2_tasks[AEC_THREAD_COUNT][AEC_2_TASKS_PASSES];
-    /** task distribution definition for 3 tasks, scheduled across AEC_THREAD_COUNT threads */
-    par_tasks_t par_3_tasks[AEC_THREAD_COUNT][AEC_3_TASKS_PASSES];
-}task_distribution_t;
+    aec_par_tasks_and_channels_t par_1_tasks_and_channels[AEC_LIB_MAX_THREADS][1 * AEC_LIB_MAX_CHANNELS];
 
-#endif /* aec_task_distribution_h_ */
+    unsigned passes_for_3_tasks;
+    /** task distribution definition for 3 tasks, scheduled across AEC_THREAD_COUNT threads */
+    aec_par_tasks_t par_3_tasks[AEC_LIB_MAX_THREADS][3];
+
+    unsigned passes_for_2_tasks;
+    /** task distribution definition for 2 tasks, scheduled across AEC_THREAD_COUNT threads */
+    aec_par_tasks_t par_2_tasks[AEC_LIB_MAX_THREADS][2];
+}aec_task_distribution_t;
+
+
+#endif

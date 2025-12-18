@@ -4,8 +4,7 @@
 #include "ic_low_level.h"
 
 // lib_ic heavily reuses functions from lib_aec currently
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 #include "aec_priv.h"
 
 // Delay y input w.r.t. x input
@@ -32,9 +31,9 @@ void ic_frame_init(
         ic_state_t *state,
         int32_t y_data[IC_FRAME_ADVANCE],
         int32_t x_data[IC_FRAME_ADVANCE]){
-    
+
     const exponent_t q0_31_exp = -31;
-    // y frame 
+    // y frame
     for(unsigned ch=0; ch<IC_Y_CHANNELS; ch++) {
         /* Create 512 samples frame */
         // Copy previous y samples
@@ -59,7 +58,7 @@ void ic_frame_init(
         // Update exp just in case
         state->prev_y_bfp[ch].exp = q0_31_exp;
     }
-    // x frame 
+    // x frame
     for(unsigned ch=0; ch<IC_X_CHANNELS; ch++) {
         /* Create 512 samples frame */
         // Copy previous x samples
@@ -105,7 +104,7 @@ void ic_update_td_ema_energy(
         unsigned start_offset,
         unsigned length,
         const uq2_30 alpha){
-    
+
     if(!length) {
         return;
     }
@@ -200,7 +199,7 @@ void ic_create_output(
     bfp_s32_t *error_ptr = &state->error_bfp[ch];
 
     aec_priv_create_output(output_ptr, overlap_ptr, error_ptr);
-    
+
 }
 
 // Calculate inverse X-energy
@@ -251,7 +250,7 @@ static inline int32_t ashr32(int32_t x, right_shift_t shr)
 {
   if(shr >= 0)
     return x >> shr;
-  
+
   int64_t tmp = ((int64_t)x) << -shr;
 
   if(tmp > INT32_MAX)       return INT32_MAX;
@@ -276,7 +275,7 @@ float_s32_t float_s32_add_fix(
 
   const right_shift_t x_shr = res.exp - x.exp;
   const right_shift_t y_shr = res.exp - y.exp;
-  
+
   int32_t x_mant = (x_shr >= 32) ? 0 : ashr32(x.mant, x_shr);
   int32_t y_mant = (y_shr >= 32) ? 0 : ashr32(y.mant, y_shr);
 
@@ -305,7 +304,7 @@ void ic_set_mu(ic_state_t * state, float_s32_t mu){
 void ic_mu_control_system(ic_state_t * state, float_s32_t vnr){
     ic_adaption_controller_state_t *ad_state = &state->ic_adaption_controller_state;
     ic_adaption_controller_config_t *ad_config = &state->ic_adaption_controller_state.adaption_controller_config;
-    
+
     const float_s32_t one = f32_to_float_s32(1.0);
     const float_s32_t zero = f32_to_float_s32(0.0);
 
@@ -354,7 +353,7 @@ void ic_mu_control_system(ic_state_t * state, float_s32_t vnr){
 
 // Reset adaptive components and output an unprocessed frame
 void ic_reset_filter(ic_state_t *state, int32_t output[IC_FRAME_ADVANCE]){
-    
+
     for(unsigned ch=0; ch<IC_Y_CHANNELS; ch++) {
         bfp_complex_s32_t *H_hat = state->H_hat_bfp[ch];
         aec_priv_reset_filter(H_hat, IC_X_CHANNELS, IC_FILTER_PHASES);
@@ -363,7 +362,7 @@ void ic_reset_filter(ic_state_t *state, int32_t output[IC_FRAME_ADVANCE]){
     for(unsigned ch = 0; ch < IC_X_CHANNELS; ch ++){
         bfp_s32_set(&state->sigma_XX_bfp[ch], 0, zero_exp);
     }
-    // Getting unproccessed y frame from state->y_prev_samples_copy[ch] and state->prev_y_bfp[ch].data 
+    // Getting unproccessed y frame from state->y_prev_samples_copy[ch] and state->prev_y_bfp[ch].data
     for(unsigned ch=0; ch<IC_Y_CHANNELS; ch++) {
         int32_t DWORD_ALIGNED buff[IC_FRAME_LENGTH];
         memcpy(&buff[0], &state->y_prev_samples_copy[ch][0], IC_FRAME_ADVANCE*sizeof(int32_t));
@@ -390,6 +389,6 @@ void ic_apply_leakage(
 
     for(int ph=0; ph<IC_X_CHANNELS*IC_FILTER_PHASES; ph++){
         bfp_complex_s32_t *H_hat_ptr = &state->H_hat_bfp[y_ch][ph];
-        bfp_complex_s32_real_scale(H_hat_ptr, H_hat_ptr, state->leakage_alpha); 
+        bfp_complex_s32_real_scale(H_hat_ptr, H_hat_ptr, state->leakage_alpha);
     }
 }

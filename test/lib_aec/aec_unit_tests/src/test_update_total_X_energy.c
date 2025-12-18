@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define NUM_BINS ((AEC_PROC_FRAME_LENGTH/2) + 1)
 
@@ -33,7 +32,7 @@ void aec_calc_X_fifo_energy_fp(
     for(unsigned ch=0; ch<num_channels; ch++) {
         for(int i=0; i<NUM_BINS; i++) {
             double temp = (X_fifo[ch][last_ph][i].re * X_fifo[ch][last_ph][i].re) + (X_fifo[ch][last_ph][i].im * X_fifo[ch][last_ph][i].im);
-            
+
             X_energy[ch][i] -= temp; //subtract energy of phase rolling out
             temp = (X[ch][i].re * X[ch][i].re) + (X[ch][i].im * X[ch][i].im);
             X_energy[ch][i] += temp; //Add latest X data energy
@@ -70,7 +69,7 @@ void update_X_fifo_fp(
             X_fifo[ch][mapping[0]][i].im = X[ch][i].im;
         }
     }
-    
+
 
 
 }
@@ -86,7 +85,7 @@ void test_update_total_X_energy() {
     aec_state_t state, shadow_state;
     aec_shared_state_t aec_shared_state;
     aec_init(&state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
-    
+
     unsigned X_energy_recalc_bin = 0;
     complex_s32_t X[AEC_MAX_X_CHANNELS][NUM_BINS];
     for(unsigned ch=0; ch<num_x_channels; ch++) {
@@ -112,8 +111,8 @@ void test_update_total_X_energy() {
             }
             mapping[p] = p;
         }
-    } 
-    
+    }
+
     double max_diff_percentage_shadow = 0.0;
     double max_diff_percentage = 0.0;
     int max_diff = 0;
@@ -123,7 +122,7 @@ void test_update_total_X_energy() {
             bfp_complex_s32_t *X_ptr = &state.shared_state->X[ch];
             X_ptr->exp = pseudo_rand_int(&seed, -3, 4) - 30;
             X_ptr->hr = (pseudo_rand_uint32(&seed) % 3);
-            
+
             //Generate X
             for(unsigned bin=0; bin<NUM_BINS; bin++)
             {
@@ -133,14 +132,14 @@ void test_update_total_X_energy() {
                 X_fp[ch][bin].im = ldexp(X_ptr->data[bin].im, X_ptr->exp);
             }
         }
-        
+
         //Calculate X_energy
         for(unsigned ch=0; ch<num_x_channels; ch++) {
             aec_calc_X_fifo_energy(&state, ch, X_energy_recalc_bin);
             aec_calc_X_fifo_energy(&shadow_state, ch, X_energy_recalc_bin);
         }
-        aec_calc_X_fifo_energy_fp(X_energy_fp, &max_X_energy_fp[0], X_fp, X_fifo_fp, mapping, num_x_channels, state.num_phases, X_energy_recalc_bin); 
-        aec_calc_X_fifo_energy_fp(X_energy_shadow_fp, &max_X_energy_shadow_fp[0], X_fp, X_fifo_fp, mapping, num_x_channels, shadow_state.num_phases, X_energy_recalc_bin); 
+        aec_calc_X_fifo_energy_fp(X_energy_fp, &max_X_energy_fp[0], X_fp, X_fifo_fp, mapping, num_x_channels, state.num_phases, X_energy_recalc_bin);
+        aec_calc_X_fifo_energy_fp(X_energy_shadow_fp, &max_X_energy_shadow_fp[0], X_fp, X_fifo_fp, mapping, num_x_channels, shadow_state.num_phases, X_energy_recalc_bin);
         //Update X_fifo
         for(unsigned ch=0; ch<num_x_channels; ch++) {
             aec_update_X_fifo_and_calc_sigmaXX(&state, ch);
@@ -178,7 +177,7 @@ void test_update_total_X_energy() {
                 if(diff_double > 0.0002*(ref_double < 0.0 ? -ref_double : ref_double) + pow(10, -8))
                 {
                     printf("Main filter: iter %d. ch: %d, bin: %d, diff %f outside pass limits. ref %f, dut %f\n", iter, ch, i, diff_double, ref_double, dut_double);
-                    printf("Main filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_ptr->data[i], X_energy_ptr->exp);                    
+                    printf("Main filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_ptr->data[i], X_energy_ptr->exp);
                     assert(0);
                 }
                 ref_double = X_energy_shadow_fp[ch][i];
@@ -190,7 +189,7 @@ void test_update_total_X_energy() {
                 if(diff_double > 0.002*(ref_double < 0.0 ? -ref_double : ref_double) + pow(10, -8))
                 {
                     printf("Shadow filter: iter %d, ch: %d, bin: %d, diff %f outside pass limits. ref %f, dut %f\n", iter, ch, i, diff_double, ref_double, dut_double);
-                    printf("Shadow filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_shadow_ptr->data[i], X_energy_shadow_ptr->exp);                    
+                    printf("Shadow filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_shadow_ptr->data[i], X_energy_shadow_ptr->exp);
                     assert(0);
                 }
             }
@@ -218,7 +217,7 @@ void test_update_total_X_energy() {
         X_energy_recalc_bin += 1;
         if(X_energy_recalc_bin == (AEC_PROC_FRAME_LENGTH/2) + 1) {
             X_energy_recalc_bin = 0;
-        }        
+        }
     }
     printf("max_diff_percentage = %f\n",max_diff_percentage);
     printf("max_diff_percentage_shadow = %f\n",max_diff_percentage_shadow);

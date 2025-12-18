@@ -63,7 +63,6 @@ foreach( testfile ${TEST_SOURCES} )
 
     target_link_libraries(fwk_voice_${TESTNAME}
         PUBLIC
-            lib_xcore_math
             fwk_voice::test::shared::test_utils
             fwk_voice::test::shared::unity
             fwk_voice::example::hpf
@@ -80,7 +79,5 @@ foreach( testfile ${TEST_SOURCES} )
         target_link_options(fwk_voice_${TESTNAME}
             PRIVATE
                 "-target=${XCORE_TARGET}")
-    else()
-        target_link_libraries(fwk_voice_${TESTNAME} m)
     endif()
 endforeach( testfile ${TEST_SOURCES} )

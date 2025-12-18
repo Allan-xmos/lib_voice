@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define NUM_BINS ((AEC_PROC_FRAME_LENGTH/2) + 1)
 
@@ -16,7 +15,7 @@ void aec_update_sigma_XX_fp (double (*sigma_XX)[NUM_BINS], double *sum_X_energy,
             double energy = (X_fp[x_ch][i].re*X_fp[x_ch][i].re)+(X_fp[x_ch][i].im*X_fp[x_ch][i].im);
             sum_X_energy[x_ch] += energy;
             sigma_XX[x_ch][i] = sigma_XX[x_ch][i]*(1.0 - ldexp(1.0, -sigma_xx_shift));
-            sigma_XX[x_ch][i] += (energy*ldexp(1.0, -sigma_xx_shift));            
+            sigma_XX[x_ch][i] += (energy*ldexp(1.0, -sigma_xx_shift));
         }
     }
 }
@@ -51,7 +50,7 @@ void test_update_sigma_XX() {
             sigma_XX_fp[x_ch][bin] = 0.0;
         }
     }
-    
+
     int mapping[AEC_MAIN_FILTER_PHASES];
     bfp_complex_s32_t X_fifo_check[AEC_MAX_X_CHANNELS][AEC_MAIN_FILTER_PHASES];
     for(int ch=0; ch<num_x_channels; ch++) {
@@ -81,8 +80,8 @@ void test_update_sigma_XX() {
         for(unsigned ch=0; ch<num_x_channels; ch++) {
             aec_update_X_fifo_and_calc_sigmaXX(&state, ch);
         }
-        aec_update_sigma_XX_fp(sigma_XX_fp, sum_X_energy_fp, X_fp, num_x_channels, state.shared_state->config_params.aec_core_conf.sigma_xx_shift); 
-        
+        aec_update_sigma_XX_fp(sigma_XX_fp, sum_X_energy_fp, X_fp, num_x_channels, state.shared_state->config_params.aec_core_conf.sigma_xx_shift);
+
         for(unsigned ch=0; ch < num_x_channels; ch++){
             //printf("%f, %f\n",sum_X_energy_fp[ch], ldexp(state.shared_state->sum_X_energy[ch].mant, state.shared_state->sum_X_energy[ch].exp));
             unsigned diff = vector_int32_maxdiff((int32_t*)&state.shared_state->sum_X_energy[ch].mant, state.shared_state->sum_X_energy[ch].exp, (double*)&sum_X_energy_fp[ch], 0, 1);

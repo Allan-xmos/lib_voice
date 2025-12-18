@@ -1,21 +1,21 @@
 # Auto-generate task distribution scheme and top level config files
 
 if( NOT ${Python3_FOUND} )
-  message(FATAL_ERROR "Python3 not found for running . ") 
+  message(FATAL_ERROR "Python3 not found for running . ")
 endif()
 
 #copy conftest.py in the build directory since pytest_collect_file only collects tests from the directory tree where conftest.py is present
-configure_file( conftest.py conftest.py COPYONLY ) 
+configure_file( conftest.py conftest.py COPYONLY )
 set( GEN_SCHEDULE_SCRIPT ${SHARED_SRC_PATH}/python/generate_task_distribution_scheme.py )
 set( AUTOGEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/src.autogen )
 set( AUTOGEN_SOURCES ${AUTOGEN_DIR}/aec_task_distribution.c )
-set( AUTOGEN_INCLUDES ${AUTOGEN_DIR}/aec_task_distribution.h ${AUTOGEN_DIR}/aec_config.h)
+set( AUTOGEN_INCLUDES ${AUTOGEN_DIR}/aec_config.h)
 
 message(STATUS "de_unit_tests aec build config:  ${AEC_UNIT_TESTS_BUILD_CONFIG}" )
 message( STATUS "Unit tests speedup factor ${TEST_SPEEDUP_FACTOR}" )
 set( GEN_SCHEDULE_SCRIPT_BYPRODUCTS ${AUTOGEN_SOURCES} ${AUTOGEN_INCLUDES} )
 
-unset(GEN_SCHEDULE_SCRIPT_ARGS) 
+unset(GEN_SCHEDULE_SCRIPT_ARGS)
 list(APPEND GEN_SCHEDULE_SCRIPT_ARGS --out-dir ${AUTOGEN_DIR})
 list(APPEND GEN_SCHEDULE_SCRIPT_ARGS --config ${AEC_UNIT_TESTS_BUILD_CONFIG})
 
@@ -47,7 +47,7 @@ foreach( testfile ${TEST_SOURCES} )
     # Get test name
     #cmake_path( GET testfile STEM TESTNAME )
     get_filename_component(TESTNAME ${testfile} NAME_WLE)
-    
+
     # Create runner file directory
     file( MAKE_DIRECTORY ${RUNNERS_DIR}/${TESTNAME} )
 
@@ -56,7 +56,7 @@ foreach( testfile ${TEST_SOURCES} )
     set( RUNNER_FILE ${RUNNERS_DIR}/${TESTNAME}/${TESTNAME}_Runner.c )
     set( GEN_RUNNER_SCRIPT_BYPRODUCTS ${RUNNER_FILE} )
 
-    unset(GEN_RUNNER_SCRIPT_ARGS) 
+    unset(GEN_RUNNER_SCRIPT_ARGS)
     list(APPEND GEN_RUNNER_SCRIPT_ARGS --project-root ${UNITY_PATH}/.. )
     list(APPEND GEN_RUNNER_SCRIPT_ARGS --source-file ${testfile} )
     list(APPEND GEN_RUNNER_SCRIPT_ARGS --runner-file ${RUNNER_FILE})
@@ -84,17 +84,17 @@ foreach( testfile ${TEST_SOURCES} )
             ${AUTOGEN_DIR}
         )
 
-    target_link_libraries(fwk_voice_${TESTNAME} 
+    target_link_libraries(fwk_voice_${TESTNAME}
         PUBLIC
             fwk_voice::aec
             fwk_voice::adec
             fwk_voice::test::shared::test_utils
             fwk_voice::test::shared::unity
-            fwk_voice::example::aec1thread)
+            fwk_voice::aec)
 
     if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
         target_compile_options(fwk_voice_${TESTNAME}
-            PRIVATE 
+            PRIVATE
                 "-DUNITY_SUPPORT_64"
                 "-Wno-xcore-fptrgroup"
                 "-report"
@@ -103,8 +103,6 @@ foreach( testfile ${TEST_SOURCES} )
         target_link_options(fwk_voice_${TESTNAME}
             PRIVATE
                 "-target=${XCORE_TARGET}")
-    else()
-        target_link_libraries(fwk_voice_${TESTNAME} m)
     endif()
 endforeach()
 

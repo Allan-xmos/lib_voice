@@ -4,12 +4,12 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-#include "aec_api.h"
+#include "aec.h"
 int detect_input_activity_fp(double (*input)[AEC_FRAME_ADVANCE], double active_threshold, int channels) {
     for(int ch=0; ch<channels; ch++) {
         for(int i=0; i<AEC_FRAME_ADVANCE; i++) {
             if(fabs(input[ch][i]) > active_threshold) {
-                return 1;    
+                return 1;
             }
         }
     }
@@ -23,7 +23,7 @@ float_s32_t float_s32_use_exponent(float_s32_t a, int exp) {
 
     bfp_s32_t out_bfp;
     bfp_s32_init(&out_bfp, &out.mant, out.exp, 1, 0);
-    
+
     bfp_s32_use_exponent(&out_bfp, exp);
     return out;
 }

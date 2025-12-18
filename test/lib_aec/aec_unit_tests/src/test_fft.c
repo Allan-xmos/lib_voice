@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 double sine_lut[AEC_PROC_FRAME_LENGTH / 4 + 1];
 //In-place N point complex FFT
@@ -18,7 +17,7 @@ void test_fft() {
     unsigned num_x_channels = 2;
     unsigned main_filter_phases = 6;
     unsigned shadow_filter_phases = 2;
-    
+
     aec_state_t main_state, shadow_state;
     aec_memory_pool_t aec_memory_pool;
     aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
@@ -45,7 +44,7 @@ void test_fft() {
         else {
             state_ptr = &shadow_state;
         }
-        aec_frame_init(&main_state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);        
+        aec_frame_init(&main_state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
         bfp_s32_t *fft_in;
         bfp_complex_s32_t *fft_out;
         int num_channels;

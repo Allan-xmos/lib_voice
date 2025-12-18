@@ -1,12 +1,12 @@
 // Copyright 2022 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#include "aec_api.h"
+#include "aec.h"
 #include "adec_api.h"
 
 void adec_estimate_delay (
         de_output_t *de_output,
-        const bfp_complex_s32_t* H_hat, 
+        const bfp_complex_s32_t* H_hat,
         unsigned num_phases)
 {
     //Direct manipulation of mant/exp because f64_to_float_s32(0.0) takes hundreds of cycles
@@ -16,7 +16,7 @@ void adec_estimate_delay (
     float_s32_t peak_fd_power = zero;
     int32_t peak_power_phase_index = 0;
     de_output->sum_phase_powers = zero;
-    
+
     for(int ph=0; ph<num_phases; ph++) { //compute delay over 1 x-y pair phases
         float_s32_t phase_power;
         aec_calc_freq_domain_energy(&phase_power, &H_hat[ph]);
@@ -32,7 +32,7 @@ void adec_estimate_delay (
 
     if(float_s32_gt(de_output->sum_phase_powers, zero)){
         float_s32_t num_phases_s32 = {num_phases, 0};
-        de_output->peak_to_average_ratio = 
+        de_output->peak_to_average_ratio =
                 float_s32_div(float_s32_mul(peak_fd_power, num_phases_s32), de_output->sum_phase_powers);
     }else{
         de_output->peak_to_average_ratio = one;

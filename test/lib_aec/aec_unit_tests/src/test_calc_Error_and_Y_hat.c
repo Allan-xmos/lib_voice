@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define TEST_MAIN_PHASES (5)
 #define TEST_NUM_Y (1)
@@ -50,7 +49,7 @@ void calc_Error_and_Y_hat_fp(
                     }
                     else {
                         for(int i=0; i<NUM_BINS; i++) {
-                            Y_hat[ch][i].re += ((H_hat_shad[ch][xch*phases + ph][i].re * X_fifo[xch][ph][i].re) - (H_hat_shad[ch][xch*phases + ph][i].im * X_fifo[xch][ph][i].im));                        
+                            Y_hat[ch][i].re += ((H_hat_shad[ch][xch*phases + ph][i].re * X_fifo[xch][ph][i].re) - (H_hat_shad[ch][xch*phases + ph][i].im * X_fifo[xch][ph][i].im));
                             Y_hat[ch][i].im += ((H_hat_shad[ch][xch*phases + ph][i].re * X_fifo[xch][ph][i].im) + (H_hat_shad[ch][xch*phases + ph][i].im * X_fifo[xch][ph][i].re));
                         }
                     }
@@ -69,14 +68,14 @@ void test_calc_Error_and_Y_hat() {
     unsigned num_x_channels = TEST_NUM_X;
     unsigned main_filter_phases = TEST_MAIN_PHASES;
     unsigned shadow_filter_phases = TEST_SHADOW_PHASES;
-    
+
     aec_state_t state, shadow_state;
     aec_memory_pool_t aec_memory_pool;
     aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
     aec_shared_state_t aec_shared_state;
-    
+
     aec_init(&state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
-    
+
     //Declare floating point arrays
     complex_double_t H_hat_fp[TEST_NUM_Y][TEST_NUM_X*TEST_MAIN_PHASES][NUM_BINS];
     complex_double_t H_hat_shadow_fp[TEST_NUM_Y][TEST_NUM_X*TEST_SHADOW_PHASES][NUM_BINS];
@@ -102,7 +101,7 @@ void test_calc_Error_and_Y_hat() {
         int bypass = pseudo_rand_uint32(&seed) % 2;
         state_ptr->shared_state->config_params.aec_core_conf.bypass = bypass;
 
-        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);        
+        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
         for(int ch=0; ch<num_y_channels; ch++) {
             //state_ptr->shared_state->Y is initialised in the y->Y fft aec_fft() call with state_ptr->shared_state->y as input. Initialising here for
             //standalone testing.
@@ -148,7 +147,7 @@ void test_calc_Error_and_Y_hat() {
         //Generate Y
         for(int ch=0; ch<num_y_channels; ch++) {
             state_ptr->shared_state->Y[ch].exp = pseudo_rand_int(&seed, -31, 32);
-            state_ptr->shared_state->Y[ch].hr = pseudo_rand_uint32(&seed) % 3;                
+            state_ptr->shared_state->Y[ch].hr = pseudo_rand_uint32(&seed) % 3;
             for(int i=0; i<NUM_BINS; i++) {
                 state_ptr->shared_state->Y[ch].data[i].re = pseudo_rand_int32(&seed) >> state_ptr->shared_state->Y[ch].hr;
                 state_ptr->shared_state->Y[ch].data[i].im = pseudo_rand_int32(&seed) >> state_ptr->shared_state->Y[ch].hr;
@@ -180,7 +179,7 @@ void test_calc_Error_and_Y_hat() {
             for(unsigned t=0; t<TEST_NUM_Y; t++) {
                 int remaining_length = NUM_BINS;
                 int start = 0;
-                for(unsigned j=0; j<NUM_CHUNKS_PER_Y; j++) { 
+                for(unsigned j=0; j<NUM_CHUNKS_PER_Y; j++) {
                     unsigned ch = t;
                     unsigned length = 0;
                     unsigned start_offset = 0;
@@ -208,19 +207,19 @@ void test_calc_Error_and_Y_hat() {
                     aec_l2_calc_Error_and_Y_hat(&Error_par[index], &Y_hat_par[index], &state_ptr->shared_state->Y[ch], state_ptr->X_fifo_1d, state_ptr->H_hat[ch], num_x_channels, state_ptr->num_phases, start_offset, length, state_ptr->shared_state->config_params.aec_core_conf.bypass);
                     //printf("Error: (%d, %d), Y_hat: (%d,%d)\n", Error_par[index].exp, Error_par[index].hr, Y_hat_par[index].exp, Y_hat_par[index].hr);
                 }
-            }    
+            }
             //printf("\n");
             //Unify
             for(int ch=0; ch<num_y_channels; ch++) {
                 int final_exp, final_hr;
-                aec_l2_bfp_complex_s32_unify_exponent(Error_par, &final_exp, &final_hr, mapping, TEST_NUM_Y*NUM_CHUNKS_PER_Y, ch, 0);                
+                aec_l2_bfp_complex_s32_unify_exponent(Error_par, &final_exp, &final_hr, mapping, TEST_NUM_Y*NUM_CHUNKS_PER_Y, ch, 0);
                 state_ptr->Error[ch].exp = final_exp;
                 state_ptr->Error[ch].hr = final_hr;
                 if(state_ptr->Error[ch].exp == INT_MIN)
                 {
                     assert(0);
                 }
-                aec_l2_bfp_complex_s32_unify_exponent(Y_hat_par, &final_exp, &final_hr, mapping, TEST_NUM_Y*NUM_CHUNKS_PER_Y, ch, 0);                
+                aec_l2_bfp_complex_s32_unify_exponent(Y_hat_par, &final_exp, &final_hr, mapping, TEST_NUM_Y*NUM_CHUNKS_PER_Y, ch, 0);
                 state_ptr->Y_hat[ch].exp = final_exp;
                 state_ptr->Y_hat[ch].hr = final_hr;
                 if(state_ptr->Y_hat[ch].exp == INT_MIN)
@@ -250,9 +249,9 @@ void test_calc_Error_and_Y_hat() {
                 diff = (diff < 0) ? -diff : diff;
                 if(diff > max_diff) max_diff = diff;
                 TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(1<<4, max_diff, "Y_hat diff too large.");
-            }            
+            }
         }
-        
+
     }
     printf("max_diff = %d\n",max_diff);
 }

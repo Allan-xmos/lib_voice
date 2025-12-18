@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 double sine_lut_ifft[AEC_PROC_FRAME_LENGTH / 4 + 1];
 //In-place N-pt complex IFFT
@@ -73,11 +72,11 @@ void test_ifft() {
             ref[ch][AEC_PROC_FRAME_LENGTH/2].re = ref[ch][0].im;
             ref[ch][AEC_PROC_FRAME_LENGTH/2].im = 0;
             ref[ch][0].im = 0;
-            ifft_in[ch].data[AEC_PROC_FRAME_LENGTH/2].re = ifft_in[ch].data[0].im; 
+            ifft_in[ch].data[AEC_PROC_FRAME_LENGTH/2].re = ifft_in[ch].data[0].im;
             ifft_in[ch].data[AEC_PROC_FRAME_LENGTH/2].im = 0;
             ifft_in[ch].data[0].im = 0;
         }
-        
+
         //DUT IFFT
         for(int ch=0; ch<num_y_channels; ch++) {
             //printf("addr in: 0x%08x, addr out: 0x%08x\n",&ifft_in[ch].data[0], &ifft_out[ch].data[0]);

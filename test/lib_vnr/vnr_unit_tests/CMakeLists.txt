@@ -28,8 +28,8 @@ foreach(testfile ${TEST_SOURCES})
     target_sources(${APP_NAME} PRIVATE ${COMMON_SOURCES_C} ${testfile})
     target_include_directories(${APP_NAME} PRIVATE src)
     target_include_directories(${APP_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/modules/lib_vnr/src/) # For testing private VNR feature extraction functions
-    
-    target_link_libraries(${APP_NAME} 
+
+    target_link_libraries(${APP_NAME}
         PUBLIC
             fwk_voice::vnr
             fwk_voice::example::fileutils)
@@ -43,7 +43,7 @@ foreach(testfile ${TEST_SOURCES})
         target_link_options(${APP_NAME}
             PRIVATE
                 -lquadspi
-                -w            
+                -w
                 "-target=${XCORE_TARGET}"
                 "-report"
                 "${CONFIG_XSCOPE_PATH}/config.xscope")
@@ -62,11 +62,6 @@ foreach(testfile ${TEST_SOURCES})
             PRIVATE
                 ${BUILD_FLAGS})
 
-        target_link_libraries(${APP_NAME} 
-            PUBLIC
-                lib_xcore_math)
-
         target_link_libraries(${APP_NAME} PRIVATE "-lpthread")
-        target_link_libraries(${APP_NAME} PRIVATE m)
     endif()
 endforeach()

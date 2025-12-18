@@ -8,7 +8,7 @@
 ---------------
 
 .. doxygenpage:: page_aec_defines_h
-  
+
 
 .. _aec_state_h:
 
@@ -16,16 +16,16 @@
 -------------
 
 .. doxygenpage:: page_aec_state_h
-  
 
 
-.. _aec_api_h:
 
-`aec_api.h`
------------
+.. _aec_h:
 
-.. doxygenpage:: page_aec_api_h
-  
+`aec.h`
+-------
+
+.. doxygenpage:: page_aec_h
+
 
 
 

@@ -3,11 +3,10 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define NUM_BINS ((AEC_PROC_FRAME_LENGTH/2) + 1)
- 
+
 void aec_calc_T_fp(
         complex_double_t (*T)[AEC_MAX_X_CHANNELS][NUM_BINS],
         complex_double_t (*Error)[NUM_BINS],
@@ -43,7 +42,7 @@ void test_calc_T() {
     double inv_X_energy_fp[AEC_MAX_X_CHANNELS][NUM_BINS];
     double mu_fp[AEC_MAX_Y_CHANNELS][AEC_MAX_X_CHANNELS];
     complex_double_t T_fp[AEC_MAX_Y_CHANNELS][AEC_MAX_X_CHANNELS][NUM_BINS];
-    
+
     unsigned seed = 45;
     double max_diff_percentage = 0.0;
     for(int iter=0; iter<(1<<11)/F; iter++) {
@@ -60,7 +59,7 @@ void test_calc_T() {
 
         for(int ch=0; ch<num_y_channels; ch++) {
             state_ptr->Error[ch].exp = pseudo_rand_int(&seed, -3, 4) - 31;
-            state_ptr->Error[ch].hr = pseudo_rand_uint32(&seed) % 3;                
+            state_ptr->Error[ch].hr = pseudo_rand_uint32(&seed) % 3;
             for(int i=0; i<NUM_BINS; i++) {
                 state_ptr->Error[ch].data[i].re = pseudo_rand_int32(&seed) >> state_ptr->Error[ch].hr;
                 state_ptr->Error[ch].data[i].im = pseudo_rand_int32(&seed) >> state_ptr->Error[ch].hr;
@@ -82,7 +81,7 @@ void test_calc_T() {
         for(int ych=0; ych<num_y_channels; ych++) {
             for(int xch=0; xch<num_y_channels; xch++) {
                 state_ptr->mu[ych][xch].exp = pseudo_rand_int(&seed, -3, 4) - 31;
-                int hr = pseudo_rand_uint32(&seed) % 3;                
+                int hr = pseudo_rand_uint32(&seed) % 3;
                 state_ptr->mu[ych][xch].mant = pseudo_rand_int32(&seed) >> hr;
 
                 mu_fp[ych][xch] = ldexp(state_ptr->mu[ych][xch].mant, state_ptr->mu[ych][xch].exp);
@@ -101,7 +100,7 @@ void test_calc_T() {
         for(int ych=0; ych<num_y_channels; ych++) {
             for(int xch=0; xch<num_x_channels; xch++) {
                 aec_calc_T(state_ptr, ych, xch);
-            } 
+            }
             //Since T memory will be overwritten when computing for next y-channel, do error checking now
             for(int xch=0; xch<num_x_channels; xch++) {
                 for(int i=0; i<NUM_BINS; i++) {

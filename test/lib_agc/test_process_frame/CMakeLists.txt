@@ -49,7 +49,7 @@ foreach(testfile ${TEST_SOURCES})
     target_include_directories(fwk_voice_agc_${TESTNAME}
         PRIVATE src)
 
-    target_link_libraries(fwk_voice_agc_${TESTNAME} 
+    target_link_libraries(fwk_voice_agc_${TESTNAME}
         PUBLIC
             fwk_voice::agc
             fwk_voice::test::shared::test_utils
@@ -57,7 +57,7 @@ foreach(testfile ${TEST_SOURCES})
 
     if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
         target_compile_options(fwk_voice_agc_${TESTNAME}
-            PRIVATE 
+            PRIVATE
                 "-DUNITY_SUPPORT_64"
                 "-Wno-xcore-fptrgroup"
                 "-report"
@@ -66,9 +66,5 @@ foreach(testfile ${TEST_SOURCES})
         target_link_options(fwk_voice_agc_${TESTNAME}
             PRIVATE
                 "-target=${XCORE_TARGET}")
-    else()
-        target_link_libraries(fwk_voice_agc_${TESTNAME}
-            PRIVATE
-                m)
     endif()
 endforeach(testfile ${TEST_SOURCES})

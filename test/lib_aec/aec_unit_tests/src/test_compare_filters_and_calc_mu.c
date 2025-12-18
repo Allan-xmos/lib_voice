@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define TEST_NUM_Y (2)
 #define TEST_NUM_X (2)
@@ -102,7 +101,7 @@ static void init_coherence_mu_config_fp(coherence_mu_config_fp_t *cfg) {
     cfg->coh_thresh_abs = 0.65;
     cfg->mu_scalar = 1.0;
     cfg->eps = (double)1e-100;
-    
+
     cfg->thresh_minus20dB = pow(10, -20/10);
     cfg->x_energy_thresh = pow(10, -40/10);
     cfg->mu_coh_time = 2;
@@ -293,12 +292,12 @@ void calc_coherence_mu_fp(
                 }
             }
         }
-        double sum_X_energy_max = sum_X_energy[0]; 
+        double sum_X_energy_max = sum_X_energy[0];
         for(int xch=1; xch<params->x_channels; xch++) {
             if(sum_X_energy_max < sum_X_energy[xch]) sum_X_energy_max = sum_X_energy[xch];
         }
         for(int xch=0; xch<params->x_channels; xch++) {
-            //if ref_energy_log[x_ch] <= ref_energy_thresh or ref_energy_log[x_ch] < np.max(ref_energy_log)-20: 
+            //if ref_energy_log[x_ch] <= ref_energy_thresh or ref_energy_log[x_ch] < np.max(ref_energy_log)-20:
             if((sum_X_energy[xch] <= cfg->x_energy_thresh) || (sum_X_energy[xch] < (sum_X_energy_max * cfg->thresh_minus20dB))) {
                 checkpoints_mu[12] |= 1;
                 for(int ych=0; ych<params->y_channels; ych++) {
@@ -333,7 +332,7 @@ void calc_coherence_mu_fp(
 #define NUM_SHADOW_CHECKPOINTS (9)
 int checkpoints[NUM_SHADOW_CHECKPOINTS] = {0};
 void compare_filter_fp(
-        shadow_filt_params_fp_t *params,        
+        shadow_filt_params_fp_t *params,
         const shadow_filt_config_fp_t *cfg
         )
 {
@@ -368,16 +367,16 @@ void compare_filter_fp(
                 params->Error_shadow[ch][i].re = params->Y[ch][i].re;
                 params->Error_shadow[ch][i].im = params->Y[ch][i].im;
             }
-            overall_Error_shadow[ch] = overall_Input[ch]; 
+            overall_Error_shadow[ch] = overall_Input[ch];
             //# give the zeroed filter time to reconverge (or redeconverge)
-            params->shadow_reset_count[ch] = -cfg->shadow_reset_timer;             
+            params->shadow_reset_count[ch] = -cfg->shadow_reset_timer;
         }
         if((overall_Error_shadow[ch] <= (cfg->shadow_copy_thresh * overall_Error[ch])) &&
             (params->shadow_better_count[ch] > cfg->shadow_better_thresh)) {
             checkpoints[2] |= 1;
             //printf("checkpoint 2\n");
             //# if shadow filter is much better, and has been for several frames,
-            //# copy to reference filter                            
+            //# copy to reference filter
             params->shadow_flag[ch] = COPY;
             params->shadow_reset_count[ch] = 0;
             params->shadow_better_count[ch] += 1;
@@ -401,7 +400,7 @@ void compare_filter_fp(
                 params->shadow_flag[ch] = EQUAL;
             }
         }
-        else if((overall_Error_shadow[ch] >= cfg->shadow_reset_thresh * overall_Error[ch]) && 
+        else if((overall_Error_shadow[ch] >= cfg->shadow_reset_thresh * overall_Error[ch]) &&
             (params->shadow_reset_count[ch] >= 0)) {
             //# if shadow filter is worse than reference, reset provided that
             //# the delay is small and we're not letting the shadow filter reconverge after zeroing
@@ -410,7 +409,7 @@ void compare_filter_fp(
             if(params->shadow_reset_count[ch] > cfg->shadow_zero_thresh) {
                 //printf("checkpoint 5. ych %d\n", ch);
                 checkpoints[5] |= 1;
-                //# if shadow filter has been reset several times in a row, reset to zeros                
+                //# if shadow filter has been reset several times in a row, reset to zeros
                 params->shadow_flag[ch] = ZERO;
                 reset_shadow_filter_fp(params, ch);
                 for(int i=0; i<NUM_BINS; i++) {
@@ -418,7 +417,7 @@ void compare_filter_fp(
                     params->Error_shadow[ch][i].im = params->Y[ch][i].im;
                 }
                 //# give the zeroed filter time to reconverge
-                params->shadow_reset_count[ch] = -cfg->shadow_reset_timer;                
+                params->shadow_reset_count[ch] = -cfg->shadow_reset_timer;
             }
             else {
                 //printf("checkpoint 6\n");
@@ -426,8 +425,8 @@ void compare_filter_fp(
                 //# otherwise copy the main filter to the shadow filter
                 main_to_shadow_filter_copy_fp(params, ch);
                 for(int i=0; i<NUM_BINS; i++) {
-                    params->Error_shadow[ch][i].re = params->Error[ch][i].re;                    
-                    params->Error_shadow[ch][i].im = params->Error[ch][i].im;                    
+                    params->Error_shadow[ch][i].re = params->Error[ch][i].re;
+                    params->Error_shadow[ch][i].im = params->Error[ch][i].im;
                 }
                 params->shadow_flag[ch] = RESET;
             }
@@ -435,13 +434,13 @@ void compare_filter_fp(
         else {
             //printf("checkpoint 7\n");
             checkpoints[7] |= 1;
-            //# shadow filter is comparable to main filter, 
+            //# shadow filter is comparable to main filter,
             //# or we're waiting for it to reconverge after zeroing
             params->shadow_better_count[ch] = 0;
             params->shadow_flag[ch] = EQUAL;
             if(params->shadow_reset_count[ch] < 0) {
                 params->shadow_reset_count[ch] += 1;
-            }            
+            }
         }
     }
     //# reset sigma_xx if both mics shadow filtered
@@ -471,7 +470,7 @@ void calc_delta_fp(shadow_filt_params_fp_t *params, const coherence_mu_config_fp
             max_energy = (params->max_X_energy_main[ch] > max_energy) ? params->max_X_energy_main[ch] : max_energy;
         }
         max_energy = max_energy * params->delta_scale_main;
-        //params->delta_main = (max_energy > params->delta_min) ? max_energy : params->delta_min; 
+        //params->delta_main = (max_energy > params->delta_min) ? max_energy : params->delta_min;
         if(max_energy > params->delta_min) {
             params->delta_main = max_energy;
         }
@@ -495,7 +494,7 @@ void calc_delta_fp(shadow_filt_params_fp_t *params, const coherence_mu_config_fp
     }
     else {
         params->delta_main = params->delta_adaption_force_on;
-        params->delta_shadow = params->delta_adaption_force_on; 
+        params->delta_shadow = params->delta_adaption_force_on;
     }
 }
 
@@ -509,7 +508,7 @@ void compare_filters_and_calc_mu_fp(
     compare_filter_fp(
             params,
             shadow_cfg);
-    
+
     //TODO check if all paths executed
     calc_delta_fp(params, coh_mu_cfg);
 
@@ -548,7 +547,7 @@ void test_compare_filters_and_calc_mu() {
     aec_shared_state_t shared_state;
     aec_memory_pool_t main_memory_pool;
     aec_shadow_filt_memory_pool_t shadow_memory_pool;
-    
+
     unsigned num_y_channels = TEST_NUM_Y;
     unsigned num_x_channels = TEST_NUM_X;
     unsigned main_filter_phases = TEST_MAIN_PHASES;
@@ -557,7 +556,7 @@ void test_compare_filters_and_calc_mu() {
     //floating point arrays
     shadow_filt_config_fp_t shadow_filt_cfg_fp;
     coherence_mu_config_fp_t coh_mu_cfg_fp;
-    shadow_filt_params_fp_t shadow_filt_coh_mu_params_fp; 
+    shadow_filt_params_fp_t shadow_filt_coh_mu_params_fp;
 
     //Initialise fixed point
     aec_init(&main_state, &shadow_state, &shared_state, (uint8_t*)&main_memory_pool, (uint8_t*)&shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
@@ -572,10 +571,10 @@ void test_compare_filters_and_calc_mu() {
             num_x_channels,
             main_filter_phases,
             shadow_filter_phases);
-    
+
     unsigned seed = 35788;
     int32_t new_frame[TEST_NUM_Y + TEST_NUM_X][AEC_FRAME_ADVANCE];
-    unsigned max_diff_coh_mu = 0; 
+    unsigned max_diff_coh_mu = 0;
     for(int iter=0; iter<(1<<11)/F; iter++) {
         //every 200 frames set bypass
         main_state.shared_state->config_params.aec_core_conf.bypass = 0;
@@ -649,14 +648,14 @@ void test_compare_filters_and_calc_mu() {
             main_state.overall_Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
             main_state.overall_Error[ych].mant = pseudo_rand_uint32(&seed) >> 1;
             params_fp->overall_Error[ych] = ldexp(main_state.overall_Error[ych].mant, main_state.overall_Error[ych].exp);
-            
+
             //overall_Error_shadow
             shadow_state.overall_Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
             shadow_state.overall_Error[ych].mant = pseudo_rand_uint32(&seed) >> 1;
             params_fp->overall_Error_shadow[ych] = ldexp(shadow_state.overall_Error[ych].mant, shadow_state.overall_Error[ych].exp);
-            
+
             //overall_Y
-            main_state.shared_state->overall_Y[ych].exp = pseudo_rand_int(&seed, -31, 32); 
+            main_state.shared_state->overall_Y[ych].exp = pseudo_rand_int(&seed, -31, 32);
             main_state.shared_state->overall_Y[ych].mant = pseudo_rand_uint32(&seed) >> 1;
             params_fp->overall_Y[ych] = ldexp(main_state.shared_state->overall_Y[ych].mant, main_state.shared_state->overall_Y[ych].exp);
 
@@ -683,7 +682,7 @@ void test_compare_filters_and_calc_mu() {
                 params_fp->mu_shad_count[ych] = 0;
             }
         }
-        
+
         //Set adaption_config to something other than AUTO once in a while
         if((iter > 0) && !(iter % 100)) {
             int force_on = pseudo_rand_uint32(&seed) % 2;
@@ -723,7 +722,7 @@ void test_compare_filters_and_calc_mu() {
                 main_state.shared_state->sigma_XX[xch].data[i] = pseudo_rand_int32(&seed) >> main_state.shared_state->sigma_XX[xch].hr;
                 params_fp->sigma_XX[xch][i] = ldexp(main_state.shared_state->sigma_XX[xch].data[i], main_state.shared_state->sigma_XX[xch].exp);
             }
-            
+
             //sum_X_energy
             main_state.shared_state->sum_X_energy[xch].exp = pseudo_rand_int(&seed, -31, 32) - 31;
             main_state.shared_state->sum_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
@@ -734,12 +733,12 @@ void test_compare_filters_and_calc_mu() {
             main_state.max_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
             params_fp->max_X_energy_main[xch] = ldexp(main_state.max_X_energy[xch].mant, main_state.max_X_energy[xch].exp);
             //Make shadow max_energy smaller since shadow scale is bigger and we want the scaled_max_energy < delta_min code path executed
-            shadow_state.max_X_energy[xch].exp = -40 - (pseudo_rand_uint32(&seed) & 63); 
+            shadow_state.max_X_energy[xch].exp = -40 - (pseudo_rand_uint32(&seed) & 63);
             shadow_state.max_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
             params_fp->max_X_energy_shadow[xch] = ldexp(shadow_state.max_X_energy[xch].mant, shadow_state.max_X_energy[xch].exp);
 
         }
-        
+
         compare_filters_and_calc_mu_fp(
                 &shadow_filt_coh_mu_params_fp,
                 &shadow_filt_cfg_fp,
@@ -777,14 +776,14 @@ void test_compare_filters_and_calc_mu() {
 
             //compare Error_Shadow
             if(diff_Error_shadow > 0) {printf("iter %d. diff_Error_shadow %d too large\n",iter, diff_Error_shadow); assert(0);}
-            
+
             //Compare H_hat and H_hat_shadow
             for(int xch=0; xch<num_x_channels; xch++) {
                 for(int ph=0; ph<main_state.num_phases; ph++) {
                     unsigned diff_H_hat = vector_int32_maxdiff((int32_t*)&main_state.H_hat[ych][xch*main_state.num_phases + ph].data[0], main_state.H_hat[ych][xch*main_state.num_phases + ph].exp, (double*)&params_fp->H_hat[ych][xch][ph][0], 0, 2*NUM_BINS);
                     if(diff_H_hat > 0){printf("iter %d, ych %d, xch %d, ph %d, shadow_flag %d. diff_H_hat %d too large\n",iter, ych, xch, ph, params_fp->shadow_flag[ych], diff_H_hat); assert(0);}
                 }
-                
+
                 for(int ph=0; ph<shadow_state.num_phases; ph++) {
                     unsigned diff_H_hat_shadow = vector_int32_maxdiff((int32_t*)&shadow_state.H_hat[ych][xch*shadow_state.num_phases + ph].data[0], shadow_state.H_hat[ych][xch*shadow_state.num_phases + ph].exp, (double*)&params_fp->H_hat_shadow[ych][xch][ph][0], 0, 2*NUM_BINS);
                     if(diff_H_hat_shadow > 0){printf("iter %d, ych %d, xch %d, ph %d, shadow_flag %d. diff_H_hat_shadow %d too large\n",iter, ych, xch, ph, params_fp->shadow_flag[ych], diff_H_hat_shadow); assert(0);}
@@ -804,17 +803,17 @@ void test_compare_filters_and_calc_mu() {
         delta_diff = vector_int32_maxdiff((int32_t*)&shadow_state.delta.mant, shadow_state.delta.exp, &params_fp->delta_shadow, 0, 1);
         if(delta_diff > 1) {printf("iter %d. delta_diff_shadow %d too large\n",iter, delta_diff); assert(0);}
 
-        
+
         //check calc_mu outputs
         for(int ych=0; ych<num_y_channels; ych++) {
 
             //compare mu_coh_count
             if(params_fp->mu_coh_count[ych] != main_state.shared_state->coh_mu_state[ych].mu_coh_count) {
                 printf("iter %d. mu_coh_count mismatch. (ref %d, dut %ld)\n",iter, params_fp->mu_coh_count[ych], main_state.shared_state->coh_mu_state[ych].mu_coh_count); assert(0);}
-            
+
             //compare mu_shad_count
             if(params_fp->mu_shad_count[ych] != main_state.shared_state->coh_mu_state[ych].mu_shad_count) {printf("iter %d. mu_shad_count mismatch. (ref %d, dut %ld\n",iter, params_fp->mu_shad_count[ych], main_state.shared_state->coh_mu_state[ych].mu_shad_count); assert(0);}
-            
+
             //compare coh_mu
             for(int xch=0; xch<num_x_channels; xch++) {
                 unsigned diff_coh_mu = vector_int32_maxdiff((int32_t*)&main_state.shared_state->coh_mu_state[ych].coh_mu[xch].mant, main_state.shared_state->coh_mu_state[ych].coh_mu[xch].exp, (double*)&params_fp->coh_mu[ych][xch], 0, 1);

@@ -27,10 +27,4 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
             "-target=${XCORE_TARGET}"
             "-report"
             "${CMAKE_CURRENT_SOURCE_DIR}/config.xscope")
-else()
-    target_link_libraries(fwk_voice_test_ns_profile
-        PRIVATE 
-            # need to explicitly link m after lib_xcore_math
-            lib_xcore_math
-            m)
 endif()

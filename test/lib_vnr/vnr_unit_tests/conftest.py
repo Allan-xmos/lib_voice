@@ -34,11 +34,9 @@ def vnr_obj():
 @pytest.fixture
 def dut_runner(request, target):
     exe_path = bin_dir_path / request.node.originalname
-    if target == "xcore":
-        exe_path = exe_path.with_suffix(".xe")
 
     def _run_dut(input_bin):
-        op, _ = run_dut(input_bin, exe_path)
+        op, _ = run_dut(input_bin, exe_path, target)
         return op
 
     return _run_dut
@@ -49,4 +47,4 @@ def rng():
 
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
-        metafunc.parametrize("target", ['x86', 'xcore'])
+        metafunc.parametrize("target", ['native', 'xs3a'])

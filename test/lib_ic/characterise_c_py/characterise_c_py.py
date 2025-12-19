@@ -80,7 +80,7 @@ def process_py(input_data):
     output_data, _ = ic_obj.process_array(input_data)
     return np.reshape(output_data, output_data.shape[1])
 
-def process_c(input_data, run_native=False):
+def process_c(input_data):
 
     assert input_data.ndim == 2
     assert input_data.shape[0] == 2
@@ -89,9 +89,7 @@ def process_c(input_data, run_native=False):
 
     input_data = pvc.interleave_channel_frames(input_data, FRAME_ADVANCE)
 
-    local_exe = IC_XE
-    if not run_native: local_exe = local_exe.with_suffix(".xe")
-    output_data, _ = run_dut(input_data, local_exe)
+    output_data, _ = run_dut(input_data, IC_XE, "xs3a")
     
     return pvc.int32_to_float(output_data)
 

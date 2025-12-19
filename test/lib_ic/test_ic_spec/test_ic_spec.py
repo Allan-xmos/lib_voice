@@ -98,7 +98,7 @@ def process_py(input_data):
     return np.reshape(output_data, output_data.shape[1])
 
 
-def process_c(input_data, xe_name, run_native=False):
+def process_c(input_data, xe_name):
     input_data = pvc.float_to_int32(input_data)
 
     assert input_data.ndim == 2
@@ -106,9 +106,7 @@ def process_c(input_data, xe_name, run_native=False):
 
     input_data = pvc.interleave_channel_frames(input_data, frame_advance)
     
-    local_exe = xe_name
-    if not run_native: local_exe = local_exe.with_suffix(".xe")
-    output_data, _ = run_dut(input_data, local_exe)
+    output_data, _ = run_dut(input_data, xe_name, "xs3a")
 
     return pvc.int32_to_float(output_data)
 

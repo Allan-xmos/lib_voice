@@ -15,7 +15,7 @@ ic_xe = Path(__file__).parents[3] / "build" / "test" / "lib_ic" / "test_ic_profi
 SAMPLE_RATE = 16000
 FRAME_ADVANCE = 240
 
-def run_ic_xe(ic_xe, audio_in, audio_out, run_native, profile):
+def run_ic_xe(ic_xe, audio_in, audio_out, target, profile):
     
     input_data, _ = sf.read(audio_in, dtype=np.int32)
     
@@ -26,13 +26,11 @@ def run_ic_xe(ic_xe, audio_in, audio_out, run_native, profile):
     
     input_data = pvc.interleave_channel_frames(input_data, FRAME_ADVANCE)
     
-    local_exe = ic_xe
-    if not run_native: local_exe = local_exe.with_suffix(".xe")
-    output_data, xcore_stdo = run_dut(input_data, local_exe)
+    output_data, xcore_stdo = run_dut(input_data, ic_xe, target)
     
     sf.write(audio_out, output_data, SAMPLE_RATE)
     
-    if not run_native and profile:
+    if target != "native" and profile:
         parse_profile_log(xcore_stdo, worst_case_file=f"ic_prof.log")
 
 '''
@@ -192,8 +190,8 @@ def create_wav_input():
     
 def test_ic_profile():
     create_wav_input()
-    run_ic_xe(ic_xe, "input.wav", "output.wav", False, True)
+    run_ic_xe(ic_xe, "input.wav", "output.wav", "xs3a", True)
 
 if __name__ == "__main__":
     create_wav_input()
-    run_ic_xe(ic_xe, "input.wav", "output.wav", True, False)
+    run_ic_xe(ic_xe, "input.wav", "output.wav", "native", False)

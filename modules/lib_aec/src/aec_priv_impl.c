@@ -8,6 +8,9 @@
 #include "aec_priv.h"
 #include "xmath/xmath.h"
 
+#define FLOAT_S32_ZERO (float_s32_t){0, -31}
+#define FLOAT_S32_ONE (float_s32_t){1073741824, -30}
+
 void aec_priv_main_init(
         aec_state_t *state,
         aec_shared_state_t *shared_state,
@@ -469,13 +472,13 @@ void aec_priv_calc_coherence_mu(
             if(coh_mu_state[ch].mu_shad_count >= 1)
             {
                 for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-                    coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(1.0); //TODO profile f64_to_float_s32
+                    coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ONE; //TODO profile f64_to_float_s32
                 }
             }
             else if(coh_mu_state[ch].mu_coh_timer > 0)
             {
                 for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-                    coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(0);
+                    coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ZERO;
                 }
             }
             else { //# if yy_hat coherence denotes absence of near-end/noise
@@ -484,7 +487,7 @@ void aec_priv_calc_coherence_mu(
 
                     if(float_s32_gt(coh_mu_state[ch].coh, coh_mu_state[ch].coh_slow)) {
                         for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-                            coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(1.0);
+                            coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ONE;
                         }
                     }
                     else if(float_s32_gt(coh_mu_state[ch].coh, CC_thres))
@@ -502,16 +505,23 @@ void aec_priv_calc_coherence_mu(
                     }
                     else {
                         for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-                            coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(0.0);
+                            coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ZERO;
                         }
                     }
                     
                 }
                 else{
                     //# slow coherence is low, filter has not converged.
-                    for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-                        coh_mu_state[ch].coh_mu[x_ch] = f64_to_float_s32(1.0);
-                }
+                    if (float_s32_gt(coh_mu_state[ch].coh, coh_conf->coh_thresh_abs)) {
+                        for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
+                            coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ONE;
+                        }
+                    }
+                    else {
+                        for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
+                            coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ZERO;
+                        }
+                    }
                 }
             }
         }

@@ -14,7 +14,7 @@ import argparse
 from pathlib import Path
 from run_dut import run_dut
 import soundfile as sf
-from profile import parse_profile_log
+from profile_xcore import parse_profile_log
 
 cwd = Path(__file__).parent
 exe = cwd / "../../../build/test/lib_vnr/test_vnr_profile/bin/fwk_voice_vnr_test_profile"
@@ -51,8 +51,14 @@ def run_with_xscope_fileio(input_file, target, parse_profile=False):
     output_data, stdout = run_dut(input_data, exe, target)
 
     if target != "native" and parse_profile:
-        src_folder = cwd / 'src'
-        parse_profile_log(stdout, str(src_folder), worst_case_file="vnr_prof.log")
+        src_folder = str(cwd / 'src')
+        parse_profile_log(
+            stdout,
+            src_folder,
+            worst_case_file="vnr_prof.log",
+            per_tag_worst_case=True,
+            recursive=False
+        )
 
     return output_data
 

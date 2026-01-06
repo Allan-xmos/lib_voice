@@ -78,19 +78,6 @@ endif()
 add_library(fwk_voice::example::fileutils ALIAS fwk_voice_example_shared_src_file_utils)
 
 ######
-add_library(fwk_voice_example_shared_src_profile_xcore INTERFACE)
-target_sources(fwk_voice_example_shared_src_profile_xcore
-    INTERFACE
-        profile/profile.c
-)
-target_include_directories(fwk_voice_example_shared_src_profile_xcore
-    INTERFACE
-        profile
-)
-
-add_library(fwk_voice::example::profile_xcore ALIAS fwk_voice_example_shared_src_profile_xcore)
-
-######
 add_library(fwk_voice_example_shared_src_hpf INTERFACE)
 target_sources(fwk_voice_example_shared_src_hpf
     INTERFACE

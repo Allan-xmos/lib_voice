@@ -24,7 +24,7 @@ ap_conf = config.get_config_dict(ap_config_file)
 proc_frame_length = ap_conf["general"]["proc_frame_length"]
 frame_advance = ap_conf["general"]["frame_advance"]
 
-input_file = "../../../examples/bare-metal/ic/input.wav"
+input_file = "input.wav"
 output_file = "output.wav"
 
 @pytest.fixture(params=[34])

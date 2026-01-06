@@ -8,11 +8,29 @@ import subprocess
 import tempfile
 import re
 from pathlib import Path
+import platform
 
-def run_dut(input_data, xe):
+def get_binary_path(xe, target="xs3a"):
+    xe_path = Path(xe) if not isinstance(xe, Path) else xe
+    
+    # Ensure path has at most one suffix, strip it to get the base name
+    assert len(xe_path.suffixes) <= 1, f"Path has multiple suffixes: {xe_path}"
+    xe_path = xe_path.with_suffix("")
+
+    if target == "xs3a":
+        return xe_path.with_suffix(".xe")
+    elif target == "native":
+        pltfm = platform.system()
+        if pltfm == "Linux" or pltfm == "Darwin": return xe_path
+        elif pltfm == "Windows": return xe_path.with_suffix(".exe")
+        else: assert 0, f"{pltfm} platform is not supported"
+    else:
+        assert 0, f"{target} target is unsupported"
+
+def run_dut(input_data, xe, target="xs3a"):
     target_stdout = []
     output_data = np.empty(0, dtype=np.int32)
-    xe_path = Path(xe) if not isinstance(xe, Path) else xe
+    xe_path = get_binary_path(xe, target)
 
     with tempfile.TemporaryDirectory(dir=".", suffix=xe_path.stem) as tmp_folder:
         tmp_folder = Path(tmp_folder)
@@ -33,7 +51,7 @@ def run_dut(input_data, xe):
                 if m is not None:
                     target_stdout.append(re.sub(r'\[DEVICE\]\s*', '', line))
 
-        else:  # x86 run
+        else:  # native run
             res = subprocess.run([str(xe_path), "input.bin", "output.bin"], cwd=tmp_folder, stdout=subprocess.PIPE, text=True)
             target_stdout = res.stdout.splitlines()
 

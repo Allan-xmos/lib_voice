@@ -3,8 +3,6 @@ set( CONFIG_XSCOPE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/shared_src/etc )
 
 add_subdirectory( shared_src )
 
-add_subdirectory( ic )
-
 add_subdirectory( aec_1_thread )
 
 add_subdirectory( agc )

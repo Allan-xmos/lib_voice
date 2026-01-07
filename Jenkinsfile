@@ -175,7 +175,11 @@ pipeline {
                   }
                   // test VNR xcommon_cmake build
                   dir("test/lib_vnr/test_vnr_xccm") {
-                    xcoreBuild()
+                    xcoreBuild(archiveBins: false)
+                  }
+                  // test AGC xcommon_cmake build
+                  dir("test/lib_agc/test_agc_xccm") {
+                    xcoreBuild(archiveBins: false)
                   }
                   unstash 'cmake_build_xcore'
                 }

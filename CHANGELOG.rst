@@ -6,6 +6,7 @@ UNRELEASED
 
   * ADDED: `xcommon_cmake` support for `lib_vnr`
   * REMOVED: IC example
+  * REMOVED: AGC example
   * CHANGED: Merged `fwk_voice::vnr::features` and `fwk_voice::vnr::inference` cmake targets into `fwk_voice::vnr`
   * CHANGED: Moved the VNR model into `modules/lib_vnr/python/model/trained_model.tflite`
   * CHANGED: Moved the VNR MEL generation script into `modules/lib_vnr/python/gen_mel_filters.py`

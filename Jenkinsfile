@@ -225,9 +225,6 @@ pipeline {
                       sh "mv output.wav output_mt.wav"
                       sh "diff output_st.wav output_mt.wav"
                     }
-                    dir("examples/bare-metal/agc") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/agc/bin/fwk_voice_example_bare_metal_agc.xe --input ../shared_src/test_streams/agc_example_input.wav"
-                    }
                   }
                 }
               }

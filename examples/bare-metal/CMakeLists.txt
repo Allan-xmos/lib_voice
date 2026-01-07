@@ -5,8 +5,6 @@ add_subdirectory( shared_src )
 
 add_subdirectory( aec_1_thread )
 
-add_subdirectory( agc )
-
 add_subdirectory( pipeline_single_threaded )
 
 add_subdirectory( vnr )

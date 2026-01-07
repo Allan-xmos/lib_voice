@@ -15,7 +15,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
     target_sources(fwk_voice_vnr_test_profile PRIVATE src/main.xc)
     target_link_libraries(fwk_voice_vnr_test_profile 
         PUBLIC
-            fwk_voice::example::profile_xcore
+            fwk_voice::test::shared::profile_xcore
             )
     set(APP_COMPILER_FLAGS
         -Os

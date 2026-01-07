@@ -15,7 +15,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
 
     target_link_libraries(fwk_voice_test_ns_profile
         PRIVATE
-            fwk_voice::example::profile_xcore
+            fwk_voice::test::shared::profile_xcore
     )
     target_compile_options(fwk_voice_test_ns_profile
         PRIVATE

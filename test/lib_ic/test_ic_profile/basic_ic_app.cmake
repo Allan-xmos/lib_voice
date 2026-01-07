@@ -16,7 +16,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
     )
     target_link_libraries(fwk_voice_example_shared_ic_test_wav
         INTERFACE
-            fwk_voice::example::profile_xcore
+            fwk_voice::test::shared::profile_xcore
             )
     target_compile_options(fwk_voice_example_shared_ic_test_wav
         INTERFACE "-target=${XCORE_TARGET}")

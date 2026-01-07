@@ -43,7 +43,7 @@ foreach( BUILD_CONFIG ${TEST_ADEC_PROFILE_BUILD_CONFIG} )
     target_link_libraries(fwk_voice_test_adec_profile_${CONFIG_STR}
         PUBLIC
             fwk_voice::test::shared_test_wav_adec
-            fwk_voice::example::profile_xcore
+            fwk_voice::test::shared::profile_xcore
             )
 
     target_compile_definitions(fwk_voice_test_adec_profile_${CONFIG_STR}

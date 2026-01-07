@@ -45,14 +45,16 @@ def process_x86(bin_file, input_file, output_file):
 
 def process_python(input_file, output_file, arch):
     config_file = os.path.join(thisfile_path, "py_pipeline/config/prev_arch.json")
-    if arch == 'aec_ic_prev_arch':
-        wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True, disable_agc=True)
-    elif arch == 'aec_ic_ns_prev_arch':
-        wav_pipeline.test_file(input_file, output_file, config_file, disable_agc=True)
-    elif arch == 'aec_ic_agc_prev_arch':
-        wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True)
-    elif arch == 'aec_ic_ns_agc_prev_arch':
+    if arch == 'aec_ic_ns_agc_prev_arch':
         wav_pipeline.test_file(input_file, output_file, config_file)
+    else:
+        raise ValueError(f"Unknown architecture for python processing: {arch}")
+        if arch == 'aec_ic_prev_arch':
+            wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True, disable_agc=True)
+        elif arch == 'aec_ic_ns_prev_arch':
+            wav_pipeline.test_file(input_file, output_file, config_file, disable_agc=True)
+        elif arch == 'aec_ic_agc_prev_arch':
+            wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True)
     stdo = ""
     return stdo
 

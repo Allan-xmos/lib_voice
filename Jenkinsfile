@@ -175,7 +175,15 @@ pipeline {
                   }
                   // test VNR xcommon_cmake build
                   dir("test/lib_vnr/test_vnr_xccm") {
-                    xcoreBuild()
+                    xcoreBuild(archiveBins: false)
+                  }
+                  // test NS xcommon_cmake build
+                  dir("test/lib_ns/test_ns_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
+                  // test AGC xcommon_cmake build
+                  dir("test/lib_agc/test_agc_xccm") {
+                    xcoreBuild(archiveBins: false)
                   }
                   unstash 'cmake_build_xcore'
                 }
@@ -224,9 +232,6 @@ pipeline {
                       sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_mt.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
                       sh "mv output.wav output_mt.wav"
                       sh "diff output_st.wav output_mt.wav"
-                    }
-                    dir("examples/bare-metal/agc") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/agc/bin/fwk_voice_example_bare_metal_agc.xe --input ../shared_src/test_streams/agc_example_input.wav"
                     }
                   }
                 }

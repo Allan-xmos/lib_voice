@@ -6,6 +6,7 @@ UNRELEASED
 
   * ADDED: `xcommon_cmake` support for `lib_vnr`
   * ADDED: `xcommon_cmake` support for `lib_agc`
+  * ADDED: `xcommon_cmake` support for `lib_ns`
   * REMOVED: IC example
   * REMOVED: AGC example
   * CHANGED: Merged `fwk_voice::vnr::features` and `fwk_voice::vnr::inference` cmake targets into `fwk_voice::vnr`

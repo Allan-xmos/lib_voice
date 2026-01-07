@@ -177,6 +177,10 @@ pipeline {
                   dir("test/lib_vnr/test_vnr_xccm") {
                     xcoreBuild(archiveBins: false)
                   }
+                  // test NS xcommon_cmake build
+                  dir("test/lib_ns/test_ns_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
                   // test AGC xcommon_cmake build
                   dir("test/lib_agc/test_agc_xccm") {
                     xcoreBuild(archiveBins: false)

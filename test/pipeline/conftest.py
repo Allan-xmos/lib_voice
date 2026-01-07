@@ -13,10 +13,6 @@ pipeline_bins = {
                                 "xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_bare_metal_pipeline_multi_thread.xe")},
                 "alt_arch"  :    {"x86" : os.path.abspath("../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_st"),
                                 "xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_mt.xe")},
-                "aec_ic_prev_arch" : {"xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_pipeline_aec_ic.xe"),
-                                      "x86" : os.path.abspath("../../build/examples/bare-metal/pipeline_single_threaded/bin/fwk_voice_example_st_pipeline_aec_ic.xe")},
-                "aec_ic_ns_prev_arch" : {"xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_pipeline_aec_ic_ns_agc.xe")},
-                "aec_ic_agc_prev_arch" : {"xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_pipeline_aec_ic_agc.xe")},
                 "aec_ic_ns_agc_prev_arch" : {"xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_pipeline_aec_ic_ns_agc.xe")}
                 }
 results_log_file = os.path.abspath("results.csv")
@@ -89,11 +85,11 @@ def pytest_sessionstart(session):
     
     # prev-arch: Standard config, full pipeline
     # alt-arch: Alt-arch config, full pipeline
-    # aec_ic_prev_arch: Standard config, AEC+IC pipeline
+    # aec_ic_ns_agc_prev_arch: Standard config, no ADEC pipeline
     if full_pipeline_run:
-        architectures = ["prev_arch", "alt_arch", "aec_ic_prev_arch", "aec_ic_ns_agc_prev_arch"]
+        architectures = ["prev_arch", "alt_arch", "aec_ic_ns_agc_prev_arch"]
     else:
-        architectures = ["alt_arch", "aec_ic_prev_arch"]
+        architectures = ["alt_arch", "aec_ic_ns_agc_prev_arch"]
 
     input_wav_files = [os.path.join(hydra_audio_path, filename) for filename in os.listdir(hydra_audio_path) if (filename.endswith(".wav"))]
     #input_wav_files = [os.path.join(hydra_audio_path, "InHouse_XVF3510v080_v1.2_20190423_Loc3_Noise2_80dB__Take1.wav")]

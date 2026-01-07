@@ -47,6 +47,9 @@ def process_python(input_file, output_file, arch):
     config_file = os.path.join(thisfile_path, "py_pipeline/config/prev_arch.json")
     if arch == 'aec_ic_ns_agc_prev_arch':
         wav_pipeline.test_file(input_file, output_file, config_file)
+    elif arch == 'alt_arch':
+        # alt arch not originally supported in python pipeline, so skip for now
+        pass
     else:
         raise ValueError(f"Unknown architecture for python processing: {arch}")
         if arch == 'aec_ic_prev_arch':

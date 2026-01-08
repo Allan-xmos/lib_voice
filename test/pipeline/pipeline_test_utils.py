@@ -44,11 +44,15 @@ def process_x86(bin_file, input_file, output_file):
     return stdout
 
 def process_python(input_file, output_file, arch):
+    # currently this test only runs python pipelines without ADEC, and skips those with.
     config_file = os.path.join(thisfile_path, "py_pipeline/config/prev_arch.json")
     if arch == 'aec_ic_ns_agc_prev_arch':
         wav_pipeline.test_file(input_file, output_file, config_file)
     elif arch == 'alt_arch':
         # alt arch not originally supported in python pipeline, so skip for now
+        pass
+    elif arch == 'prev_arch':
+        # prev arch not originally supported in python pipeline, so skip for now
         pass
     else:
         raise ValueError(f"Unknown architecture for python processing: {arch}")

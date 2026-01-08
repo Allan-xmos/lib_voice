@@ -1,12 +1,12 @@
 #include "xmath/xmath.h"
 #include "fileio.h"
 #include "wav_utils.h"
-#include "aec_config.h"
+#include "aec.h"
 #include "pipeline_state.h"
 #include "dump_H_hat.h"
 #include <limits.h>
 
-#ifndef LOG_DEBUG_INFO 
+#ifndef LOG_DEBUG_INFO
     #define LOG_DEBUG_INFO (0)
 #endif
 
@@ -73,8 +73,6 @@ void parse_runtime_args(int *runtime_args_arr) {
 void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
 {
     //check validity of compile time configuration
-    assert(AEC_MAX_Y_CHANNELS <= AEC_LIB_MAX_Y_CHANNELS);
-    assert(AEC_MAX_X_CHANNELS <= AEC_LIB_MAX_X_CHANNELS);
     assert((AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES) <= (AEC_LIB_MAX_PHASES));
     assert((AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_SHADOW_FILTER_PHASES) <= (AEC_LIB_MAX_PHASES));
     //Initialise default values of runtime arguments
@@ -132,12 +130,12 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
          printf("Error: unsupported wav bit depth (%d) for %s file. Only 32 supported\n", input_header_struct.bit_depth, input_file_name);
          _Exit(1);
      }
-    // Ensure input wav file contains correct number of channels 
+    // Ensure input wav file contains correct number of channels
     if(input_header_struct.num_channels != (AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS)){
         printf("Error: wav num channels(%d) does not match aec(%u)\n", input_header_struct.num_channels, (AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS));
         _Exit(1);
     }
-    
+
     unsigned frame_count = wav_get_num_frames(&input_header_struct);
     // Calculate number of frames in the wav file
     unsigned block_count = frame_count / AEC_FRAME_ADVANCE;
@@ -158,7 +156,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     int32_t DWORD_ALIGNED pipeline_output[2][AEC_FRAME_ADVANCE];
 
     unsigned bytes_per_frame = wav_get_num_bytes_per_frame(&input_header_struct);
-    
+
     // Initialise pipeline
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
     // DE mode AEC config is fixed and not run time configurable
@@ -166,17 +164,17 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     aec_de_mode_conf.num_y_channels = 1;
     aec_de_mode_conf.num_main_filt_phases = 30;
     aec_de_mode_conf.num_shadow_filt_phases = 0;
-    
+
     /** Non DE mode AEC config is runtime configurable, main reason being ADEC tests pass only for alt arch (1, 2, 15,
      * 5) config while for profiling I want to use the worst case (2, 2, 10, 5) config*/
     aec_non_de_mode_conf.num_y_channels = runtime_args[Y_CHANNELS];
     aec_non_de_mode_conf.num_x_channels = runtime_args[X_CHANNELS];
     aec_non_de_mode_conf.num_main_filt_phases = runtime_args[MAIN_FILTER_PHASES];
     aec_non_de_mode_conf.num_shadow_filt_phases = runtime_args[SHADOW_FILTER_PHASES];
-    
+
     adec_config_t adec_conf;
     adec_conf.bypass = 0;
-    adec_conf.force_de_cycle_trigger = 0; 
+    adec_conf.force_de_cycle_trigger = 0;
 #if BYPASS_ADEC
     // All AEC module tests are run in this mode only
     adec_conf.bypass = 1;
@@ -184,7 +182,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
 #if TRIGGER_DE_ONLY_ON_STARTUP
     // If DE is enabled only on startup, bypass adec and set force_de_cycle_trigger to 1
     adec_conf.bypass = 1;
-    adec_conf.force_de_cycle_trigger = 1; 
+    adec_conf.force_de_cycle_trigger = 1;
 #endif
 #if LOG_DEBUG_INFO
     //bypass adec since we only want to log aec behaviour
@@ -244,7 +242,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.peak_to_average_ratio));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
 #endif
-        
+
         // Create interleaved output that can be written to wav file
         for (unsigned ch=0;ch<AEC_MAX_Y_CHANNELS;ch++){
             for(unsigned i=0;i<AEC_FRAME_ADVANCE;i++){
@@ -253,7 +251,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         }
 
         file_write(&output_file, (uint8_t*)(output_write_buffer), output_header_struct.bit_depth/8 * AEC_FRAME_ADVANCE * AEC_MAX_Y_CHANNELS);
-        
+
         char strbuf[100];
         sprintf(strbuf, "%ld\n", pipeline_state.adec_requested_delay_samples);
         file_write(&req_delay_file, (uint8_t*)strbuf,  strlen(strbuf));

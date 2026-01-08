@@ -4,10 +4,10 @@
 #include "de_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_api.h"
+#include "aec.h"
 #include "adec_api.h"
 
-//Note this is larger than AEC_LIB_MAIN_FILTER_PHASES but AEC_LIB_MAX_Y_CHANNELS and AEC_LIB_MAX_X_CHANNELS are 2 so it works..
+//Note this is larger than AEC_LIB_MAIN_FILTER_PHASES but AEC_MAX_Y_CHANNELS and AEC_MAX_X_CHANNELS are 2 so it works..
 //i.e. 30 <= 10 * 2 * 2
 #define NUM_PHASES_DELAY_EST    30
 #define PHASE_CMPLX_AIR_LEN     257
@@ -28,7 +28,7 @@ static void calc_fd_frame_energy_fp(double *output, dsp_complex_fp *input, int l
 }
 
 
-int estimate_delay_fp(  dsp_complex_fp H_hat[1][NUM_PHASES_DELAY_EST][PHASE_CMPLX_AIR_LEN], int32_t num_phases, int32_t len_phase, 
+int estimate_delay_fp(  dsp_complex_fp H_hat[1][NUM_PHASES_DELAY_EST][PHASE_CMPLX_AIR_LEN], int32_t num_phases, int32_t len_phase,
                             double *sum_phase_powers, double phase_powers[NUM_PHASES_DELAY_EST], double *peak_to_average_ratio,
                             double *peak_phase_power, int32_t *peak_power_phase_index){
 
@@ -129,7 +129,7 @@ void test_delay_estimate() {
     }
 
     //Now try a few corner cases
-    
+
     aec_init(&state, NULL, &shared_state, aec_memory_pool, NULL, 1, 1, num_phases, 0);
     memset(H_hat, 0, sizeof(H_hat));
 

@@ -3,12 +3,12 @@
 #ifndef __ADEC_TYPES_H__
 #define __ADEC_TYPES_H__
 #include "xmath/xmath.h"
-#include "aec_defines.h"
+#include "aec.h"
 #include "adec_defines.h"
 
 /**
  * @page page_adec_state_h adec_state.h
- * 
+ *
  * This header contains definitions for data structures and enums used in lib_adec.
  *
  * @ingroup adec_header_file
@@ -22,7 +22,7 @@
  * @ingroup adec_types
  */
 typedef enum {
-    ADEC_NORMAL_AEC_MODE, ///< ADEC processing mode where it monitors AEC performance and requests small delay correction. 
+    ADEC_NORMAL_AEC_MODE, ///< ADEC processing mode where it monitors AEC performance and requests small delay correction.
     ADEC_DELAY_ESTIMATOR_MODE, ///< ADEC processing mode for bulk delay correction in which it measures for a new delay offset.
 } adec_mode_t;
 
@@ -31,7 +31,7 @@ typedef enum {
  *
  * This is used to provide configuration when initialising ADEC at startup. A copy of this structure is present in the ADEC state structure
  * and available to be modified by the application for run time control of ADEC configuration.
- * 
+ *
  * @ingroup adec_types
  */
 typedef struct {
@@ -41,12 +41,12 @@ typedef struct {
     /** Force trigger a delay estimation cycle. When set to 1, ADEC bypasses the ADEC monitoring process and transitions to delay
      * estimation mode for measuring delay offset.
     */
-    int32_t force_de_cycle_trigger; 
+    int32_t force_de_cycle_trigger;
 }adec_config_t;
 
 /**
  * @brief Delay estimator output structure
- * 
+ *
  * @ingroup adec_types
  */
 typedef struct {
@@ -60,7 +60,7 @@ typedef struct {
 
 /**
  * @brief ADEC output structure
- * 
+ *
  * @ingroup adec_types
  */
 typedef struct {
@@ -69,13 +69,13 @@ typedef struct {
     /** Mic delay in samples requested by ADEC. Relevant when delay_change_request_flag is 1. Note that this value is a signed integer.
      * A positive `requested_mic_delay_samples` requires the microphone to be delayed so the application needs to delay the input mic
      * signal by `requested_mic_delay_samples` samples. A negative `requested_mic_delay_samples` means ADEC is requesting the input mic
-     * signal to be moved earlier in time. This, the application should do my delaying the input reference signal 
+     * signal to be moved earlier in time. This, the application should do my delaying the input reference signal
      * by `abs(requested_mic_delay_samples)` samples.
     */
     int32_t requested_mic_delay_samples;
     /** flag indicating ADEC's request for a reset of part of the AEC state to get AEC filter to start adapting from a 0 filter.
      * ADEC requests this when a small delay correction needs to be applied that doesn't require a full reset of the AEC.*/
-    
+
     int32_t reset_aec_flag;
     /** Flag indicating if AEC needs to be run configured in delay estimation mode.*/
     int32_t delay_estimator_enabled_flag;
@@ -85,7 +85,7 @@ typedef struct {
 
 /**
  * @brief Input structure containing current frame's information from AEC
- * 
+ *
  * @ingroup adec_types
  */
 typedef struct {
@@ -99,7 +99,7 @@ typedef struct {
 
 /**
  * @brief ADEC input structure
- * 
+ *
  * @ingroup adec_types
  */
 typedef struct {
@@ -121,21 +121,21 @@ typedef struct {
  * @ingroup adec_types
  */
 typedef struct {
-    float_s32_t max_peak_to_average_ratio_since_reset; ///< Maximum peak to average AEC filter phase energy ratio seen since a delay correction was last requested. 
+    float_s32_t max_peak_to_average_ratio_since_reset; ///< Maximum peak to average AEC filter phase energy ratio seen since a delay correction was last requested.
     float_s32_t peak_to_average_ratio_history[ADEC_PEAK_TO_AVERAGE_HISTORY_DEPTH + 1]; ///< Last ADEC_PEAK_TO_AVERAGE_HISTORY_DEPTH frames peak_to_average_ratio of phase energies
     float_s32_t peak_power_history[ADEC_PEAK_LINREG_HISTORY_SIZE]; ///< Last ADEC_PEAK_LINREG_HISTORY_SIZE frames peak phase power
     float_s32_t aec_peak_to_average_good_aec_threshold; ///< Threshold was considering peak to average ratio as good
-    
+
     q8_24 agm_q24; ///< AEC goodness metric indicating a measure of how well AEC filter is performing
     q8_24 erle_bad_bits_q24; ///< log2 of threshold below which AEC output's measured ERLE is considered bad
     q8_24 erle_good_bits_q24; ///< log2 of threshold above which AEC output's measured ERLE is considered good
-    q8_24 peak_phase_energy_trend_gain_q24; ///< Multiplier used for scaling agm's sensitivity to peak phase energy trend 
+    q8_24 peak_phase_energy_trend_gain_q24; ///< Multiplier used for scaling agm's sensitivity to peak phase energy trend
     q8_24 erle_bad_gain_q24; ///< Multiplier determining how steeply we reduce aec's goodness when measured erle falls below the bad erle threshold
 
     adec_mode_t mode; ///< ADEC's mode of operation. Can be operating in normal AEC or delay estimation mode
     int32_t peak_to_average_ratio_valid_flag;
     int32_t gated_milliseconds_since_mode_change; ///< milliseconds elapsed since a delay change was last requested. Used to ensure that delay corrections are not requested too early without allowing enough time for aec filter to converge.
-    int32_t last_measured_delay; ///< Last measured delay 
+    int32_t last_measured_delay; ///< Last measured delay
     int32_t peak_power_history_idx; ///< index storing the head of the peak_power_history circular buffer
     int32_t peak_power_history_valid; ///< Flag indicating whether the peak_power_history buffer has been filled at least once.
     int32_t sf_copy_flag; ///< Flag indicating if shadow to main filter copy has happened at least once in the AEC

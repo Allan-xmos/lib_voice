@@ -15,7 +15,7 @@ target_include_directories(fwk_voice_example_bare_metal_aec_2_thread
 )
 target_link_libraries(fwk_voice_example_bare_metal_aec_2_thread
     PUBLIC
-        fwk_voice::example::aec2thread
+        fwk_voice::aec
         fwk_voice::example::fileutils
 )
 
@@ -33,10 +33,5 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
             "-target=${XCORE_TARGET}"
             "-report"
             "${CONFIG_XSCOPE_PATH}/config.xscope"
-    )
-else()
-    target_link_libraries(fwk_voice_example_bare_metal_aec_2_thread
-        PRIVATE
-            m
     )
 endif()

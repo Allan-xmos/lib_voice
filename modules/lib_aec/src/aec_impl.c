@@ -3,8 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 #include "aec_priv.h"
 
 void aec_init(
@@ -31,7 +30,7 @@ void aec_frame_init(
     unsigned num_y_channels = main_state->shared_state->num_y_channels;
     unsigned num_x_channels = main_state->shared_state->num_x_channels;
 
-    // y frame 
+    // y frame
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         /* Create 512 samples frame */
         // Copy previous y samples
@@ -53,7 +52,7 @@ void aec_frame_init(
         // Update exp just in case
         main_state->shared_state->prev_y[ch].exp = AEC_INPUT_EXP;
     }
-    // x frame 
+    // x frame
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         /* Create 512 samples frame */
         // Copy previous x samples
@@ -135,10 +134,10 @@ void aec_forward_fft(
 {
     //Input bfp_s32_t structure will get overwritten since FFT is computed in-place. Keep a copy of input->length and assign it back after fft call.
     //This is done to avoid having to call bfp_s32_init() on the input every frame
-    uint32_t len = input->length; 
+    uint32_t len = input->length;
     bfp_complex_s32_t *temp = bfp_fft_forward_mono(input);
     temp->hr = bfp_complex_s32_headroom(temp); // TODO Workaround till https://github.com/xmos/lib_xcore_math/issues/96 is fixed
-    
+
     memcpy(output, temp, sizeof(bfp_complex_s32_t));
     bfp_fft_unpack_mono(output);
     input->length = len;
@@ -149,12 +148,12 @@ void aec_forward_fft(
 void aec_calc_X_fifo_energy(
         aec_state_t *state,
         unsigned ch,
-        unsigned recalc_bin) 
+        unsigned recalc_bin)
 {
     if((state == NULL) || (!state->num_phases)) {
         return;
     }
- 
+
     bfp_s32_t *X_energy_ptr = &state->X_energy[ch];
     bfp_complex_s32_t *X_ptr = &state->shared_state->X[ch];
     float_s32_t *max_X_energy_ptr = &state->max_X_energy[ch];
@@ -334,14 +333,14 @@ void aec_compare_filters_and_calc_mu(
     coherence_mu_config_params_t *coh_mu_conf_ptr = &main_state->shared_state->config_params.coh_mu_conf;
     aec_priv_calc_coherence_mu(coh_mu_state_ptr, coh_mu_conf_ptr, main_state->shared_state->sum_X_energy,
             main_state->shared_state->shadow_filter_params.shadow_flag, main_state->shared_state->num_y_channels, main_state->shared_state->num_x_channels);
-    
+
     //calculate delta. Done here instead of aec_l2_calc_inv_X_energy_denom() since max_X_energy across all x-channels is needed in delta computation.
     //aec_l2_calc_inv_X_energy_denom() is called per x channel
     aec_priv_calc_delta(&main_state->delta, &main_state->max_X_energy[0], &main_state->shared_state->config_params, main_state->delta_scale, main_state->shared_state->num_x_channels);
     if(shadow_state != NULL) {
         aec_priv_calc_delta(&shadow_state->delta, &shadow_state->max_X_energy[0], &shadow_state->shared_state->config_params, shadow_state->delta_scale, shadow_state->shared_state->num_x_channels);
     }
-    
+
     //Update main and shadow filter mu
     for(unsigned y_ch=0; y_ch<main_state->shared_state->num_y_channels; y_ch++) {
         for(unsigned x_ch=0; x_ch<main_state->shared_state->num_x_channels; x_ch++) {
@@ -369,7 +368,7 @@ void aec_update_X_fifo_1d(
 }
 
 void aec_reset_state(aec_state_t *main_state, aec_state_t *shadow_state){
-    aec_shared_state_t *shared_state = main_state->shared_state; 
+    aec_shared_state_t *shared_state = main_state->shared_state;
     uint32_t y_channels = shared_state->num_y_channels;
     uint32_t x_channels = shared_state->num_x_channels;
     uint32_t main_phases = main_state->num_phases;
@@ -418,7 +417,7 @@ uint32_t aec_detect_input_activity(const int32_t (*input_data)[AEC_FRAME_ADVANCE
         float_s32_t max = bfp_s32_max(&abs);
         if(float_s32_gt(max, active_threshold)) {
             return 1;
-        }  
+        }
     }
     return 0;
 }

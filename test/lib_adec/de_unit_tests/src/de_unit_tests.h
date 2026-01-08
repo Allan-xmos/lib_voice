@@ -10,9 +10,7 @@
 #include <math.h>
 
 #include "pseudo_rand.h"
-#include "aec_defines.h"
-#include "aec_config.h"
-#include "aec_memory_pool.h"
+#include "aec.h"
 
 // Set F to a power of 2 greater than 1 to speedup testing by a Fx
 #undef F

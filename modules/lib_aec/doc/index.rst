@@ -24,5 +24,5 @@ On GitHub
 API
 ***
 
-To use the functions in this library in an application, include :ref:`aec_api_h` in the application source file
+To use the functions in this library in an application, include :ref:`aec_h` in the application source file
 

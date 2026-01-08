@@ -6,5 +6,6 @@ if(PROJECT_IS_TOP_LEVEL)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL XCORE_XS3A)
         ## Needed for CFFI tests
         target_compile_options(lib_xcore_math PRIVATE "-fPIC")
+        target_link_libraries(lib_xcore_math PUBLIC m)
     endif()
 endif()

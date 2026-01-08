@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define NUM_BINS ((AEC_PROC_FRAME_LENGTH/2) + 1)
 //right shift with symmetry around the first element (DC)
@@ -26,7 +25,7 @@ static void shift_mirror_posi(double *output, const double *input, int shift, in
 //left shift with symmetry around the last element (nyquist).
 static void shift_mirror_negi(double *output, const double *input, int shift, int length) {
     shift = -shift;
-    //eg. [1, 2, 3, 4, 5] after shift of 2 becomes [3, 4, 5(nyquist), 4, 3]  
+    //eg. [1, 2, 3, 4, 5] after shift of 2 becomes [3, 4, 5(nyquist), 4, 3]
     //first copy the shifted part => [3, 4, 5, -, -]
     for(int i=0; i<length-shift; i++) {
         output[i] = input[shift+i];
@@ -37,7 +36,7 @@ static void shift_mirror_negi(double *output, const double *input, int shift, in
     //now do symmetry around sym_index and populate the remaining length
     //In our eg. this will populate [-, -, -, 4, 3]
     for(int i=0; i<shift; i++) {
-        output[sym_index +1 + i] = output[sym_index -1 - i]; 
+        output[sym_index +1 + i] = output[sym_index -1 - i];
     }
 }
 
@@ -61,7 +60,7 @@ static void vect_smooth(double *output, double *scratch, const double *norm_deno
     for(int i=0; i<input_length; i++) {
         output[i] += scratch[i]*taps[4];
     }
-    
+
     double sum = 0.0;
     for(int i=0; i<5; i++) {
         sum += taps[i];
@@ -99,7 +98,7 @@ void test_aec_inv_X_energy_div_by_zero() {
     unsigned num_x_channels = 1;
     unsigned main_filter_phases = 6;
     unsigned shadow_filter_phases = 2;
-    
+
     aec_state_t main_state, shadow_state;
     aec_memory_pool_t aec_memory_pool;
     aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
@@ -124,7 +123,7 @@ void test_aec_inv_X_energy_div_by_zero() {
     }
     state_ptr->delta.mant = 0;
     state_ptr->delta.exp = -1024;
-    unsigned is_shadow = 1; // to just test inv_X_energy = 1/(X_energy + delta) 
+    unsigned is_shadow = 1; // to just test inv_X_energy = 1/(X_energy + delta)
     for(int ch=0; ch<num_x_channels; ch++) {
         aec_calc_normalisation_spectrum(state_ptr, ch, is_shadow);
     }
@@ -168,7 +167,7 @@ void test_aec_calc_normalisation_spectrum() {
                 X_energy_fp[ch][i] = ldexp(state_ptr->X_energy[ch].data[i], state_ptr->X_energy[ch].exp);
 
                 state_ptr->shared_state->sigma_XX[ch].data[i] = (pseudo_rand_int32(&seed) & 0x7fffffff) >> state_ptr->shared_state->sigma_XX[ch].hr; //sigma_XX is positive
-                sigma_XX_fp[ch][i] = ldexp(state_ptr->shared_state->sigma_XX[ch].data[i], state_ptr->shared_state->sigma_XX[ch].exp);                    
+                sigma_XX_fp[ch][i] = ldexp(state_ptr->shared_state->sigma_XX[ch].data[i], state_ptr->shared_state->sigma_XX[ch].exp);
             }
             state_ptr->delta.exp = -32 - (pseudo_rand_uint32(&seed) & 63);
             state_ptr->delta.mant = pseudo_rand_int32(&seed) & 0x7fffffff;

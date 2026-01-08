@@ -1,7 +1,7 @@
 // Copyright 2017-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#include "aec_state.h"
+#include "aec.h"
 
 #include <stdio.h>
 #include <math.h>
@@ -24,7 +24,7 @@ void aec_dump_H_hat(aec_state_t *state, file_t *file_handle){
     sprintf(strbuf, "H_hat = np.zeros((y_channel_count, x_channel_count, max_phase_count, f_bin_count), dtype=np.complex128)\n");
     file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
 
-    for(int ych=0; ych<state->shared_state->num_y_channels; ych++) {        
+    for(int ych=0; ych<state->shared_state->num_y_channels; ych++) {
         for(int xch=0; xch<state->shared_state->num_x_channels; xch++) {
             for(int ph=0; ph<state->num_phases; ph++) {
                 sprintf(strbuf, "H_hat[%u][%u][%u] = ", ych, xch, ph);

@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define TEST_NUM_Y (1)
 #define TEST_NUM_X (2)
@@ -24,7 +23,7 @@ void aec_filter_adapt_fp(
     }
     complex_double_t scratch[AEC_PROC_FRAME_LENGTH];
     int N = AEC_PROC_FRAME_LENGTH;
-    
+
     for(int i=0; i<N/2+1; i++) {
         complex_double_t T_mult_conj_X;
         T_mult_conj_X.re = (T[i].re*X_fifo[i].re + T[i].im*X_fifo[i].im);
@@ -53,7 +52,7 @@ void aec_filter_adapt_fp(
     }
     bit_reverse((complex_double_t*)scratch, N);
     forward_fft((complex_double_t*)scratch, N, sine_lut);
-    
+
     for(int i=0; i<N/2+1; i++) {
         H_hat[i].re = scratch[i].re;
         H_hat[i].im = scratch[i].im;
@@ -94,7 +93,7 @@ void test_aec_filter_adapt() {
         }
         state_ptr->shared_state->config_params.aec_core_conf.bypass = pseudo_rand_uint32(&seed) % 2;
         unsigned test_l2_api = pseudo_rand_uint32(&seed) % 2;
-        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);        
+        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
         //Generate H_hat
         for(int ch=0; ch<num_y_channels; ch++) {
             for(int ph=0; ph<num_x_channels*state_ptr->num_phases; ph++) {
@@ -162,7 +161,7 @@ void test_aec_filter_adapt() {
             }
         }
         //dut
-        if(!test_l2_api) { 
+        if(!test_l2_api) {
             for(int ch=0; ch<num_y_channels; ch++) {
                 aec_filter_adapt(state_ptr, ch);
             }

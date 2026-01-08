@@ -6,29 +6,17 @@
 #include <assert.h>
 #include <limits.h>
 
-#include "aec_api.h"
-
-#include "aec_config.h"
-#include "aec_memory_pool.h"
+#include "aec.h"
 #include "fileio.h"
 #include "wav_utils.h"
 
-
-extern void aec_process_frame_1thread(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state,
-        int32_t (*output_main)[AEC_FRAME_ADVANCE],
-        int32_t (*output_shadow)[AEC_FRAME_ADVANCE],
-        const int32_t (*y_data)[AEC_FRAME_ADVANCE],
-        const int32_t (*x_data)[AEC_FRAME_ADVANCE]);
+extern aec_task_distribution_t tdist;
 
 void aec_task(const char *input_file_name, const char *output_file_name) {
     // Ensure configuration is a subset of the maximum configuration the library supports
-    assert(AEC_MAX_Y_CHANNELS <= AEC_LIB_MAX_Y_CHANNELS);
-    assert(AEC_MAX_X_CHANNELS <= AEC_LIB_MAX_X_CHANNELS);
     assert((AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES) <= (AEC_LIB_MAX_PHASES));
     assert((AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_SHADOW_FILTER_PHASES) <= (AEC_LIB_MAX_PHASES));
-    
+
     file_t input_file, output_file;
     // Open input wav file containing mic and ref channels of input data
     int ret = file_open(&input_file, input_file_name, "rb");
@@ -50,12 +38,12 @@ void aec_task(const char *input_file_name, const char *output_file_name) {
          printf("Error: unsupported wav bit depth (%d) for %s file. Only 32 supported\n", input_header_struct.bit_depth, input_file_name);
          _Exit(1);
      }
-    // Ensure input wav file contains correct number of channels 
+    // Ensure input wav file contains correct number of channels
     if(input_header_struct.num_channels != (AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS)){
         printf("Error: wav num channels(%d) does not match aec(%u)\n", input_header_struct.num_channels, (AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS));
         _Exit(1);
     }
-    
+
     unsigned frame_count = wav_get_num_frames(&input_header_struct);
     // Calculate number of frames in the wav file
     unsigned block_count = frame_count / AEC_FRAME_ADVANCE;
@@ -78,11 +66,11 @@ void aec_task(const char *input_file_name, const char *output_file_name) {
 
     // Initialise AEC
     uint8_t DWORD_ALIGNED aec_memory_pool[sizeof(aec_memory_pool_t)];
-    uint8_t DWORD_ALIGNED aec_shadow_filt_memory_pool[sizeof(aec_shadow_filt_memory_pool_t)]; 
+    uint8_t DWORD_ALIGNED aec_shadow_filt_memory_pool[sizeof(aec_shadow_filt_memory_pool_t)];
     aec_state_t DWORD_ALIGNED main_state;
     aec_state_t DWORD_ALIGNED shadow_state;
     aec_shared_state_t DWORD_ALIGNED aec_shared_state;
-    
+
     aec_init(&main_state, &shadow_state, &aec_shared_state,
             &aec_memory_pool[0], &aec_shadow_filt_memory_pool[0],
             AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS,
@@ -107,8 +95,8 @@ void aec_task(const char *input_file_name, const char *output_file_name) {
         /* Reuse mic data memory for main filter output
          * Reuse ref data memory for shadow filter output.
          */
-        aec_process_frame_1thread(&main_state, &shadow_state, frame_y, frame_x, frame_y, frame_x);
-        
+        aec_process_frame(&main_state, &shadow_state, frame_y, frame_x, frame_y, frame_x, &tdist);
+
         // Create interleaved output that can be written to wav file
         for (unsigned ch=0;ch<AEC_MAX_Y_CHANNELS;ch++){
             for(unsigned i=0;i<AEC_FRAME_ADVANCE;i++){

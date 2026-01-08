@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 static const double WOLA_window_fp[32] = {
         0.0022640387134577056, 0.009035651368646647, 0.020253513192751316,
@@ -114,7 +113,7 @@ void test_create_output() {
         }
 
         for(int ch=0; ch<num_y_channels; ch++) {
-            bfp_s32_t *error_ptr = &state_ptr->error[ch]; 
+            bfp_s32_t *error_ptr = &state_ptr->error[ch];
             error_ptr->exp = pseudo_rand_int(&seed, -31, 32);
             error_ptr->hr = (pseudo_rand_uint32(&seed) % 3);
             for(int i=0; i<AEC_PROC_FRAME_LENGTH; i++) {
@@ -133,7 +132,7 @@ void test_create_output() {
 
         for(int ch=0; ch<state_ptr->shared_state->num_y_channels; ch++) {
             //check error
-            bfp_s32_t *error_ptr = &state_ptr->error[ch]; 
+            bfp_s32_t *error_ptr = &state_ptr->error[ch];
             for(int i=0; i<AEC_PROC_FRAME_LENGTH; i++) {
                 check_error(error_fp[ch][i], error_ptr->data[i], error_ptr->exp, 0.0000002, pow(10, -8), ch, iter, "error wrong");
             }

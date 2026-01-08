@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
+#include "aec_priv.h"
 
 //AEC level 2
 void aec_l2_calc_Error_and_Y_hat(
@@ -70,7 +70,7 @@ void aec_l2_bfp_complex_s32_unify_exponent(
         uint32_t desired_index,
         uint32_t min_headroom)
 {
-    *final_exp = INT_MIN; 
+    *final_exp = INT_MIN;
     for(int i=0; i<array_len; i++) {
         if(((mapping == NULL) || (mapping[i] == desired_index)) && (chunks[i].length > 0)) {
             if((int32_t)(chunks[i].exp - chunks[i].hr + min_headroom) > *final_exp) {
@@ -95,7 +95,7 @@ void aec_l2_bfp_s32_unify_exponent(
         uint32_t desired_index,
         uint32_t min_headroom)
 {
-    *final_exp = INT_MIN; //find biggest exponent (fewest fraction bits) 
+    *final_exp = INT_MIN; //find biggest exponent (fewest fraction bits)
     for(int i=0; i<array_len; i++) {
         if((mapping == NULL) || ((mapping != NULL) && (mapping[i] == desired_index) && (chunks[i].length > 0))) {
             if((int32_t)(chunks[i].exp - chunks[i].hr + min_headroom) > *final_exp) {

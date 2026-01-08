@@ -35,7 +35,4 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
             "-target=${XCORE_TARGET}"
             "-report"
             "${CONFIG_XSCOPE_PATH}/config.xscope")
-else()
-    target_link_libraries(fwk_voice_example_bare_metal_pipeline_alt_arch_st
-        PRIVATE m)
 endif()

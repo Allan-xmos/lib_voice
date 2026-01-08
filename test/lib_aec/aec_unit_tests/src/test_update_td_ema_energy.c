@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 void update_td_ema_energy_fp(double *ema, double *input, double length, double alpha) {
     if(!length) return;
@@ -27,7 +26,7 @@ void test_update_td_ema_energy() {
     double ref_ema = 0.0;
 
     double ref[TEST_LEN];
-    
+
     unsigned seed = 5683;
     int max_diff = 0;
     for(int iter=0; iter<(1<<14)/F; iter++) {
@@ -64,11 +63,11 @@ void test_update_td_ema_energy() {
 
 
         update_td_ema_energy_fp(&ref_ema, &ref[start_offset], length, alpha_fp);
-        
+
         //dut updates ema inplace
         aec_config_params_t cfg;
         cfg.aec_core_conf.ema_alpha_q30 = alpha_q30;
-        aec_calc_time_domain_ema_energy(&dut_ema, &dut, start_offset, length, &cfg); 
+        aec_calc_time_domain_ema_energy(&dut_ema, &dut, start_offset, length, &cfg);
 
         //printf("ref %f, dut %f\n",ref, ldexp(dut_ema.mant, dut_ema.exp));
         int dut = dut_ema.mant;

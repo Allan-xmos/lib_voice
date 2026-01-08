@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 //TODO MODIFY TO TEST FOR POSITIVE AND NEGATIVE EXPONENTS!!!
 
@@ -15,9 +14,9 @@ void test_bfp_complex_s32_l2_unify_exponent() {
     complex_s32_t mem[NUM_SUBGROUPS][LENGTH_PER_SUBGROUP];
     bfp_complex_s32_t chunks[NUM_CHUNKS];
     int chunk_subgroup_mapping[NUM_CHUNKS];
-    
+
     complex_double_t mem_float[NUM_SUBGROUPS][LENGTH_PER_SUBGROUP];
-    
+
     int32_t max_diff = 0;
     unsigned seed = 34;
     int remaining_length[NUM_SUBGROUPS];
@@ -36,7 +35,7 @@ void test_bfp_complex_s32_l2_unify_exponent() {
             chunk_subgroup_mapping[c] = subgroup;
             chunks[c].exp = pseudo_rand_int(&seed, -31, 32);
             chunks[c].hr = (pseudo_rand_uint32(&seed) % 4);
-            //generate lengths such that total adds to LENGTH_PER_SUBGROUP            
+            //generate lengths such that total adds to LENGTH_PER_SUBGROUP
             if(remaining_length[subgroup]) {
                 chunks[c].length = pseudo_rand_uint32(&seed) % remaining_length[subgroup];
                 chunks[c].data = &mem[subgroup][LENGTH_PER_SUBGROUP - remaining_length[subgroup]];
@@ -55,7 +54,7 @@ void test_bfp_complex_s32_l2_unify_exponent() {
             }
             //printf("chunk %d, subgroup %d. exp %d, hr %d, length %d\n", c, subgroup, chunks[c].exp, chunks[c].hr, chunks[c].length);
         }
-        
+
         int final_exp, final_hr;
         bfp_complex_s32_t unified[NUM_SUBGROUPS];
         if(!null_mapping) {
@@ -126,9 +125,9 @@ void test_bfp_s32_l2_unify_exponent() {
     int32_t mem[NUM_SUBGROUPS][LENGTH_PER_SUBGROUP];
     bfp_s32_t chunks[NUM_CHUNKS];
     int chunk_subgroup_mapping[NUM_CHUNKS];
-    
+
     double mem_float[NUM_SUBGROUPS][LENGTH_PER_SUBGROUP];
-    
+
     int32_t max_diff = 0;
     unsigned seed = 34;
     int remaining_length[NUM_SUBGROUPS];
@@ -164,7 +163,7 @@ void test_bfp_s32_l2_unify_exponent() {
             }
             //printf("chunk %d, subgroup %d. exp %d, hr %d, length %d\n", c, subgroup, chunks[c].exp, chunks[c].hr, chunks[c].length);
         }
-        
+
         int final_exp, final_hr;
         bfp_s32_t unified[NUM_SUBGROUPS];
         if(!null_mapping) {

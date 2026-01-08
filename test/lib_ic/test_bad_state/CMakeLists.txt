@@ -28,7 +28,7 @@ foreach(testfile ${TEST_SOURCES})
 
     target_sources(${APP_NAME} PRIVATE ${COMMON_SOURCES_C} ${testfile})
 
-    target_link_libraries(${APP_NAME} 
+    target_link_libraries(${APP_NAME}
         PUBLIC
             fwk_voice::ic
             fwk_voice::example::fileutils)
@@ -62,11 +62,6 @@ foreach(testfile ${TEST_SOURCES})
             PRIVATE
                 ${BUILD_FLAGS})
 
-        target_link_libraries(${APP_NAME} 
-            PUBLIC
-                lib_xcore_math)
-
         target_link_libraries(${APP_NAME} PRIVATE "-lpthread")
-        target_link_libraries(${APP_NAME} PRIVATE m)
     endif()
 endforeach()

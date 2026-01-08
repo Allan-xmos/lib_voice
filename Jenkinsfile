@@ -397,8 +397,10 @@ pipeline {
                         junit "pytest_result.xml"
                       }
                       dir("test_adec_profile") {
-                        sh "pytest -n 1 --junitxml=pytest_result.xml"
+                        sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
+                        // Testing bit exactness of the AEC scheduling
+                        sh "diff output_1_2_2_10_5.wav output_2_2_2_10_5.wav"
                       }
                     }
                   }

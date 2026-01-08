@@ -18,8 +18,7 @@ def parse_arguments():
 
 
 def test_data(input_wav_data, file_length, ap_conf,
-              disable_aec=False, disable_ic=False, disable_ns=False, disable_agc=False,
-              vnr_input_override=np.empty(0, dtype=np.float64), mu_override=np.empty(0, dtype=np.float64),
+              disable_aec=False, disable_ic=False, disable_ns=False, disable_agc=False, mu_override=np.empty(0, dtype=np.float64),
               verbose = False, process_until_frame = -1):
 
     x_channel_count = ap_conf["aec"]['x_channel_count']
@@ -40,9 +39,7 @@ def test_data(input_wav_data, file_length, ap_conf,
     for frame_start in range(0, file_length-frame_advance, frame_advance):
         new_frame = awu.get_frame(input_wav_data, frame_start, frame_advance)
         #print(f"y_wav_data.shape = {y_wav_data.shape}, {y_wav_data.dtype}")
-        if len(vnr_input_override) != 0: 
-            ap_output = ap.process_frame(new_frame, vnr_input_override=vnr_input_override[count])
-        elif len(mu_override) != 0: 
+        if len(mu_override) != 0: 
             ap_output = ap.process_frame(new_frame, mu_override=mu_override[count])
         else:
             ap_output = ap.process_frame(new_frame)
@@ -56,8 +53,7 @@ def test_data(input_wav_data, file_length, ap_conf,
 
 
 def test_file(input_file, output_file, config_file, disable_aec=False, disable_ic=False, disable_ns=False, disable_agc=False,
-              vnr_input_override=np.empty(0, dtype=np.float64), mu_override=np.empty(0, dtype=np.float64),
-              verbose = False, process_until_frame = -1):
+              mu_override=np.empty(0, dtype=np.float64), verbose = False, process_until_frame = -1):
     input_rate, input_wav_file = scipy.io.wavfile.read(input_file, 'r')
     input_wav_data, input_channel_count, file_length = awu.parse_audio(input_wav_file)
     ap_conf = json_to_dict(config_file)
@@ -65,7 +61,7 @@ def test_file(input_file, output_file, config_file, disable_aec=False, disable_i
     assert input_rate == fs, f"{input_file} has a {input_rate} sample rate while config is set to {fs}"
 
     output, vnr_pred, mu_log = test_data(input_wav_data, file_length, ap_conf, disable_aec=disable_aec, disable_ic=disable_ic, disable_ns=disable_ns, disable_agc=disable_agc,
-                                         vnr_input_override=vnr_input_override, mu_override=mu_override, verbose=verbose, process_until_frame=process_until_frame)
+                                         mu_override=mu_override, verbose=verbose, process_until_frame=process_until_frame)
 
     output_32bit = np.asarray(output*np.iinfo(np.int32).max, dtype=np.int32)
     scipy.io.wavfile.write(output_file, input_rate, output_32bit.T)

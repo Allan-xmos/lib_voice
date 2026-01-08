@@ -46,7 +46,7 @@
  * `main_state`, `shadow_state` and shared_state structures must start at double word aligned addresses.
  *
  * main_mem_pool and shadow_mem_pool must point to memory buffers big enough to support main and shadow filter
- * processing.  AEC state aec_state_t and shared state aec_shared_state_t structures contain only the BFP data
+ * processing.  AEC state aec_filter_state_t and shared state aec_shared_filter_state_t structures contain only the BFP data
  * structures used in the AEC. The memory these BFP structures will point to needs to be provided by the user in the
  * memory pool main and shadow filters memory pool. An example memory pool structure is present in aec_memory_pool_t and
  * aec_shadow_filt_memory_pool_t.
@@ -56,9 +56,9 @@
  * @par Example
  * @code{.c}
  *      #include "aec_memory_pool.h"
-        aec_state_t DWORD_ALIGNED main_state;
-        aec_state_t DWORD_ALIGNED shadow_state;
-        aec_shared_state_t DWORD_ALIGNED aec_shared_state;
+        aec_filter_state_t DWORD_ALIGNED main_state;
+        aec_filter_state_t DWORD_ALIGNED shadow_state;
+        aec_shared_filter_state_t DWORD_ALIGNED aec_shared_state;
         uint8_t DWORD_ALIGNED aec_mem[sizeof(aec_memory_pool_t)];
         uint8_t DWORD_ALIGNED aec_shadow_mem[sizeof(aec_shadow_filt_memory_pool_t)];
         unsigned y_chans = 2, x_chans = 2;
@@ -71,11 +71,7 @@
  * @ingroup aec_func
  */
 void aec_init(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state,
-        aec_shared_state_t *shared_state,
-        uint8_t *main_mem_pool,
-        uint8_t *shadow_mem_pool,
+        aec_state_t *aec_state,
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_main_filter_phases,
@@ -100,8 +96,7 @@ void aec_init(
  * @ingroup aec_func
  */
 void aec_process_frame(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state,
+        aec_state_t *aec_state,
         int32_t (*output_main)[AEC_FRAME_ADVANCE],
         int32_t (*output_shadow)[AEC_FRAME_ADVANCE],
         const int32_t (*y_data)[AEC_FRAME_ADVANCE],
@@ -145,7 +140,7 @@ void aec_calc_freq_domain_energy(
  *
  * @ingroup aec_func
  */
-void aec_reset_state(aec_state_t *main_state, aec_state_t *shadow_state);
+void aec_reset_state(aec_state_t *aec_state);
 
 /** @brief Calculate the energy of the input signal
  *
@@ -177,7 +172,7 @@ float_s32_t aec_calc_max_input_energy(
  *
  */
 float_s32_t aec_calc_corr_factor(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch);
 
 #endif

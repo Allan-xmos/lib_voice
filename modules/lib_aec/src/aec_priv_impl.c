@@ -8,16 +8,16 @@
 #include "xmath/xmath.h"
 
 void aec_priv_main_init(
-        aec_state_t *state,
-        aec_shared_state_t *shared_state,
+        aec_filter_state_t *state,
+        aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_phases)
 {
-    memset(state, 0, sizeof(aec_state_t));
+    memset(state, 0, sizeof(aec_filter_state_t));
     //reset shared_state. Only done in main_init()
-    memset(shared_state, 0, sizeof(aec_shared_state_t));
+    memset(shared_state, 0, sizeof(aec_shared_filter_state_t));
 
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
@@ -131,15 +131,15 @@ void aec_priv_main_init(
 }
 
 void aec_priv_shadow_init(
-        aec_state_t *state,
-        aec_shared_state_t *shared_state,
+        aec_filter_state_t *state,
+        aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_phases)
 {
     if(state == NULL) {
         return;
     }
-    memset(state, 0, sizeof(aec_state_t));
+    memset(state, 0, sizeof(aec_filter_state_t));
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
     //initialise number of phases
@@ -263,10 +263,10 @@ void aec_priv_copy_filter(
 }
 
 void aec_priv_compare_filters(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state)
+        aec_filter_state_t *main_state,
+        aec_filter_state_t *shadow_state)
 {
-    aec_shared_state_t *shared_state = main_state->shared_state;
+    aec_shared_filter_state_t *shared_state = main_state->shared_state;
     shadow_filt_config_params_t *shadow_conf = &shared_state->config_params.shadow_filt_conf;
     shadow_filter_params_t *shadow_params = &shared_state->shadow_filter_params;
     unsigned ref_low_all_xch = 1;

@@ -40,7 +40,7 @@ static void init_coherence_mu_config_fp(coherence_mu_params_fp *cfg, int channel
     cfg->mu_shad_time = 30;
     cfg->adaption_config = AEC_ADAPTION_AUTO;
     cfg->force_adaption_mu = 1.0;
-    //state
+    //aec_state.main_state
     for(int i=0; i<channels; i++) {
         cfg->coh[i] = 1.0;
         cfg->coh_slow[i] = 0.0;
@@ -88,10 +88,8 @@ void test_calc_coherence() {
     unsigned num_x_channels = 1;
     unsigned num_phases = AEC_MAIN_FILTER_PHASES - 1;
 
-    aec_memory_pool_t aec_memory_pool;
-    aec_state_t state;
-    aec_shared_state_t aec_shared_state;
-    aec_init(&state, NULL, &aec_shared_state, (uint8_t*)&aec_memory_pool, NULL, num_y_channels, num_x_channels, num_phases, 0);
+    aec_state_t aec_state;
+    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, 0);
 
     //Initialize floating point
     coherence_mu_params_fp coh_params_fp;
@@ -102,45 +100,45 @@ void test_calc_coherence() {
     unsigned seed = 10;
     int32_t max_diff = 0;
     for(int iter=0; iter<(1<<12)/F; iter++) {
-        state.shared_state->config_params.aec_core_conf.bypass = pseudo_rand_uint32(&seed) % 2;
-        aec_frame_init(&state, NULL, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]); //frame init will copy y[240:480] into output
-        //state.y_hat is initialised as part of Y_hat -> y_hat ifft. Do it here for standalone testing
+        aec_state.main_state.shared_state->config_params.aec_core_conf.bypass = pseudo_rand_uint32(&seed) % 2;
+        aec_frame_init(&aec_state.main_state, NULL, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]); //frame init will copy y[240:480] into output
+        //aec_state.main_state.y_hat is initialised as part of Y_hat -> y_hat ifft. Do it here for standalone testing
         for(int ch=0; ch<num_y_channels; ch++) {
-            bfp_s32_init(&state.y_hat[ch], (int32_t*)&state.Y_hat[ch].data[0], 0, AEC_PROC_FRAME_LENGTH, 0);
+            bfp_s32_init(&aec_state.main_state.y_hat[ch], (int32_t*)&aec_state.main_state.Y_hat[ch].data[0], 0, AEC_PROC_FRAME_LENGTH, 0);
         }
 
         for(int ch=0; ch<num_y_channels; ch++) {
-            state.shared_state->y[ch].exp = pseudo_rand_int(&seed, -31, 32);
-            state.shared_state->y[ch].hr = pseudo_rand_uint32(&seed) % 4;
+            aec_state.main_state.shared_state->y[ch].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.main_state.shared_state->y[ch].hr = pseudo_rand_uint32(&seed) % 4;
 
-            state.y_hat[ch].exp = pseudo_rand_int(&seed, -31, 32);
-            state.y_hat[ch].hr = pseudo_rand_uint32(&seed) % 4;
+            aec_state.main_state.y_hat[ch].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.main_state.y_hat[ch].hr = pseudo_rand_uint32(&seed) % 4;
 
             for(int i=0; i<AEC_PROC_FRAME_LENGTH; i++) {
-                state.shared_state->y[ch].data[i] = pseudo_rand_int32(&seed) >> state.shared_state->y[ch].hr;
-                y_fp[ch][i] = ldexp(state.shared_state->y[ch].data[i], state.shared_state->y[ch].exp);
+                aec_state.main_state.shared_state->y[ch].data[i] = pseudo_rand_int32(&seed) >> aec_state.main_state.shared_state->y[ch].hr;
+                y_fp[ch][i] = ldexp(aec_state.main_state.shared_state->y[ch].data[i], aec_state.main_state.shared_state->y[ch].exp);
 
-                state.y_hat[ch].data[i] = pseudo_rand_int32(&seed) >> state.y_hat[ch].hr;
-                y_hat_fp[ch][i] = ldexp(state.y_hat[ch].data[i], state.y_hat[ch].exp);
+                aec_state.main_state.y_hat[ch].data[i] = pseudo_rand_int32(&seed) >> aec_state.main_state.y_hat[ch].hr;
+                y_hat_fp[ch][i] = ldexp(aec_state.main_state.y_hat[ch].data[i], aec_state.main_state.y_hat[ch].exp);
             }
         }
 
-        //since state.shared_state->y is being initialised with a new frame after calling aec_frame_init(), we need to update state->shared_state->prev_y again since that's where y[240:480] is read from in aec_calc_coherence()
+        //since aec_state.main_state.shared_state->y is being initialised with a new frame after calling aec_frame_init(), we need to update aec_state.main_state->shared_state->prev_y again since that's where y[240:480] is read from in aec_calc_coherence()
         for(int ch=0; ch<num_y_channels; ch++) {
-            memcpy(state.shared_state->prev_y[ch].data, &state.shared_state->y[ch].data[AEC_FRAME_ADVANCE], (AEC_PROC_FRAME_LENGTH-AEC_FRAME_ADVANCE)*sizeof(int32_t));
-            state.shared_state->prev_y[ch].exp = state.shared_state->y[ch].exp;
-            state.shared_state->prev_y[ch].hr = state.shared_state->y[ch].hr;
+            memcpy(aec_state.main_state.shared_state->prev_y[ch].data, &aec_state.main_state.shared_state->y[ch].data[AEC_FRAME_ADVANCE], (AEC_PROC_FRAME_LENGTH-AEC_FRAME_ADVANCE)*sizeof(int32_t));
+            aec_state.main_state.shared_state->prev_y[ch].exp = aec_state.main_state.shared_state->y[ch].exp;
+            aec_state.main_state.shared_state->prev_y[ch].hr = aec_state.main_state.shared_state->y[ch].hr;
         }
 
 
-        aec_calc_coherence_fp(&coh_params_fp, y_fp, y_hat_fp, num_y_channels, state.shared_state->config_params.aec_core_conf.bypass);
+        aec_calc_coherence_fp(&coh_params_fp, y_fp, y_hat_fp, num_y_channels, aec_state.main_state.shared_state->config_params.aec_core_conf.bypass);
 
         for(int ch=0; ch<num_y_channels; ch++) {
-            aec_calc_coherence(&state, ch);
+            aec_calc_coherence(&aec_state.main_state, ch);
 
         }
         for(int ch=0; ch<num_y_channels; ch++) {
-            coherence_mu_params_t *coh_mu_state_ptr = &state.shared_state->coh_mu_state[ch];
+            coherence_mu_params_t *coh_mu_state_ptr = &aec_state.main_state.shared_state->coh_mu_state[ch];
 
             //printf("coh: %f, %f, (%d, %d)\n", coh_params_fp.coh[ch], ldexp(coh_mu_state_ptr->coh.mant, coh_mu_state_ptr->coh.exp), coh_mu_state_ptr->coh.mant, coh_mu_state_ptr->coh.exp);
             int32_t dut_coh = coh_mu_state_ptr->coh.mant;

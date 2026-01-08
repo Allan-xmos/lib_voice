@@ -9,21 +9,21 @@ enum e_fft {Y_FFT, X_FFT, ERROR_FFT};
 
 #ifdef __XS3A__
 #include <xcore/parallel.h>
-DECLARE_JOB(calc_time_domain_ema_energy_task, (const aec_par_tasks_and_channels_t*, aec_state_t *, int32_t*, int, int, enum e_td_ema));
-DECLARE_JOB(fft_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, aec_state_t*, int, int, enum e_fft));
-DECLARE_JOB(update_X_energy_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, aec_state_t*, int, int, int));
-DECLARE_JOB(update_X_fifo_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, int, int));
-DECLARE_JOB(calc_Error_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, aec_state_t*, int, int));
-DECLARE_JOB(ifft_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, aec_state_t*, int, int));
-DECLARE_JOB(calc_coh_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, int, int));
-DECLARE_JOB(calc_output_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, aec_state_t*, int32_t*, int32_t*, int, int));
-DECLARE_JOB(calc_freq_domain_energy_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, aec_state_t*, int, int));
-DECLARE_JOB(calc_normalisation_spectrum_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, aec_state_t*, int, int));
-DECLARE_JOB(calc_T_task, (const aec_par_tasks_and_channels_t*, aec_state_t*, aec_state_t*, int, int, int));
-DECLARE_JOB(filter_adapt_task, (const aec_par_tasks_t*, aec_state_t*, aec_state_t*, int, int));
+DECLARE_JOB(calc_time_domain_ema_energy_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t *, int32_t*, int, int, enum e_td_ema));
+DECLARE_JOB(fft_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int, enum e_fft));
+DECLARE_JOB(update_X_energy_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int, int));
+DECLARE_JOB(update_X_fifo_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, int, int));
+DECLARE_JOB(calc_Error_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int));
+DECLARE_JOB(ifft_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int));
+DECLARE_JOB(calc_coh_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, int, int));
+DECLARE_JOB(calc_output_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int32_t*, int32_t*, int, int));
+DECLARE_JOB(calc_freq_domain_energy_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int));
+DECLARE_JOB(calc_normalisation_spectrum_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int));
+DECLARE_JOB(calc_T_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int, int));
+DECLARE_JOB(filter_adapt_task, (const aec_par_tasks_t*, aec_filter_state_t*, aec_filter_state_t*, int, int));
 #endif
 
-void calc_time_domain_ema_energy_task(const aec_par_tasks_and_channels_t* s, aec_state_t *state, int32_t *output, int passes, int channels, enum e_td_ema type) {
+void calc_time_domain_ema_energy_task(const aec_par_tasks_and_channels_t* s, aec_filter_state_t *state, int32_t *output, int passes, int channels, enum e_td_ema type) {
     for(int i=0; i<passes; i++) {
         int ch = s[i].channel;
         if(ch >= channels) continue;
@@ -48,7 +48,7 @@ void calc_time_domain_ema_energy_task(const aec_par_tasks_and_channels_t* s, aec
     }
 }
 
-void fft_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int passes, int channels, enum e_fft type) {
+void fft_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int passes, int channels, enum e_fft type) {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
         int ch = s[i].channel;
@@ -82,7 +82,7 @@ void fft_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, ae
     }
 }
 
-void update_X_energy_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int passes, int channels, int recalc_bin) {
+void update_X_energy_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int passes, int channels, int recalc_bin) {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
         int ch = s[i].channel;
@@ -101,7 +101,7 @@ void update_X_energy_task(const aec_par_tasks_and_channels_t *s, aec_state_t *ma
     }
 }
 
-void update_X_fifo_task(const aec_par_tasks_and_channels_t *s, aec_state_t *state, int passes, int channels) {
+void update_X_fifo_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *state, int passes, int channels) {
     for(int i=0; i<passes; i++) {
         int ch = s[i].channel;
         if(ch >= channels) continue;
@@ -112,7 +112,7 @@ void update_X_fifo_task(const aec_par_tasks_and_channels_t *s, aec_state_t *stat
     }
 }
 
-void calc_Error_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int passes, int channels) {
+void calc_Error_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int passes, int channels) {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
         int ch = s[i].channel;
@@ -131,7 +131,7 @@ void calc_Error_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_st
     }
 }
 
-void ifft_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int passes, int channels)
+void ifft_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int passes, int channels)
 {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
@@ -153,7 +153,7 @@ void ifft_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, a
         }
     }
 }
-void calc_coh_task(const aec_par_tasks_and_channels_t *s, aec_state_t *state, int passes, int channels) {
+void calc_coh_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *state, int passes, int channels) {
     for(int i=0; i<passes; i++) {
         int ch = s[i].channel;
         if(ch >= channels) continue;
@@ -164,7 +164,7 @@ void calc_coh_task(const aec_par_tasks_and_channels_t *s, aec_state_t *state, in
     }
 }
 
-void calc_output_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int32_t *output_main, int32_t *output_shadow, int passes, int channels) {
+void calc_output_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int32_t *output_main, int32_t *output_shadow, int passes, int channels) {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
         int ch = s[i].channel;
@@ -190,7 +190,7 @@ void calc_output_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_s
     }
 }
 
-void calc_freq_domain_energy_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int passes, int channels)
+void calc_freq_domain_energy_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int passes, int channels)
 {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
@@ -213,7 +213,7 @@ void calc_freq_domain_energy_task(const aec_par_tasks_and_channels_t *s, aec_sta
     }
 }
 
-void calc_normalisation_spectrum_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int passes, int channels) {
+void calc_normalisation_spectrum_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int passes, int channels) {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
         int ch = s[i].channel;
@@ -232,7 +232,7 @@ void calc_normalisation_spectrum_task(const aec_par_tasks_and_channels_t *s, aec
     }
 }
 
-void calc_T_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int passes, int channels, int ych) {
+void calc_T_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int passes, int channels, int ych) {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
         int xch = s[i].channel;
@@ -251,7 +251,7 @@ void calc_T_task(const aec_par_tasks_and_channels_t *s, aec_state_t *main_state,
     }
 }
 
-void filter_adapt_task(const aec_par_tasks_t *s, aec_state_t *main_state, aec_state_t *shadow_state, int passes, int ych) {
+void filter_adapt_task(const aec_par_tasks_t *s, aec_filter_state_t *main_state, aec_filter_state_t *shadow_state, int passes, int ych) {
     for(int i=0; i<passes; i++) {
         int task = s[i].task;
         int is_active = s[i].is_active;
@@ -312,14 +312,16 @@ do {                                                            \
  * aec_task_distribution.c
  */
 void aec_process_frame(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state,
+        aec_state_t *aec_state,
         int32_t (*output_main)[AEC_FRAME_ADVANCE],
         int32_t (*output_shadow)[AEC_FRAME_ADVANCE],
         const int32_t (*y_data)[AEC_FRAME_ADVANCE],
         const int32_t (*x_data)[AEC_FRAME_ADVANCE],
         const aec_task_distribution_t *tdist)
 {
+    aec_filter_state_t *main_state = &aec_state->main_state;
+    aec_filter_state_t *shadow_state = &aec_state->shadow_state;
+
     // Read number of mic and reference channels. These are specified as part of the configuration when aec_init() is called.
     int num_y_channels = main_state->shared_state->num_y_channels; //Number of mic channels
     int num_x_channels = main_state->shared_state->num_x_channels; //Number of reference channels

@@ -85,8 +85,8 @@ void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
 #else
     stage_1_process_frame(&state->stage_1_state, &stage_1_out[0], &md.max_ref_energy, &md.aec_corr_factor[0], &md.ref_active_flag, input_y_data, input_x_data);
 
-    if(state->stage_1_state.aec_main_state.shared_state->num_y_channels < AP_MAX_Y_CHANNELS) {
-        for(int ch=state->stage_1_state.aec_main_state.shared_state->num_y_channels; ch<AP_MAX_Y_CHANNELS; ch++) {
+    if(state->stage_1_state.aec_state.main_state.shared_state->num_y_channels < AP_MAX_Y_CHANNELS) {
+        for(int ch=state->stage_1_state.aec_state.main_state.shared_state->num_y_channels; ch<AP_MAX_Y_CHANNELS; ch++) {
             md.aec_corr_factor[ch] = md.aec_corr_factor[0];
         }
     }

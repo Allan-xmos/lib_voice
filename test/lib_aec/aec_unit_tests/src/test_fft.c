@@ -18,16 +18,12 @@ void test_fft() {
     unsigned main_filter_phases = 6;
     unsigned shadow_filter_phases = 2;
 
-    aec_state_t main_state, shadow_state;
-    aec_memory_pool_t aec_memory_pool;
-    aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
-    aec_shared_state_t aec_shared_state;
-
-    aec_init(&main_state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_state_t aec_state;
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
 
     int32_t DWORD_ALIGNED new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
     complex_double_t DWORD_ALIGNED ref[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_PROC_FRAME_LENGTH + 2];
-    aec_state_t *state_ptr;
+    aec_filter_state_t *state_ptr;
     unsigned seed = 83472;
     //Init FFT for reference
     make_sine_table(sine_lut, AEC_PROC_FRAME_LENGTH);
@@ -39,12 +35,12 @@ void test_fft() {
         unsigned is_shadow = pseudo_rand_uint32(&seed) % 2;
         //printf("call_type %d, is_shadow %d\n",call_type, is_shadow);
         if(is_shadow) {
-            state_ptr = &main_state;
+            state_ptr = &aec_state.main_state;
         }
         else {
-            state_ptr = &shadow_state;
+            state_ptr = &aec_state.shadow_state;
         }
-        aec_frame_init(&main_state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
+        aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
         bfp_s32_t *fft_in;
         bfp_complex_s32_t *fft_out;
         int num_channels;

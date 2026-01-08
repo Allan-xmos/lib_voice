@@ -65,14 +65,8 @@ void aec_task(const char *input_file_name, const char *output_file_name) {
     unsigned bytes_per_frame = wav_get_num_bytes_per_frame(&input_header_struct);
 
     // Initialise AEC
-    uint8_t DWORD_ALIGNED aec_memory_pool[sizeof(aec_memory_pool_t)];
-    uint8_t DWORD_ALIGNED aec_shadow_filt_memory_pool[sizeof(aec_shadow_filt_memory_pool_t)];
-    aec_state_t DWORD_ALIGNED main_state;
-    aec_state_t DWORD_ALIGNED shadow_state;
-    aec_shared_state_t DWORD_ALIGNED aec_shared_state;
-
-    aec_init(&main_state, &shadow_state, &aec_shared_state,
-            &aec_memory_pool[0], &aec_shadow_filt_memory_pool[0],
+    aec_state_t DWORD_ALIGNED aec_state;
+    aec_init(&aec_state,
             AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS,
             AEC_MAIN_FILTER_PHASES, AEC_SHADOW_FILTER_PHASES);
 
@@ -95,7 +89,7 @@ void aec_task(const char *input_file_name, const char *output_file_name) {
         /* Reuse mic data memory for main filter output
          * Reuse ref data memory for shadow filter output.
          */
-        aec_process_frame(&main_state, &shadow_state, frame_y, frame_x, frame_y, frame_x, &tdist);
+        aec_process_frame(&aec_state, frame_y, frame_x, frame_y, frame_x, &tdist);
 
         // Create interleaved output that can be written to wav file
         for (unsigned ch=0;ch<AEC_MAX_Y_CHANNELS;ch++){

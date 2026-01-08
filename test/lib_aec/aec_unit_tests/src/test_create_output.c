@@ -79,11 +79,8 @@ void test_create_output() {
     unsigned num_x_channels = 1;
     unsigned num_phases = AEC_MAIN_FILTER_PHASES - 1;
 
-    aec_memory_pool_t aec_memory_pool;
-    aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
-    aec_state_t state, shadow_state;
-    aec_shared_state_t aec_shared_state;
-    aec_init(&state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, num_phases, num_phases);
+    aec_state_t aec_state;
+    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, num_phases);
     //Initialise floating point arrays
     double error_fp[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH];
     double output_fp[AEC_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
@@ -97,14 +94,14 @@ void test_create_output() {
     //Generate error data
     for(unsigned iter=0; iter<(1<<12)/F; iter++) {
         int32_t new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
-        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
+        aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
         int is_main_filter = pseudo_rand_uint32(&seed) % 2;
-        aec_state_t *state_ptr;
+        aec_filter_state_t *state_ptr;
         if(is_main_filter) {
-            state_ptr = &state;
+            state_ptr = &aec_state.main_state;
         }
         else {
-            state_ptr = &shadow_state;
+            state_ptr = &aec_state.shadow_state;
         }
 
         //state_ptr->error is initialised in the Error->error IFFT call. Initialise here for standalone testing

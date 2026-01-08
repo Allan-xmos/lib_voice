@@ -6,8 +6,7 @@ extern aec_task_distribution_t tdist;
 
 static void aec_switch_configuration(stage_1_state_t *state, aec_conf_t *conf)
 {
-    aec_init(&state->aec_main_state, &state->aec_shadow_state, &state->aec_shared_state,
-            &state->aec_main_memory_pool[0], &state->aec_shadow_memory_pool[0],
+    aec_init(&state->aec_state,
             conf->num_y_channels, conf->num_x_channels,
             conf->num_main_filt_phases, conf->num_shadow_filt_phases);
 }
@@ -55,12 +54,12 @@ static void alt_arch_controller(stage_1_state_t *state, int32_t *ref_active_flag
     if(*ref_active_flag){ //Ref present
         // If there's reference, enable AEC and disable IC right away
         state->hold_aec_count = 0;
-        state->aec_main_state.shared_state->config_params.aec_core_conf.bypass = 0;
+        state->aec_state.main_state.shared_state->config_params.aec_core_conf.bypass = 0;
     }
     else { //Ref absent
-        if(!state->aec_main_state.shared_state->config_params.aec_core_conf.bypass) { // If reference is not there and AEC is still enabled
+        if(!state->aec_state.main_state.shared_state->config_params.aec_core_conf.bypass) { // If reference is not there and AEC is still enabled
             if(state->hold_aec_count > state->hold_aec_limit) { // If reference has been absent for 3 continuous seconds, disable AEC
-                state->aec_main_state.shared_state->config_params.aec_core_conf.bypass = 1;
+                state->aec_state.main_state.shared_state->config_params.aec_core_conf.bypass = 1;
             }
             else { // If ref hasn't been absent for 3 continuous seconds, keep AEC enabled and propagate ref as being present to the next stage.
                 state->hold_aec_count++;
@@ -119,7 +118,7 @@ void stage_1_process_frame(stage_1_state_t *state, int32_t (*output_frame)[AP_FR
             );
 
     /** Detect if there's activity on the reference channels*/
-    *ref_active_flag = aec_detect_input_activity(input_x, state->ref_active_threshold, state->aec_main_state.shared_state->num_x_channels);
+    *ref_active_flag = aec_detect_input_activity(input_x, state->ref_active_threshold, state->aec_state.main_state.shared_state->num_x_channels);
 
     /** Alt-arch controller logic*/
 #if ALT_ARCH_MODE
@@ -127,28 +126,28 @@ void stage_1_process_frame(stage_1_state_t *state, int32_t (*output_frame)[AP_FR
 #endif
 
     /** AEC*/
-    aec_process_frame(&state->aec_main_state, &state->aec_shadow_state, output_frame, NULL, input_y, input_x, &tdist);
+    aec_process_frame(&state->aec_state, output_frame, NULL, input_y, input_x, &tdist);
 
     /** Update metadata*/
-    *max_ref_energy = aec_calc_max_input_energy(input_x, state->aec_main_state.shared_state->num_x_channels);
-    for(int ch=0; ch<state->aec_main_state.shared_state->num_y_channels; ch++) {
-        aec_corr_factor[ch] = aec_calc_corr_factor(&state->aec_main_state, ch);
+    *max_ref_energy = aec_calc_max_input_energy(input_x, state->aec_state.main_state.shared_state->num_x_channels);
+    for(int ch=0; ch<state->aec_state.main_state.shared_state->num_y_channels; ch++) {
+        aec_corr_factor[ch] = aec_calc_corr_factor(&state->aec_state.main_state, ch);
     }
 
     /** Delay Estimation*/
     adec_input_t adec_in;
     adec_estimate_delay(
             &adec_in.from_de,
-            state->aec_main_state.H_hat[0],
-            state->aec_main_state.num_phases
+            state->aec_state.main_state.H_hat[0],
+            state->aec_state.main_state.num_phases
             );
 
 
     /** ADEC*/
     // Create input to ADEC from AEC
-    adec_in.from_aec.y_ema_energy_ch0 = state->aec_main_state.shared_state->y_ema_energy[0];
-    adec_in.from_aec.error_ema_energy_ch0 = state->aec_main_state.error_ema_energy[0];
-    adec_in.from_aec.shadow_flag_ch0 = state->aec_main_state.shared_state->shadow_filter_params.shadow_flag[0];
+    adec_in.from_aec.y_ema_energy_ch0 = state->aec_state.main_state.shared_state->y_ema_energy[0];
+    adec_in.from_aec.error_ema_energy_ch0 = state->aec_state.main_state.error_ema_energy[0];
+    adec_in.from_aec.shadow_flag_ch0 = state->aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[0];
     // Directly from app
     adec_in.far_end_active_flag = *ref_active_flag;
 
@@ -161,7 +160,7 @@ void stage_1_process_frame(stage_1_state_t *state, int32_t (*output_frame)[AP_FR
 
     //** Reset AEC state if needed*/
     if(adec_output.reset_aec_flag) {
-        aec_reset_state(&state->aec_main_state, &state->aec_shadow_state);
+        aec_reset_state(&state->aec_state);
     }
 
     /** Update delay buffer if there's a delay change requested by ADEC*/
@@ -175,7 +174,7 @@ void stage_1_process_frame(stage_1_state_t *state, int32_t (*output_frame)[AP_FR
     }
 
 #if ALT_ARCH_MODE
-    alt_arch_rewrite_output(output_frame, input_y, state->aec_main_state.shared_state->num_y_channels, state->aec_main_state.shared_state->config_params.aec_core_conf.bypass);
+    alt_arch_rewrite_output(output_frame, input_y, state->aec_state.main_state.shared_state->num_y_channels, state->aec_state.main_state.shared_state->config_params.aec_core_conf.bypass);
 #endif
 
     // Overwrite output with mic input if delay estimation enabled
@@ -193,7 +192,7 @@ void stage_1_process_frame(stage_1_state_t *state, int32_t (*output_frame)[AP_FR
 
         // Initialise AEC for delay estimation config
         aec_switch_configuration(state, &state->aec_de_mode_conf);
-        state->aec_main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_ON;
+        state->aec_state.main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_ON;
         state->delay_estimator_enabled = 1;
         //printf("framenum %d: switch to de mode\n", framenum);
     } else if ((!adec_output.delay_estimator_enabled_flag && state->delay_estimator_enabled)) {

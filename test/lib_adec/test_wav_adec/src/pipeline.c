@@ -16,8 +16,7 @@ extern aec_task_distribution_t tdist;
 
 static void aec_switch_configuration(pipeline_state_t *state, aec_conf_t *conf)
 {
-    aec_init(&state->aec_main_state, &state->aec_shadow_state, &state->aec_shared_state,
-            &state->aec_main_memory_pool[0], &state->aec_shadow_memory_pool[0],
+    aec_init(&state->aec_state,
             conf->num_y_channels, conf->num_x_channels,
             conf->num_main_filt_phases, conf->num_shadow_filt_phases);
 }
@@ -92,8 +91,8 @@ void pipeline_process_frame(pipeline_state_t *state,
 
         // Initialise AEC for delay estimation config
         aec_switch_configuration(state, &state->aec_de_mode_conf);
-        state->aec_main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_ON;
-        //state->aec_main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30 = fixed_mu_delay_est_mode;
+        state->aec_state.main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_ON;
+        //state->aec_state.main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30 = fixed_mu_delay_est_mode;
         state->delay_estimator_enabled = 1;
     } else if ((!state->adec_output_delay_estimator_enabled_flag && state->delay_estimator_enabled)) {
         // Start AEC for normal aec config
@@ -104,7 +103,7 @@ void pipeline_process_frame(pipeline_state_t *state,
 
     prof(4, "start_is_frame_active");
     // Calculate far_end active
-    int is_ref_active = aec_detect_input_activity(input_x_data, state->ref_active_threshold, state->aec_main_state.shared_state->num_x_channels);
+    int is_ref_active = aec_detect_input_activity(input_x_data, state->ref_active_threshold, state->aec_state.main_state.shared_state->num_x_channels);
     prof(5, "end_is_frame_active");
 
     //printf("frame %d\n",framenum);
@@ -113,7 +112,7 @@ void pipeline_process_frame(pipeline_state_t *state,
     prof(6, "start_aec_process_frame");
     int32_t aec_output_shadow[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
     // Writing main filter output to output_data directly
-    aec_process_frame(&state->aec_main_state, &state->aec_shadow_state, output_data, aec_output_shadow, input_y_data, input_x_data, &tdist);
+    aec_process_frame(&state->aec_state, output_data, aec_output_shadow, input_y_data, input_x_data, &tdist);
     prof(7, "end_aec_process_frame");
 
     prof(8, "start_estimate_delay");
@@ -121,8 +120,8 @@ void pipeline_process_frame(pipeline_state_t *state,
     adec_input_t adec_in;
     adec_estimate_delay(
             &adec_in.from_de,
-            state->aec_main_state.H_hat[0],
-            state->aec_main_state.num_phases
+            state->aec_state.main_state.H_hat[0],
+            state->aec_state.main_state.num_phases
             );
 
     prof(9, "end_estimate_delay");
@@ -130,9 +129,9 @@ void pipeline_process_frame(pipeline_state_t *state,
     prof(10, "start_adec_process_frame");
     /** ADEC*/
     // Create input to ADEC from AEC
-    adec_in.from_aec.y_ema_energy_ch0 = state->aec_main_state.shared_state->y_ema_energy[0];
-    adec_in.from_aec.error_ema_energy_ch0 = state->aec_main_state.error_ema_energy[0];
-    adec_in.from_aec.shadow_flag_ch0 = state->aec_main_state.shared_state->shadow_filter_params.shadow_flag[0];
+    adec_in.from_aec.y_ema_energy_ch0 = state->aec_state.main_state.shared_state->y_ema_energy[0];
+    adec_in.from_aec.error_ema_energy_ch0 = state->aec_state.main_state.error_ema_energy[0];
+    adec_in.from_aec.shadow_flag_ch0 = state->aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[0];
     // Directly from app
     adec_in.far_end_active_flag = is_ref_active;
 
@@ -154,7 +153,7 @@ void pipeline_process_frame(pipeline_state_t *state,
     prof(12, "start_reset_aec");
     //** Reset AEC state if needed*/
     if(adec_output.reset_aec_flag) {
-        aec_reset_state(&state->aec_main_state, &state->aec_shadow_state);
+        aec_reset_state(&state->aec_state);
     }
     prof(13, "end_reset_aec");
 

@@ -26,11 +26,7 @@ typedef struct {
 
 typedef struct {
     // AEC
-    aec_state_t DWORD_ALIGNED aec_main_state;
-    aec_state_t DWORD_ALIGNED aec_shadow_state;
-    aec_shared_state_t DWORD_ALIGNED aec_shared_state;
-    uint8_t DWORD_ALIGNED aec_main_memory_pool[sizeof(aec_memory_pool_t)];
-    uint8_t DWORD_ALIGNED aec_shadow_memory_pool[sizeof(aec_shadow_filt_memory_pool_t)];
+    aec_state_t DWORD_ALIGNED aec_state;
 
     // ADEC
     adec_state_t DWORD_ALIGNED adec_state;

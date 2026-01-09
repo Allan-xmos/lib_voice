@@ -9,7 +9,7 @@ target_sources(fwk_voice_test_shared_test_utils
 
 target_include_directories(fwk_voice_test_shared_test_utils INTERFACE pseudo_rand testing)
 
-add_library(fwk_voice::test::shared::test_utils ALIAS fwk_voice_test_shared_test_utils) 
+add_library(fwk_voice::test::shared::test_utils ALIAS fwk_voice_test_shared_test_utils)
 
 #################
 
@@ -31,7 +31,7 @@ target_sources(fwk_voice_test_shared_unity INTERFACE ${UNITY_SOURCES})
 
 target_include_directories(fwk_voice_test_shared_unity
     INTERFACE
-        ${UNITY_PATH}/src 
+        ${UNITY_PATH}/src
         ${UNITY_PATH}/extras/fixture/src
         ${UNITY_PATH}/extras/memory/src)
 

@@ -543,10 +543,7 @@ void test_compare_filters_and_calc_mu() {
     //Error_shadow
     //H_hat
     //H_hat_shadow
-    aec_state_t main_state, shadow_state;
-    aec_shared_state_t shared_state;
-    aec_memory_pool_t main_memory_pool;
-    aec_shadow_filt_memory_pool_t shadow_memory_pool;
+    aec_state_t aec_state;
 
     unsigned num_y_channels = TEST_NUM_Y;
     unsigned num_x_channels = TEST_NUM_X;
@@ -559,7 +556,7 @@ void test_compare_filters_and_calc_mu() {
     shadow_filt_params_fp_t shadow_filt_coh_mu_params_fp;
 
     //Initialise fixed point
-    aec_init(&main_state, &shadow_state, &shared_state, (uint8_t*)&main_memory_pool, (uint8_t*)&shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
     //Initialise floating point
     init_shadow_config_fp(&shadow_filt_cfg_fp);
     init_coherence_mu_config_fp(&coh_mu_cfg_fp);
@@ -577,16 +574,16 @@ void test_compare_filters_and_calc_mu() {
     unsigned max_diff_coh_mu = 0;
     for(int iter=0; iter<(1<<11)/F; iter++) {
         //every 200 frames set bypass
-        main_state.shared_state->config_params.aec_core_conf.bypass = 0;
+        aec_state.main_state.shared_state->config_params.aec_core_conf.bypass = 0;
         if((iter > 0) && !(iter % 200)) {
-            main_state.shared_state->config_params.aec_core_conf.bypass = pseudo_rand_uint32(&seed) % 2;
+            aec_state.main_state.shared_state->config_params.aec_core_conf.bypass = pseudo_rand_uint32(&seed) % 2;
         }
         //printf("iter %d\n",iter);
-        aec_frame_init(&main_state, &shadow_state, &new_frame[0], &new_frame[TEST_NUM_Y]);
+        aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[TEST_NUM_Y]);
         for(int ch=0; ch<num_y_channels; ch++) {
             //state_ptr->shared_state->Y is initialised in the y->Y fft aec_fft() call with state_ptr->shared_state->y as input. Initialising here for
             //standalone testing.
-            bfp_complex_s32_init(&main_state.shared_state->Y[ch], (complex_s32_t*)&main_state.shared_state->y[ch].data[0], 0, NUM_BINS, 0);
+            bfp_complex_s32_init(&aec_state.main_state.shared_state->Y[ch], (complex_s32_t*)&aec_state.main_state.shared_state->y[ch].data[0], 0, NUM_BINS, 0);
         }
 
         shadow_filt_params_fp_t *params_fp = &shadow_filt_coh_mu_params_fp;
@@ -594,91 +591,91 @@ void test_compare_filters_and_calc_mu() {
 
         for(int ych=0; ych<num_y_channels; ych++) {
             //H_hat
-            for(int ph=0; ph<num_x_channels*main_state.num_phases; ph++) {
-                int xch = ph/main_state.num_phases;
-                int ph_xch = (main_state.num_phases == 1) ? 0 : ph % main_state.num_phases;
-                main_state.H_hat[ych][ph].exp = pseudo_rand_int(&seed, -31, 32);
-                main_state.H_hat[ych][ph].hr = pseudo_rand_uint32(&seed) % 3;
+            for(int ph=0; ph<num_x_channels*aec_state.main_state.num_phases; ph++) {
+                int xch = ph/aec_state.main_state.num_phases;
+                int ph_xch = (aec_state.main_state.num_phases == 1) ? 0 : ph % aec_state.main_state.num_phases;
+                aec_state.main_state.H_hat[ych][ph].exp = pseudo_rand_int(&seed, -31, 32);
+                aec_state.main_state.H_hat[ych][ph].hr = pseudo_rand_uint32(&seed) % 3;
                 for(int i=0; i<NUM_BINS; i++) {
-                    main_state.H_hat[ych][ph].data[i].re = pseudo_rand_int32(&seed) >> main_state.H_hat[ych][ph].hr;
-                    main_state.H_hat[ych][ph].data[i].im = pseudo_rand_int32(&seed) >> main_state.H_hat[ych][ph].hr;
-                    params_fp->H_hat[ych][xch][ph_xch][i].re = ldexp(main_state.H_hat[ych][ph].data[i].re, main_state.H_hat[ych][ph].exp);
-                    params_fp->H_hat[ych][xch][ph_xch][i].im = ldexp(main_state.H_hat[ych][ph].data[i].im, main_state.H_hat[ych][ph].exp);
+                    aec_state.main_state.H_hat[ych][ph].data[i].re = pseudo_rand_int32(&seed) >> aec_state.main_state.H_hat[ych][ph].hr;
+                    aec_state.main_state.H_hat[ych][ph].data[i].im = pseudo_rand_int32(&seed) >> aec_state.main_state.H_hat[ych][ph].hr;
+                    params_fp->H_hat[ych][xch][ph_xch][i].re = ldexp(aec_state.main_state.H_hat[ych][ph].data[i].re, aec_state.main_state.H_hat[ych][ph].exp);
+                    params_fp->H_hat[ych][xch][ph_xch][i].im = ldexp(aec_state.main_state.H_hat[ych][ph].data[i].im, aec_state.main_state.H_hat[ych][ph].exp);
                 }
             }
-            for(int ph=0; ph<num_x_channels*shadow_state.num_phases; ph++) {
-                int xch = ph/shadow_state.num_phases;
-                int ph_xch = (shadow_state.num_phases == 1) ? 0 : ph % shadow_state.num_phases; //phase within the given xch
-                shadow_state.H_hat[ych][ph].exp = pseudo_rand_int(&seed, -31, 32);
-                shadow_state.H_hat[ych][ph].hr = pseudo_rand_uint32(&seed) % 3;
+            for(int ph=0; ph<num_x_channels*aec_state.shadow_state.num_phases; ph++) {
+                int xch = ph/aec_state.shadow_state.num_phases;
+                int ph_xch = (aec_state.shadow_state.num_phases == 1) ? 0 : ph % aec_state.shadow_state.num_phases; //phase within the given xch
+                aec_state.shadow_state.H_hat[ych][ph].exp = pseudo_rand_int(&seed, -31, 32);
+                aec_state.shadow_state.H_hat[ych][ph].hr = pseudo_rand_uint32(&seed) % 3;
                 for(int i=0; i<NUM_BINS; i++) {
-                    shadow_state.H_hat[ych][ph].data[i].re = pseudo_rand_int32(&seed) >> shadow_state.H_hat[ych][ph].hr;
-                    shadow_state.H_hat[ych][ph].data[i].im = pseudo_rand_int32(&seed) >> shadow_state.H_hat[ych][ph].hr;
-                    params_fp->H_hat_shadow[ych][xch][ph_xch][i].re = ldexp(shadow_state.H_hat[ych][ph].data[i].re, shadow_state.H_hat[ych][ph].exp);
-                    params_fp->H_hat_shadow[ych][xch][ph_xch][i].im = ldexp(shadow_state.H_hat[ych][ph].data[i].im, shadow_state.H_hat[ych][ph].exp);
+                    aec_state.shadow_state.H_hat[ych][ph].data[i].re = pseudo_rand_int32(&seed) >> aec_state.shadow_state.H_hat[ych][ph].hr;
+                    aec_state.shadow_state.H_hat[ych][ph].data[i].im = pseudo_rand_int32(&seed) >> aec_state.shadow_state.H_hat[ych][ph].hr;
+                    params_fp->H_hat_shadow[ych][xch][ph_xch][i].re = ldexp(aec_state.shadow_state.H_hat[ych][ph].data[i].re, aec_state.shadow_state.H_hat[ych][ph].exp);
+                    params_fp->H_hat_shadow[ych][xch][ph_xch][i].im = ldexp(aec_state.shadow_state.H_hat[ych][ph].data[i].im, aec_state.shadow_state.H_hat[ych][ph].exp);
                 }
             }
             //Error, Error_shadow, Y
-            main_state.Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
-            main_state.Error[ych].hr = pseudo_rand_uint32(&seed) % 3;
-            shadow_state.Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
-            shadow_state.Error[ych].hr = pseudo_rand_uint32(&seed) % 3;
-            main_state.shared_state->Y[ych].exp = pseudo_rand_int(&seed, -31, 32);
-            main_state.shared_state->Y[ych].hr = pseudo_rand_uint32(&seed) % 3;
+            aec_state.main_state.Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.main_state.Error[ych].hr = pseudo_rand_uint32(&seed) % 3;
+            aec_state.shadow_state.Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.shadow_state.Error[ych].hr = pseudo_rand_uint32(&seed) % 3;
+            aec_state.main_state.shared_state->Y[ych].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.main_state.shared_state->Y[ych].hr = pseudo_rand_uint32(&seed) % 3;
             for(int i=0; i<NUM_BINS; i++) {
                 //Error
-                main_state.Error[ych].data[i].re = pseudo_rand_int32(&seed) >> main_state.Error[ych].hr;
-                main_state.Error[ych].data[i].im = pseudo_rand_int32(&seed) >> main_state.Error[ych].hr;
-                params_fp->Error[ych][i].re = ldexp(main_state.Error[ych].data[i].re, main_state.Error[ych].exp);
-                params_fp->Error[ych][i].im = ldexp(main_state.Error[ych].data[i].im, main_state.Error[ych].exp);
+                aec_state.main_state.Error[ych].data[i].re = pseudo_rand_int32(&seed) >> aec_state.main_state.Error[ych].hr;
+                aec_state.main_state.Error[ych].data[i].im = pseudo_rand_int32(&seed) >> aec_state.main_state.Error[ych].hr;
+                params_fp->Error[ych][i].re = ldexp(aec_state.main_state.Error[ych].data[i].re, aec_state.main_state.Error[ych].exp);
+                params_fp->Error[ych][i].im = ldexp(aec_state.main_state.Error[ych].data[i].im, aec_state.main_state.Error[ych].exp);
 
                 //Error_shadow
-                shadow_state.Error[ych].data[i].re = pseudo_rand_int32(&seed) >> shadow_state.Error[ych].hr;
-                shadow_state.Error[ych].data[i].im = pseudo_rand_int32(&seed) >> shadow_state.Error[ych].hr;
-                params_fp->Error_shadow[ych][i].re = ldexp(shadow_state.Error[ych].data[i].re, shadow_state.Error[ych].exp);
-                params_fp->Error_shadow[ych][i].im = ldexp(shadow_state.Error[ych].data[i].im, shadow_state.Error[ych].exp);
+                aec_state.shadow_state.Error[ych].data[i].re = pseudo_rand_int32(&seed) >> aec_state.shadow_state.Error[ych].hr;
+                aec_state.shadow_state.Error[ych].data[i].im = pseudo_rand_int32(&seed) >> aec_state.shadow_state.Error[ych].hr;
+                params_fp->Error_shadow[ych][i].re = ldexp(aec_state.shadow_state.Error[ych].data[i].re, aec_state.shadow_state.Error[ych].exp);
+                params_fp->Error_shadow[ych][i].im = ldexp(aec_state.shadow_state.Error[ych].data[i].im, aec_state.shadow_state.Error[ych].exp);
 
                 //Y
-                main_state.shared_state->Y[ych].data[i].re = pseudo_rand_int32(&seed) >> main_state.shared_state->Y[ych].hr;
-                main_state.shared_state->Y[ych].data[i].im = pseudo_rand_int32(&seed) >> main_state.shared_state->Y[ych].hr;
-                params_fp->Y[ych][i].re = ldexp(main_state.shared_state->Y[ych].data[i].re, main_state.shared_state->Y[ych].exp);
-                params_fp->Y[ych][i].im = ldexp(main_state.shared_state->Y[ych].data[i].im, main_state.shared_state->Y[ych].exp);
+                aec_state.main_state.shared_state->Y[ych].data[i].re = pseudo_rand_int32(&seed) >> aec_state.main_state.shared_state->Y[ych].hr;
+                aec_state.main_state.shared_state->Y[ych].data[i].im = pseudo_rand_int32(&seed) >> aec_state.main_state.shared_state->Y[ych].hr;
+                params_fp->Y[ych][i].re = ldexp(aec_state.main_state.shared_state->Y[ych].data[i].re, aec_state.main_state.shared_state->Y[ych].exp);
+                params_fp->Y[ych][i].im = ldexp(aec_state.main_state.shared_state->Y[ych].data[i].im, aec_state.main_state.shared_state->Y[ych].exp);
             }
             //overall_Error
-            main_state.overall_Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
-            main_state.overall_Error[ych].mant = pseudo_rand_uint32(&seed) >> 1;
-            params_fp->overall_Error[ych] = ldexp(main_state.overall_Error[ych].mant, main_state.overall_Error[ych].exp);
+            aec_state.main_state.overall_Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.main_state.overall_Error[ych].mant = pseudo_rand_uint32(&seed) >> 1;
+            params_fp->overall_Error[ych] = ldexp(aec_state.main_state.overall_Error[ych].mant, aec_state.main_state.overall_Error[ych].exp);
 
             //overall_Error_shadow
-            shadow_state.overall_Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
-            shadow_state.overall_Error[ych].mant = pseudo_rand_uint32(&seed) >> 1;
-            params_fp->overall_Error_shadow[ych] = ldexp(shadow_state.overall_Error[ych].mant, shadow_state.overall_Error[ych].exp);
+            aec_state.shadow_state.overall_Error[ych].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.shadow_state.overall_Error[ych].mant = pseudo_rand_uint32(&seed) >> 1;
+            params_fp->overall_Error_shadow[ych] = ldexp(aec_state.shadow_state.overall_Error[ych].mant, aec_state.shadow_state.overall_Error[ych].exp);
 
             //overall_Y
-            main_state.shared_state->overall_Y[ych].exp = pseudo_rand_int(&seed, -31, 32);
-            main_state.shared_state->overall_Y[ych].mant = pseudo_rand_uint32(&seed) >> 1;
-            params_fp->overall_Y[ych] = ldexp(main_state.shared_state->overall_Y[ych].mant, main_state.shared_state->overall_Y[ych].exp);
+            aec_state.main_state.shared_state->overall_Y[ych].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.main_state.shared_state->overall_Y[ych].mant = pseudo_rand_uint32(&seed) >> 1;
+            params_fp->overall_Y[ych] = ldexp(aec_state.main_state.shared_state->overall_Y[ych].mant, aec_state.main_state.shared_state->overall_Y[ych].exp);
 
             //shadow_reset_count
-            main_state.shared_state->shadow_filter_params.shadow_reset_count[ych] = pseudo_rand_int(&seed, -31, 32);
-            params_fp->shadow_reset_count[ych] = main_state.shared_state->shadow_filter_params.shadow_reset_count[ych];
+            aec_state.main_state.shared_state->shadow_filter_params.shadow_reset_count[ych] = pseudo_rand_int(&seed, -31, 32);
+            params_fp->shadow_reset_count[ych] = aec_state.main_state.shared_state->shadow_filter_params.shadow_reset_count[ych];
             //shadow_better_count
-            main_state.shared_state->shadow_filter_params.shadow_better_count[ych] = pseudo_rand_uint32(&seed)%8; //between 0 and 7
-            params_fp->shadow_better_count[ych] = main_state.shared_state->shadow_filter_params.shadow_better_count[ych];
+            aec_state.main_state.shared_state->shadow_filter_params.shadow_better_count[ych] = pseudo_rand_uint32(&seed)%8; //between 0 and 7
+            params_fp->shadow_better_count[ych] = aec_state.main_state.shared_state->shadow_filter_params.shadow_better_count[ych];
             //coh
-            main_state.shared_state->coh_mu_state[ych].coh.exp = pseudo_rand_int(&seed, -3, 4) - 31;
-            main_state.shared_state->coh_mu_state[ych].coh.mant = pseudo_rand_uint32(&seed) & 0x7fffffff;
-            params_fp->coh[ych] = ldexp(main_state.shared_state->coh_mu_state[ych].coh.mant, main_state.shared_state->coh_mu_state[ych].coh.exp);
+            aec_state.main_state.shared_state->coh_mu_state[ych].coh.exp = pseudo_rand_int(&seed, -3, 4) - 31;
+            aec_state.main_state.shared_state->coh_mu_state[ych].coh.mant = pseudo_rand_uint32(&seed) & 0x7fffffff;
+            params_fp->coh[ych] = ldexp(aec_state.main_state.shared_state->coh_mu_state[ych].coh.mant, aec_state.main_state.shared_state->coh_mu_state[ych].coh.exp);
             //coh_slow
-            main_state.shared_state->coh_mu_state[ych].coh_slow.exp = pseudo_rand_int(&seed, -3, 4) - 31;
-            main_state.shared_state->coh_mu_state[ych].coh_slow.mant = pseudo_rand_uint32(&seed) & 0x7fffffff;
-            params_fp->coh_slow[ych] = ldexp(main_state.shared_state->coh_mu_state[ych].coh_slow.mant, main_state.shared_state->coh_mu_state[ych].coh_slow.exp);
+            aec_state.main_state.shared_state->coh_mu_state[ych].coh_slow.exp = pseudo_rand_int(&seed, -3, 4) - 31;
+            aec_state.main_state.shared_state->coh_mu_state[ych].coh_slow.mant = pseudo_rand_uint32(&seed) & 0x7fffffff;
+            params_fp->coh_slow[ych] = ldexp(aec_state.main_state.shared_state->coh_mu_state[ych].coh_slow.mant, aec_state.main_state.shared_state->coh_mu_state[ych].coh_slow.exp);
 
             //clear mu_coh_count and mu_shad_count every few frames for better code coverage in calc_coherence_mu_fp
             if((iter > 0) && !(iter % (params_fp->mu_shad_count[ych] + 2))) {
-                main_state.shared_state->coh_mu_state[ych].mu_coh_count = 0;
+                aec_state.main_state.shared_state->coh_mu_state[ych].mu_coh_count = 0;
                 params_fp->mu_coh_count[ych] = 0;
-                main_state.shared_state->coh_mu_state[ych].mu_shad_count = 0;
+                aec_state.main_state.shared_state->coh_mu_state[ych].mu_shad_count = 0;
                 params_fp->mu_shad_count[ych] = 0;
             }
         }
@@ -687,15 +684,15 @@ void test_compare_filters_and_calc_mu() {
         if((iter > 0) && !(iter % 100)) {
             int force_on = pseudo_rand_uint32(&seed) % 2;
             if(force_on) {
-                main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_ON;
+                aec_state.main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_ON;
                 coh_mu_cfg_fp.adaption_config = AEC_ADAPTION_FORCE_ON;
             }
             else {
-                main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_OFF;
+                aec_state.main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_OFF;
                 coh_mu_cfg_fp.adaption_config = AEC_ADAPTION_FORCE_OFF;
             }
-            main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30 = pseudo_rand_uint32(&seed) & 0x7fffffff;
-            coh_mu_cfg_fp.force_adaption_mu = ldexp(main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30, -30);
+            aec_state.main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30 = pseudo_rand_uint32(&seed) & 0x7fffffff;
+            coh_mu_cfg_fp.force_adaption_mu = ldexp(aec_state.main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30, -30);
         }
         if((iter > 0) && !(iter % 15)) {
             double min_coh_slow = params_fp->coh_slow[0];
@@ -706,36 +703,36 @@ void test_compare_filters_and_calc_mu() {
             //set coh to a number between CC_thres and coh_slow for code coverage of an if condition
             for(int ch=0; ch<params_fp->y_channels; ch++) {
                 params_fp->coh[ch] = CC_thres + (params_fp->coh_slow[ch] - CC_thres)/(3.15 + params_fp->coh[ch]);
-                main_state.shared_state->coh_mu_state[ch].coh = f64_to_float_s32(params_fp->coh[ch]);
+                aec_state.main_state.shared_state->coh_mu_state[ch].coh = f64_to_float_s32(params_fp->coh[ch]);
             }
         }
         //mu_scalar
-        main_state.shared_state->config_params.coh_mu_conf.mu_scalar.exp = pseudo_rand_int(&seed, -3, 4) - 31;
-        main_state.shared_state->config_params.coh_mu_conf.mu_scalar.mant = pseudo_rand_uint32(&seed) & 0x7fffffff;
-        coh_mu_cfg_fp.mu_scalar = ldexp(main_state.shared_state->config_params.coh_mu_conf.mu_scalar.mant, main_state.shared_state->config_params.coh_mu_conf.mu_scalar.exp);
+        aec_state.main_state.shared_state->config_params.coh_mu_conf.mu_scalar.exp = pseudo_rand_int(&seed, -3, 4) - 31;
+        aec_state.main_state.shared_state->config_params.coh_mu_conf.mu_scalar.mant = pseudo_rand_uint32(&seed) & 0x7fffffff;
+        coh_mu_cfg_fp.mu_scalar = ldexp(aec_state.main_state.shared_state->config_params.coh_mu_conf.mu_scalar.mant, aec_state.main_state.shared_state->config_params.coh_mu_conf.mu_scalar.exp);
 
         for(int xch=0; xch<num_x_channels; xch++) {
             //sigma_XX
-            main_state.shared_state->sigma_XX[xch].exp = pseudo_rand_int(&seed, -31, 32);
-            main_state.shared_state->sigma_XX[xch].hr = pseudo_rand_uint32(&seed) % 3;
+            aec_state.main_state.shared_state->sigma_XX[xch].exp = pseudo_rand_int(&seed, -31, 32);
+            aec_state.main_state.shared_state->sigma_XX[xch].hr = pseudo_rand_uint32(&seed) % 3;
             for(int i=0; i<NUM_BINS; i++) {
-                main_state.shared_state->sigma_XX[xch].data[i] = pseudo_rand_int32(&seed) >> main_state.shared_state->sigma_XX[xch].hr;
-                params_fp->sigma_XX[xch][i] = ldexp(main_state.shared_state->sigma_XX[xch].data[i], main_state.shared_state->sigma_XX[xch].exp);
+                aec_state.main_state.shared_state->sigma_XX[xch].data[i] = pseudo_rand_int32(&seed) >> aec_state.main_state.shared_state->sigma_XX[xch].hr;
+                params_fp->sigma_XX[xch][i] = ldexp(aec_state.main_state.shared_state->sigma_XX[xch].data[i], aec_state.main_state.shared_state->sigma_XX[xch].exp);
             }
 
             //sum_X_energy
-            main_state.shared_state->sum_X_energy[xch].exp = pseudo_rand_int(&seed, -31, 32) - 31;
-            main_state.shared_state->sum_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
-            params_fp->sum_X_energy[xch] = ldexp(main_state.shared_state->sum_X_energy[xch].mant, main_state.shared_state->sum_X_energy[xch].exp);
+            aec_state.main_state.shared_state->sum_X_energy[xch].exp = pseudo_rand_int(&seed, -31, 32) - 31;
+            aec_state.main_state.shared_state->sum_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
+            params_fp->sum_X_energy[xch] = ldexp(aec_state.main_state.shared_state->sum_X_energy[xch].mant, aec_state.main_state.shared_state->sum_X_energy[xch].exp);
 
             //max_X_energy
-            main_state.max_X_energy[xch].exp = -32 - (pseudo_rand_uint32(&seed) & 63);
-            main_state.max_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
-            params_fp->max_X_energy_main[xch] = ldexp(main_state.max_X_energy[xch].mant, main_state.max_X_energy[xch].exp);
+            aec_state.main_state.max_X_energy[xch].exp = -32 - (pseudo_rand_uint32(&seed) & 63);
+            aec_state.main_state.max_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
+            params_fp->max_X_energy_main[xch] = ldexp(aec_state.main_state.max_X_energy[xch].mant, aec_state.main_state.max_X_energy[xch].exp);
             //Make shadow max_energy smaller since shadow scale is bigger and we want the scaled_max_energy < delta_min code path executed
-            shadow_state.max_X_energy[xch].exp = -40 - (pseudo_rand_uint32(&seed) & 63);
-            shadow_state.max_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
-            params_fp->max_X_energy_shadow[xch] = ldexp(shadow_state.max_X_energy[xch].mant, shadow_state.max_X_energy[xch].exp);
+            aec_state.shadow_state.max_X_energy[xch].exp = -40 - (pseudo_rand_uint32(&seed) & 63);
+            aec_state.shadow_state.max_X_energy[xch].mant = pseudo_rand_uint32(&seed) >> 1;
+            params_fp->max_X_energy_shadow[xch] = ldexp(aec_state.shadow_state.max_X_energy[xch].mant, aec_state.shadow_state.max_X_energy[xch].exp);
 
         }
 
@@ -743,49 +740,49 @@ void test_compare_filters_and_calc_mu() {
                 &shadow_filt_coh_mu_params_fp,
                 &shadow_filt_cfg_fp,
                 &coh_mu_cfg_fp,
-                main_state.shared_state->config_params.aec_core_conf.bypass);
+                aec_state.main_state.shared_state->config_params.aec_core_conf.bypass);
 
         aec_compare_filters_and_calc_mu(
-                &main_state,
-                &shadow_state);
+                &aec_state.main_state,
+                &aec_state.shadow_state);
 
         //check compare_filters outputs
         for(int ych=0; ych<num_y_channels; ych++) {
             //compare shadow_flag
-            if(params_fp->shadow_flag[ych] != main_state.shared_state->shadow_filter_params.shadow_flag[ych]) {
-                printf("iter %d. shadow_flag (ref %d, dut %ld) error\n", iter, params_fp->shadow_flag[ych], main_state.shared_state->shadow_filter_params.shadow_flag[ych]);
+            if(params_fp->shadow_flag[ych] != aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[ych]) {
+                printf("iter %d. shadow_flag (ref %d, dut %ld) error\n", iter, params_fp->shadow_flag[ych], aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[ych]);
                 assert(0);
             }
 
             //compare shadow_reset_count
-            if(params_fp->shadow_reset_count[ych] != main_state.shared_state->shadow_filter_params.shadow_reset_count[ych]) {
-                printf("iter %d. shadow_reset_count (ref %d, dut %d) error\n", iter, params_fp->shadow_reset_count[ych], main_state.shared_state->shadow_filter_params.shadow_reset_count[ych]);
+            if(params_fp->shadow_reset_count[ych] != aec_state.main_state.shared_state->shadow_filter_params.shadow_reset_count[ych]) {
+                printf("iter %d. shadow_reset_count (ref %d, dut %d) error\n", iter, params_fp->shadow_reset_count[ych], aec_state.main_state.shared_state->shadow_filter_params.shadow_reset_count[ych]);
                 assert(0);
             }
 
             //compare shadow_better_count
-            if(params_fp->shadow_better_count[ych] != main_state.shared_state->shadow_filter_params.shadow_better_count[ych]) {
-                printf("iter %d. shadow_better_count (ref %d, dut %d) error\n", iter, params_fp->shadow_better_count[ych], main_state.shared_state->shadow_filter_params.shadow_better_count[ych]);
+            if(params_fp->shadow_better_count[ych] != aec_state.main_state.shared_state->shadow_filter_params.shadow_better_count[ych]) {
+                printf("iter %d. shadow_better_count (ref %d, dut %d) error\n", iter, params_fp->shadow_better_count[ych], aec_state.main_state.shared_state->shadow_filter_params.shadow_better_count[ych]);
                 assert(0);
             }
             //compare Error
-            unsigned diff_Error = vector_int32_maxdiff((int32_t*)&main_state.Error[ych].data[0], main_state.Error[ych].exp, (double*)params_fp->Error[ych], 0, 2*NUM_BINS);
+            unsigned diff_Error = vector_int32_maxdiff((int32_t*)&aec_state.main_state.Error[ych].data[0], aec_state.main_state.Error[ych].exp, (double*)params_fp->Error[ych], 0, 2*NUM_BINS);
             if(diff_Error > 0) {printf("iter %d. diff_Error %d too large\n",iter, diff_Error); assert(0);}
 
-            unsigned diff_Error_shadow = vector_int32_maxdiff((int32_t*)&shadow_state.Error[ych].data[0], shadow_state.Error[ych].exp, (double*)params_fp->Error_shadow[ych], 0, 2*NUM_BINS);
+            unsigned diff_Error_shadow = vector_int32_maxdiff((int32_t*)&aec_state.shadow_state.Error[ych].data[0], aec_state.shadow_state.Error[ych].exp, (double*)params_fp->Error_shadow[ych], 0, 2*NUM_BINS);
 
             //compare Error_Shadow
             if(diff_Error_shadow > 0) {printf("iter %d. diff_Error_shadow %d too large\n",iter, diff_Error_shadow); assert(0);}
 
             //Compare H_hat and H_hat_shadow
             for(int xch=0; xch<num_x_channels; xch++) {
-                for(int ph=0; ph<main_state.num_phases; ph++) {
-                    unsigned diff_H_hat = vector_int32_maxdiff((int32_t*)&main_state.H_hat[ych][xch*main_state.num_phases + ph].data[0], main_state.H_hat[ych][xch*main_state.num_phases + ph].exp, (double*)&params_fp->H_hat[ych][xch][ph][0], 0, 2*NUM_BINS);
+                for(int ph=0; ph<aec_state.main_state.num_phases; ph++) {
+                    unsigned diff_H_hat = vector_int32_maxdiff((int32_t*)&aec_state.main_state.H_hat[ych][xch*aec_state.main_state.num_phases + ph].data[0], aec_state.main_state.H_hat[ych][xch*aec_state.main_state.num_phases + ph].exp, (double*)&params_fp->H_hat[ych][xch][ph][0], 0, 2*NUM_BINS);
                     if(diff_H_hat > 0){printf("iter %d, ych %d, xch %d, ph %d, shadow_flag %d. diff_H_hat %d too large\n",iter, ych, xch, ph, params_fp->shadow_flag[ych], diff_H_hat); assert(0);}
                 }
 
-                for(int ph=0; ph<shadow_state.num_phases; ph++) {
-                    unsigned diff_H_hat_shadow = vector_int32_maxdiff((int32_t*)&shadow_state.H_hat[ych][xch*shadow_state.num_phases + ph].data[0], shadow_state.H_hat[ych][xch*shadow_state.num_phases + ph].exp, (double*)&params_fp->H_hat_shadow[ych][xch][ph][0], 0, 2*NUM_BINS);
+                for(int ph=0; ph<aec_state.shadow_state.num_phases; ph++) {
+                    unsigned diff_H_hat_shadow = vector_int32_maxdiff((int32_t*)&aec_state.shadow_state.H_hat[ych][xch*aec_state.shadow_state.num_phases + ph].data[0], aec_state.shadow_state.H_hat[ych][xch*aec_state.shadow_state.num_phases + ph].exp, (double*)&params_fp->H_hat_shadow[ych][xch][ph][0], 0, 2*NUM_BINS);
                     if(diff_H_hat_shadow > 0){printf("iter %d, ych %d, xch %d, ph %d, shadow_flag %d. diff_H_hat_shadow %d too large\n",iter, ych, xch, ph, params_fp->shadow_flag[ych], diff_H_hat_shadow); assert(0);}
                 }
             }
@@ -793,14 +790,14 @@ void test_compare_filters_and_calc_mu() {
 
         //compare sigma_XX
         for(int xch=0; xch<num_x_channels; xch++) {
-            unsigned diff_sigma_XX = vector_int32_maxdiff((int32_t*)&main_state.shared_state->sigma_XX[xch].data[0], main_state.shared_state->sigma_XX[xch].exp, &params_fp->sigma_XX[xch][0], 0, NUM_BINS);
+            unsigned diff_sigma_XX = vector_int32_maxdiff((int32_t*)&aec_state.main_state.shared_state->sigma_XX[xch].data[0], aec_state.main_state.shared_state->sigma_XX[xch].exp, &params_fp->sigma_XX[xch][0], 0, NUM_BINS);
             if(diff_sigma_XX > 0) {printf("iter %d. diff_sigma_XX %d too large\n",iter, diff_sigma_XX); assert(0);}
         }
 
         //compare delta
-        unsigned delta_diff = vector_int32_maxdiff((int32_t*)&main_state.delta.mant, main_state.delta.exp, &params_fp->delta_main, 0, 1);
+        unsigned delta_diff = vector_int32_maxdiff((int32_t*)&aec_state.main_state.delta.mant, aec_state.main_state.delta.exp, &params_fp->delta_main, 0, 1);
         if(delta_diff > 1) {printf("iter %d. delta_diff_main %d too large\n",iter, delta_diff); assert(0);}
-        delta_diff = vector_int32_maxdiff((int32_t*)&shadow_state.delta.mant, shadow_state.delta.exp, &params_fp->delta_shadow, 0, 1);
+        delta_diff = vector_int32_maxdiff((int32_t*)&aec_state.shadow_state.delta.mant, aec_state.shadow_state.delta.exp, &params_fp->delta_shadow, 0, 1);
         if(delta_diff > 1) {printf("iter %d. delta_diff_shadow %d too large\n",iter, delta_diff); assert(0);}
 
 
@@ -808,15 +805,15 @@ void test_compare_filters_and_calc_mu() {
         for(int ych=0; ych<num_y_channels; ych++) {
 
             //compare mu_coh_count
-            if(params_fp->mu_coh_count[ych] != main_state.shared_state->coh_mu_state[ych].mu_coh_count) {
-                printf("iter %d. mu_coh_count mismatch. (ref %d, dut %ld)\n",iter, params_fp->mu_coh_count[ych], main_state.shared_state->coh_mu_state[ych].mu_coh_count); assert(0);}
+            if(params_fp->mu_coh_count[ych] != aec_state.main_state.shared_state->coh_mu_state[ych].mu_coh_count) {
+                printf("iter %d. mu_coh_count mismatch. (ref %d, dut %ld)\n",iter, params_fp->mu_coh_count[ych], aec_state.main_state.shared_state->coh_mu_state[ych].mu_coh_count); assert(0);}
 
             //compare mu_shad_count
-            if(params_fp->mu_shad_count[ych] != main_state.shared_state->coh_mu_state[ych].mu_shad_count) {printf("iter %d. mu_shad_count mismatch. (ref %d, dut %ld\n",iter, params_fp->mu_shad_count[ych], main_state.shared_state->coh_mu_state[ych].mu_shad_count); assert(0);}
+            if(params_fp->mu_shad_count[ych] != aec_state.main_state.shared_state->coh_mu_state[ych].mu_shad_count) {printf("iter %d. mu_shad_count mismatch. (ref %d, dut %ld\n",iter, params_fp->mu_shad_count[ych], aec_state.main_state.shared_state->coh_mu_state[ych].mu_shad_count); assert(0);}
 
             //compare coh_mu
             for(int xch=0; xch<num_x_channels; xch++) {
-                unsigned diff_coh_mu = vector_int32_maxdiff((int32_t*)&main_state.shared_state->coh_mu_state[ych].coh_mu[xch].mant, main_state.shared_state->coh_mu_state[ych].coh_mu[xch].exp, (double*)&params_fp->coh_mu[ych][xch], 0, 1);
+                unsigned diff_coh_mu = vector_int32_maxdiff((int32_t*)&aec_state.main_state.shared_state->coh_mu_state[ych].coh_mu[xch].mant, aec_state.main_state.shared_state->coh_mu_state[ych].coh_mu[xch].exp, (double*)&params_fp->coh_mu[ych][xch], 0, 1);
                 if(diff_coh_mu > 64) {
                     printf("iter %d. diff_coh_mu[%d][%d] %d too large\n",iter, ych, xch, diff_coh_mu);
                     assert(0);
@@ -826,14 +823,14 @@ void test_compare_filters_and_calc_mu() {
 
             //Finally compare main and shadow filter mu
             for(int xch=0; xch<num_x_channels; xch++) {
-                unsigned diff_main_filt_mu = vector_int32_maxdiff((int32_t*)&main_state.mu[ych][xch].mant, main_state.mu[ych][xch].exp, (double*)&params_fp->main_filt_mu[ych][xch], 0, 1);
+                unsigned diff_main_filt_mu = vector_int32_maxdiff((int32_t*)&aec_state.main_state.mu[ych][xch].mant, aec_state.main_state.mu[ych][xch].exp, (double*)&params_fp->main_filt_mu[ych][xch], 0, 1);
                 if(diff_main_filt_mu > 64) {
                     printf("iter %d. diff_main_filt_mu[%d][%d] %d too large\n",iter, ych, xch, diff_main_filt_mu);
                     assert(0);
                 }
             }
             for(int xch=0; xch<num_x_channels; xch++) {
-                unsigned diff_shadow_filt_mu = vector_int32_maxdiff((int32_t*)&shadow_state.mu[ych][xch].mant, shadow_state.mu[ych][xch].exp, (double*)&params_fp->shadow_filt_mu[ych][xch], 0, 1);
+                unsigned diff_shadow_filt_mu = vector_int32_maxdiff((int32_t*)&aec_state.shadow_state.mu[ych][xch].mant, aec_state.shadow_state.mu[ych][xch].exp, (double*)&params_fp->shadow_filt_mu[ych][xch], 0, 1);
                 if(diff_shadow_filt_mu > 64) {
                     printf("iter %d. diff_shadow_filt_mu[%d][%d] %d too large\n",iter, ych, xch, diff_shadow_filt_mu);
                     assert(0);

@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "aec_defines.h"
+#include "aec_memory_pool.h"
+#include "aec_schedule.h"
 #include "xmath/xmath.h"
 
 
@@ -160,11 +162,11 @@ typedef struct {
  * @brief AEC shared state structure.
  *
  * Data structures holding AEC persistent state that is common between main filter and shadow filter.
- * aec_state_t::shared_state for both main and shadow filter point to the common aec_shared_t structure.
+ * aec_filter_state_t::shared_state for both main and shadow filter point to the common aec_shared_t structure.
  *
  * @ingroup aec_types
  */
- //! [aec_shared_state_t]
+ //! [aec_shared_filter_state_t]
 typedef struct {
     /** BFP array pointing to the reference input spectrum phases. The term \b phase refers to the spectrum data for a
      * frame. Multiple phases means multiple frames of data.
@@ -249,18 +251,20 @@ typedef struct {
      * The index increments from 0 to AEC_PROC_FRAME_LENGTH/2, then decrements
      * back to 0 over successive frames.*/
     unsigned X_energy_recalc_bin;
-}aec_shared_state_t;
-//! [aec_shared_state_t]
+
+    const aec_task_distribution_t *tdist;
+}aec_shared_filter_state_t;
+//! [aec_shared_filter_state_t]
 
 /**
- * @brief AEC state structure.
+ * @brief AEC filter state structure.
  *
- * Data structures holding AEC persistent state. There are 2 instances of aec_state_t maintained within AEC; one for
+ * Data structures holding AEC filter persistent state. There are 2 instances of aec_filter_state_t maintained within AEC; one for
  * main filter and one for shadow filter specific state.
  *
  * @ingroup aec_types
  */
-//! [aec_state_t]
+//! [aec_filter_state_t]
 typedef struct {
     /** BFP array pointing to estimated mic signal spectrum. The Y_data data values are stored as length
      * AEC_FD_FRAME_LENGTH, complex 32bit array per y channel.*/
@@ -340,13 +344,33 @@ typedef struct {
     float_s32_t delta;
 
     /** pointer to the state data shared between main and shadow filter.*/
-    aec_shared_state_t *shared_state;
+    aec_shared_filter_state_t *shared_state;
 
     /** Number of filter phases per x-y pair that AEC filter is configured for. This is the input argument
-     * num_main_filter_phases or num_shadow_filter_phases, depending on which filter the aec_state_t is instantiated
+     * num_main_filter_phases or num_shadow_filter_phases, depending on which filter the aec_filter_state_t is instantiated
      * for, passed in aec_init() call.*/
     unsigned num_phases;
+}aec_filter_state_t;
+//! [aec_filter_state_t]
+
+/**
+ * @brief AEC state struct.
+ *
+ * Data structure holding AEC module's persistent state.
+ *
+ * @ingroup aec_types
+ */
+typedef struct {
+    /** AEC main filter state */
+    aec_filter_state_t DWORD_ALIGNED main_state;
+    /** AEC shadow filter state */
+    aec_filter_state_t DWORD_ALIGNED shadow_state;
+    /** AEC state shared between the main and shadow filter */
+    aec_shared_filter_state_t DWORD_ALIGNED shared_state;
+    /** Memory pool for the AEC main filter */
+    aec_memory_pool_t DWORD_ALIGNED main_mem_pool;
+    /** Memory pool for the AEC shadow filter */
+    aec_shadow_filt_memory_pool_t DWORD_ALIGNED shadow_mem_pool;
 }aec_state_t;
-//! [aec_state_t]
 
 #endif

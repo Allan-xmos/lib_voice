@@ -18,12 +18,8 @@ void test_ifft() {
     unsigned main_filter_phases = 6;
     unsigned shadow_filter_phases = 2;
 
-    aec_state_t main_state, shadow_state;
-    aec_memory_pool_t aec_memory_pool;
-    aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
-    aec_shared_state_t aec_shared_state;
-
-    aec_init(&main_state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_state_t aec_state;
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     unsigned seed = 78431;
     int32_t DWORD_ALIGNED new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
@@ -33,10 +29,10 @@ void test_ifft() {
     make_sine_table(sine_lut_ifft, AEC_PROC_FRAME_LENGTH);
     unsigned max_diff = 0;
     for(unsigned itt=0;itt<(1<<10)/F;itt++) {
-        aec_frame_init(&main_state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
+        aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
         int call_type = pseudo_rand_uint32(&seed) % 2; //Error->error or Y_hat->y_hat IFFT
         int is_shadow = pseudo_rand_uint32(&seed) % 2;
-        aec_state_t *state_ptr = (is_shadow == 1) ? &shadow_state : &main_state;
+        aec_filter_state_t *state_ptr = (is_shadow == 1) ? &aec_state.shadow_state : &aec_state.main_state;
         bfp_complex_s32_t *ifft_in;
         bfp_s32_t *ifft_out;
         if(call_type == 0) { //Error->error

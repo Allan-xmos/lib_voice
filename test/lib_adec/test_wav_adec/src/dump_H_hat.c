@@ -7,7 +7,7 @@
 #include <math.h>
 #include "fileio.h"
 
-void aec_dump_H_hat(aec_state_t *state, file_t *file_handle){
+void aec_dump_H_hat(aec_filter_state_t *state, file_t *file_handle){
     char strbuf[1024];
     sprintf(strbuf, "import numpy as np\n");
     file_write(file_handle, (uint8_t*)strbuf, strlen(strbuf));

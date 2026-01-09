@@ -61,9 +61,7 @@ int estimate_delay_fp(  dsp_complex_fp H_hat[1][NUM_PHASES_DELAY_EST][PHASE_CMPL
 
 #define TEST_LEN (AEC_PROC_FRAME_LENGTH/2 + 1)
 void test_delay_estimate() {
-    uint8_t DWORD_ALIGNED aec_memory_pool[sizeof(aec_memory_pool_t)];
-    aec_state_t DWORD_ALIGNED state;
-    aec_shared_state_t DWORD_ALIGNED shared_state;
+    aec_state_t aec_state;
 
     //FP version of phase coeffs
     dsp_complex_fp H_hat[1][NUM_PHASES_DELAY_EST][PHASE_CMPLX_AIR_LEN] = {{{{0.0}}}};
@@ -75,23 +73,23 @@ void test_delay_estimate() {
     //Populate selected phase with energy to see if we can read peak
     de_output_t de_output;
     for(unsigned ph = 0; ph < num_phases; ph++){
-        aec_init(&state, NULL, &shared_state, aec_memory_pool, NULL, 1, 1, num_phases, 0);
+        aec_init(&aec_state, 1, 1, num_phases, 0, &aec_tdist_chans2_threads2);
         memset(H_hat, 0, sizeof(H_hat));
 
-        unsigned length = state.H_hat[ch][ph].length;
+        unsigned length = aec_state.main_state.H_hat[ch][ph].length;
         TEST_ASSERT_EQUAL_INT32_MESSAGE(length, PHASE_CMPLX_AIR_LEN, "Phase length assumption wrong");
 
 
-        state.H_hat[ch][ph].exp = pseudo_rand_int(&seed, -39, 39);
+        aec_state.main_state.H_hat[ch][ph].exp = pseudo_rand_int(&seed, -39, 39);
         for(unsigned i = 0; i < length; i++){
-            state.H_hat[ch][ph].data[i].re = pseudo_rand_int32(&seed);
-            state.H_hat[ch][ph].data[i].im = pseudo_rand_int32(&seed);
+            aec_state.main_state.H_hat[ch][ph].data[i].re = pseudo_rand_int32(&seed);
+            aec_state.main_state.H_hat[ch][ph].data[i].im = pseudo_rand_int32(&seed);
 
-            H_hat[ch][ph][i].re = ldexp(state.H_hat[ch][ph].data[i].re, state.H_hat[ch][ph].exp);
-            H_hat[ch][ph][i].im = ldexp(state.H_hat[ch][ph].data[i].im, state.H_hat[ch][ph].exp);
+            H_hat[ch][ph][i].re = ldexp(aec_state.main_state.H_hat[ch][ph].data[i].re, aec_state.main_state.H_hat[ch][ph].exp);
+            H_hat[ch][ph][i].im = ldexp(aec_state.main_state.H_hat[ch][ph].data[i].im, aec_state.main_state.H_hat[ch][ph].exp);
 
         }
-        adec_estimate_delay(&de_output, state.H_hat[0], state.num_phases);
+        adec_estimate_delay(&de_output, aec_state.main_state.H_hat[0], aec_state.main_state.num_phases);
 
         double sum_phase_powers;
         double phase_powers[NUM_PHASES_DELAY_EST];
@@ -117,7 +115,7 @@ void test_delay_estimate() {
         double peak_phase_power_ratio = peak_phase_power / dut_peak_phase_power_fp;
         double peak_to_average_ratio_ratio = peak_to_average_ratio / dut_peak_to_average_ratio_fp;
 
-        // printf("exponent: %d\n", state.H_hat[ch][ph].exp);
+        // printf("exponent: %d\n", aec_state.main_state.H_hat[ch][ph].exp);
         // printf("sum_phase_powers ref: %lf dut: %lf, ratio: %lf\n", sum_phase_powers, dut_sum_phase_powers_fp, sum_phase_powers_ratio);
         // printf("peak_phase_power ref: %lf dut: %lf, ratio: %lf\n", peak_phase_power, dut_peak_phase_power_fp, peak_phase_power_ratio);
         // printf("peak_to_average_ratio ref: %lf dut: %lf, ratio: %lf\n", peak_to_average_ratio, dut_peak_to_average_ratio_fp, peak_to_average_ratio_ratio);
@@ -130,7 +128,7 @@ void test_delay_estimate() {
 
     //Now try a few corner cases
 
-    aec_init(&state, NULL, &shared_state, aec_memory_pool, NULL, 1, 1, num_phases, 0);
+    aec_init(&aec_state, 1, 1, num_phases, 0, &aec_tdist_chans2_threads2);
     memset(H_hat, 0, sizeof(H_hat));
 
     double sum_phase_powers;
@@ -140,7 +138,7 @@ void test_delay_estimate() {
     int32_t peak_power_phase_index;
     int measured_delay_fp = estimate_delay_fp(H_hat, NUM_PHASES_DELAY_EST, PHASE_CMPLX_AIR_LEN,
                                 &sum_phase_powers, phase_powers, &peak_to_average_ratio, &peak_phase_power, &peak_power_phase_index);
-    adec_estimate_delay(&de_output, state.H_hat[0], state.num_phases);
+    adec_estimate_delay(&de_output, aec_state.main_state.H_hat[0], aec_state.main_state.num_phases);
     double dut_peak_to_average_ratio_fp = ldexp(de_output.peak_to_average_ratio.mant, de_output.peak_to_average_ratio.exp);
     printf("peak_to_average_ratio ref: %lf dut: %lf\n", peak_to_average_ratio, dut_peak_to_average_ratio_fp);
 

@@ -32,8 +32,8 @@
  * @ingroup aec_func
  */
 void aec_frame_init(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state,
+        aec_filter_state_t *main_state,
+        aec_filter_state_t *shadow_state,
         const int32_t (*y_data)[AEC_FRAME_ADVANCE],
         const int32_t (*x_data)[AEC_FRAME_ADVANCE]);
 
@@ -124,7 +124,7 @@ void aec_inverse_fft(
  * @ingroup aec_func
  */
 void aec_calc_X_fifo_energy(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch,
         unsigned recalc_bin);
 
@@ -140,7 +140,7 @@ void aec_calc_X_fifo_energy(
  * @ingroup aec_func
  */
 void aec_update_X_fifo_and_calc_sigmaXX(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch);
 
 /**
@@ -156,7 +156,7 @@ void aec_update_X_fifo_and_calc_sigmaXX(
  * @ingroup aec_func
  */
 void aec_calc_Error_and_Y_hat(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch);
 
 /**
@@ -172,7 +172,7 @@ void aec_calc_Error_and_Y_hat(
  * @ingroup aec_func
  */
 void aec_calc_coherence(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch);
 
 /**
@@ -189,7 +189,7 @@ void aec_calc_coherence(
  *
  */
 void aec_calc_output(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         int32_t (*output)[AEC_FRAME_ADVANCE],
         unsigned ch);
 
@@ -208,7 +208,7 @@ void aec_calc_output(
  * @ingroup aec_func
  */
 void aec_calc_normalisation_spectrum(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch,
         unsigned is_shadow);
 
@@ -225,8 +225,8 @@ void aec_calc_normalisation_spectrum(
  * @ingroup aec_func
  */
 void aec_compare_filters_and_calc_mu(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state);
+        aec_filter_state_t *main_state,
+        aec_filter_state_t *shadow_state);
 
 /**
  * @brief Calculate the parameter `T`
@@ -241,7 +241,7 @@ void aec_compare_filters_and_calc_mu(
  * @ingroup aec_func
  */
 void aec_calc_T(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned y_ch,
         unsigned x_ch);
 
@@ -257,7 +257,7 @@ void aec_calc_T(
  *
  */
 void aec_filter_adapt(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned y_ch);
 
 /** @brief Update the X FIFO alternate BFP structure
@@ -272,7 +272,7 @@ void aec_filter_adapt(
  *
  */
 void aec_update_X_fifo_1d(
-        aec_state_t *state);
+        aec_filter_state_t *state);
 
 
 //TODO pending documentation and examples for L2 APIs
@@ -333,16 +333,16 @@ void aec_l2_bfp_s32_unify_exponent(
         uint32_t min_headroom);
 
 void aec_priv_main_init(
-        aec_state_t *state,
-        aec_shared_state_t *shared_state,
+        aec_filter_state_t *state,
+        aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_phases);
 
 void aec_priv_shadow_init(
-        aec_state_t *state,
-        aec_shared_state_t *shared_state,
+        aec_filter_state_t *state,
+        aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_phases);
 void aec_priv_reset_filter(
@@ -366,8 +366,8 @@ void aec_priv_bfp_s32_reset(bfp_s32_t *a);
 void aec_priv_bfp_complex_s32_reset(bfp_complex_s32_t *a);
 
 void aec_priv_compare_filters(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state);
+        aec_filter_state_t *main_state,
+        aec_filter_state_t *shadow_state);
 
 void aec_priv_calc_coherence_mu(
         coherence_mu_params_t *coh_mu_state,

@@ -192,8 +192,8 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     pipeline_state_t DWORD_ALIGNED pipeline_state;
     pipeline_init(&pipeline_state, &aec_de_mode_conf, &aec_non_de_mode_conf, &adec_conf);
 
-    pipeline_state.aec_main_state.shared_state->config_params.coh_mu_conf.adaption_config = runtime_args[ADAPTION_MODE];
-    pipeline_state.aec_main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30 = runtime_args[FORCE_ADAPTION_MU];
+    pipeline_state.aec_state.main_state.shared_state->config_params.coh_mu_conf.adaption_config = runtime_args[ADAPTION_MODE];
+    pipeline_state.aec_state.main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30 = runtime_args[FORCE_ADAPTION_MU];
 
     for(unsigned b=0;b<block_count;b++){
         long input_location =  wav_get_frame_start(&input_header_struct, b * AEC_FRAME_ADVANCE, input_header_size);
@@ -214,30 +214,30 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         if (runtime_args[STOP_ADAPTING] > 0) {
             runtime_args[STOP_ADAPTING]--;
             if (runtime_args[STOP_ADAPTING] == 0) {
-                aec_dump_H_hat(&pipeline_state.aec_main_state, &H_hat_file);
+                aec_dump_H_hat(&pipeline_state.aec_state.main_state, &H_hat_file);
                 //turn off adaption
-                pipeline_state.aec_main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_OFF;
+                pipeline_state.aec_state.main_state.shared_state->config_params.coh_mu_conf.adaption_config = AEC_ADAPTION_FORCE_OFF;
             }
         }
         pipeline_process_frame(&pipeline_state, pipeline_output, frame_y, frame_x);
 
 #if LOG_DEBUG_INFO
         char buf[100];
-        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_main_state.overall_Error[0]));
+        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_state.main_state.overall_Error[0]));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_shadow_state.overall_Error[0]));
+        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_state.shadow_state.overall_Error[0]));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_main_state.shared_state->overall_Y[0]));
+        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_state.main_state.shared_state->overall_Y[0]));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%d\n", pipeline_state.aec_main_state.shared_state->shadow_filter_params.shadow_flag[0]);
+        sprintf(buf, "%d\n", pipeline_state.aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[0]);
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%d\n", pipeline_state.aec_main_state.shared_state->shadow_filter_params.shadow_reset_count[0]);
+        sprintf(buf, "%d\n", pipeline_state.aec_state.main_state.shared_state->shadow_filter_params.shadow_reset_count[0]);
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%d\n", pipeline_state.aec_main_state.shared_state->shadow_filter_params.shadow_better_count[0]);
+        sprintf(buf, "%d\n", pipeline_state.aec_state.main_state.shared_state->shadow_filter_params.shadow_better_count[0]);
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_main_state.error_ema_energy[0]));
+        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_state.main_state.error_ema_energy[0]));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_main_state.shared_state->y_ema_energy[0]));
+        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_state.main_state.shared_state->y_ema_energy[0]));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
         sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.peak_to_average_ratio));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));

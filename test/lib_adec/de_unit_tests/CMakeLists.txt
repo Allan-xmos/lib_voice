@@ -89,8 +89,7 @@ foreach( testfile ${TEST_SOURCES} )
             fwk_voice::aec
             fwk_voice::adec
             fwk_voice::test::shared::test_utils
-            fwk_voice::test::shared::unity
-            fwk_voice::aec)
+            fwk_voice::test::shared::unity)
 
     if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
         target_compile_options(fwk_voice_${TESTNAME}

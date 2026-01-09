@@ -36,7 +36,6 @@ target_link_libraries(fwk_voice_test_shared_test_wav_adec
     INTERFACE
         fwk_voice::aec
         fwk_voice::adec
-        fwk_voice::aec
         fwk_voice::example::delay_buffer
         fwk_voice::example::fileutils)
 

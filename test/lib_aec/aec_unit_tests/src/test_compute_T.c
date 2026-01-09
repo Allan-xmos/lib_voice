@@ -29,13 +29,10 @@ void test_calc_T() {
     unsigned num_y_channels = 2;
     unsigned num_x_channels = 2;
     unsigned main_filter_phases = AEC_MAIN_FILTER_PHASES - 1;
-    unsigned shadow_filter_phases = AEC_MAIN_FILTER_PHASES - 1;
+    unsigned shadow_filter_phases = AEC_SHADOW_FILTER_PHASES - 1;
 
-    aec_memory_pool_t aec_memory_pool;
-    aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
-    aec_state_t state, shadow_state;
-    aec_shared_state_t aec_shared_state;
-    aec_init(&state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_state_t aec_state;
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     //initialise float arrays
     complex_double_t Error_fp[AEC_MAX_Y_CHANNELS][NUM_BINS];
@@ -47,14 +44,14 @@ void test_calc_T() {
     double max_diff_percentage = 0.0;
     for(int iter=0; iter<(1<<11)/F; iter++) {
         int32_t new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
-        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
-        aec_state_t *state_ptr;
+        aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
+        aec_filter_state_t *state_ptr;
         int is_main_filter = pseudo_rand_uint32(&seed) % 2;
         if(is_main_filter) {
-            state_ptr = &state;
+            state_ptr = &aec_state.main_state;
         }
         else {
-            state_ptr = &shadow_state;
+            state_ptr = &aec_state.shadow_state;
         }
 
         for(int ch=0; ch<num_y_channels; ch++) {

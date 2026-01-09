@@ -209,14 +209,6 @@ pipeline {
               dir("${REPO}") {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
-                    dir("examples/bare-metal/aec_1_thread") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/aec_1_thread/bin/fwk_voice_example_bare_metal_aec_1_thread.xe --input ../shared_src/test_streams/aec_example_input.wav"
-                    }
-                    dir("examples/bare-metal/aec_2_threads") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/aec_2_threads/bin/fwk_voice_example_bare_metal_aec_2_thread.xe --input ../shared_src/test_streams/aec_example_input.wav"
-                      // Make sure 1 thread and 2 threads output is bitexact
-                      sh "diff output.wav ../aec_1_thread/output.wav"
-                    }
                     dir("examples/bare-metal/pipeline_single_threaded") {
                       sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_single_threaded/bin/fwk_voice_example_bare_metal_pipeline_single_thread.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
                     }

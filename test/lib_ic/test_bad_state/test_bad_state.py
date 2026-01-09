@@ -1,22 +1,25 @@
 import os
 import sys
 from pathlib import Path
+import tempfile
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-import scipy.io.wavfile as wavfile
+import soundfile as sf
 
 from py_voice.scripts.room_acoustic_pipeline.room_acoustic_pipeline import helpers
 import py_voice.scripts.room_acoustic_pipeline.room_acoustic_pipeline.core as rap
 
 import py_voice.test.ic.ic_test_helpers as ith
 from py_voice.config import config
+from py_voice.core import leq_smooth
 
 sys.path.append('../../shared/python/')
 import py_vs_c_utils as pvc
 import xtagctl
 import xscope_fileio
+from run_dut import run_with_xscope_fileio
 
 # some mess to get the list of IRs
 home = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio'), "acoustic_team_test_audio")
@@ -29,51 +32,37 @@ imp_path = home / 'impulse'
 imp_list = helpers.files_of_type(imp_path, 'npy')
 
 # some possible parameters
-gain = 50
+gain = 24
 noise_level = gain
 noise_pos = 2
 speech_name = "007_podcast"
 speech_pos = 3
 
-exe_dir = '../../../../build/test/lib_ic/test_bad_state/bin/'
+exe_dir = Path(__file__).parent.parent.parent.parent / 'build' / 'test' / 'lib_ic' / 'test_bad_state' / 'bin'
 xe = os.path.join(exe_dir, 'fwk_voice_test_bad_state.xe')
 
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_no_adapt_control.json"
 ap_conf = config.get_config_dict(ap_config_file)
 
-def run_xcore(conf_data, out_name):
-    conf_data.astype(np.int32).tofile('conf.bin')
+def run_xcore(conf_data, out_name, cwd='.'):
+    conf_file = Path(cwd, 'conf.bin')
+    output_file = Path(cwd, 'output.wav')
+    
+    conf_data.astype(np.int32).tofile(conf_file)
 
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-        xscope_fileio.run_on_target(adapter_id, xe)
+    run_with_xscope_fileio(xe, cwd)
 
-    sr, out_data_int32 = wavfile.read('output.wav')
+    out_data_int32, sr = sf.read(output_file, dtype='int32')
     out_data = pvc.int32_to_float(out_data_int32)
-    os.rename('output.wav',out_name)
-    os.remove('conf.bin')
+    os.replace(output_file, out_name)
+    os.remove(conf_file)
     return sr, out_data
 
-def flatten_complex_array(comp_array):
-    h = comp_array.shape[0]
-    le = comp_array.shape[1]
-    tyty = comp_array.dtype
-    array = np.zeros(le * h * 2)
-    for ph in range(h):
-        phase_offset = ph * le
-        for i in range(le):
-            indx = i * 2 + phase_offset
-            array[indx] = comp_array[ph][i].real
-            array[indx + 1] = comp_array[ph][i].imag
-    return array
-
-def float_to_int32_q29(array_float):
-    array_int32 = np.clip((np.array(array_float) * (2**29)), np.iinfo(np.int32).min, np.iinfo(np.uint32).max).astype(np.int32)
-    return array_int32
 
 def form_conf_data(config, H_hat, num_words_H):
     conf_data = np.empty(0, dtype=np.int32)
     conf_data = np.append(conf_data, np.array([num_words_H, config], dtype=np.int32))
-    conf_data = np.append(conf_data, np.array(float_to_int32_q29(flatten_complex_array(H_hat)), dtype=np.int32))
+    conf_data = np.append(conf_data, np.array(pvc.float_to_int32_qxx(pvc.flatten_complex_array(H_hat), 29), dtype=np.int32))
     return conf_data
 
 @pytest.mark.parametrize("room", ["lab"])
@@ -100,7 +89,7 @@ def test_bad_state(room, speech_level, noise_name):
                                                                 noise_pos=noise_pos,
                                                                 speech_name=speech_name,
                                                                 speech_pos=speech_pos,
-                                                                speech_snr=speech_level,
+                                                                speech_level=speech_level,
                                                                 length_secs=length_secs)
     noise_ir = np.load(imp_path / imp_list[noise_spec[2]])
     speech_ir = np.load(imp_path / imp_list[speech_spec[2]])
@@ -114,34 +103,48 @@ def test_bad_state(room, speech_level, noise_name):
                                                 signal_len=length_samps, 
                                                 return_unsquashed=True, 
                                                 return_signals=True)
-    src_path = os.path.abspath('src/')
-    prev_path = os.getcwd()
-    os.chdir(src_path)
-    wavfile.write('input.wav', fs, pvc.float_to_int32(mic_sig))
 
+    # The xcore pipeline is fixed-point; fail fast if the float sim would clip when
+    # converted to int32 (keep good/bad at the same scale; do not normalise here).
+    peak = float(np.max(np.abs(mic_sig)))
+    target_peak = 0.95
+    assert peak <= target_peak, (
+        f"Input signal too hot for fixed-point: peak={peak:.6f} > {target_peak}. "
+        "Reduce `gain`/levels or adjust the RAP spec to avoid clipping."
+    )
     num_words_H = f_bin_count * 2 * phases # H_hat[ph][bin_count] for both real and complex
-    
-    # initialise IC to cancel the speech, do adapt
-    conf_data_cancel_speech = form_conf_data(0, ideal_speech_cancellation_H, num_words_H)
-    sr, out_data_adapt_bad = run_xcore(conf_data_cancel_speech, 'output_bad_' + noise_name + '.wav')
 
-    # initialise IC to cancel the noise, don't adapt
-    conf_data_cancel_noise = form_conf_data(2, ideal_noise_cancellation_H, num_words_H)
-    sr, out_data_fixed_good = run_xcore(conf_data_cancel_noise, 'output_good_' + noise_name + '.wav')
+    with tempfile.TemporaryDirectory(dir='.') as tmpdirname:
 
-    os.rename('input.wav', 'input_' + noise_name + '.wav')
-    os.chdir(prev_path)
+        sf.write(Path(tmpdirname, 'input.wav'), pvc.float_to_int32(mic_sig.T), fs, subtype='PCM_32')
 
-    t, adapt_bad = ith.leq_smooth(out_data_adapt_bad, fs, 0.05)
-    t, fixed_good = ith.leq_smooth(out_data_fixed_good, fs, 0.05)
+        # initialise IC to cancel the speech, auto adaptation
+        conf_data_cancel_speech = form_conf_data(0, ideal_speech_cancellation_H, num_words_H)
+        sr, out_data_adapt_bad = run_xcore(conf_data_cancel_speech, 'output_bad_' + noise_name + '.wav', cwd=tmpdirname)
+
+
+    with tempfile.TemporaryDirectory(dir='.') as tmpdirname:
+        sf.write(Path(tmpdirname, 'input.wav'), pvc.float_to_int32(mic_sig.T), fs, subtype='PCM_32')
+
+        # initialise IC to cancel the noise, don't adapt
+        conf_data_cancel_noise = form_conf_data(2, ideal_noise_cancellation_H, num_words_H)
+        sr, out_data_fixed_good = run_xcore(conf_data_cancel_noise, 'output_good_' + noise_name + '.wav', cwd=tmpdirname)
+
+        os.replace(Path(tmpdirname, 'input.wav'), Path('input_' + noise_name + '.wav'))
+
+    t, adapt_bad = leq_smooth(out_data_adapt_bad, fs, 0.05)
+    t, fixed_good = leq_smooth(out_data_fixed_good, fs, 0.05)
    
     # check after 3 seconds we have converged to be better than the fixed good filter (because it should leak)
     average_fixed_good = np.mean(fixed_good[(t>3)*(t<5)])
     average_adapt_bad  = np.mean(adapt_bad[(t>3)*(t<5)])
+    print(f"average_adapt_bad (dB): {average_adapt_bad}")
+    print(f"average_fixed_good (dB): {average_fixed_good}")
+    print(f"Assertion: adapt_bad > fixed_good: {average_adapt_bad} > {average_fixed_good} = {average_adapt_bad > average_fixed_good}")
     assert average_adapt_bad > average_fixed_good
 
     if __name__ == "__main__":
-        t2, original_speech = ith.leq_smooth(out_array[delay:, 0, 0], fs, 0.05)
+        t2, original_speech = leq_smooth(out_array[0, delay:, 0], fs, 0.05)
         plt.plot(t, adapt_bad, label="adapt_bad")
         plt.plot(t, fixed_good, label="fixed_good")
         plt.plot(t2, original_speech, linestyle='--', label="raw_speech")

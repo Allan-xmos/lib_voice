@@ -31,7 +31,7 @@ def run_with_xscope_fileio(xe_path, cwd):
     target_stdout = []
     with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
         print(f"Running on {adapter_id}")
-        with open(cwd / "prof.txt", "w+") as ff:
+        with open(Path(cwd, "prof.txt"), "w+") as ff:
             xscope_fileio.run_on_target(adapter_id, str(xe_path), cwd=str(cwd), stdout=ff)
             ff.seek(0)
             stdout = ff.readlines()

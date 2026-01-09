@@ -13,13 +13,22 @@ void test_init(int32_t conf, int32_t * H_data)
 {
     ic_init(&ic_state);
     ic_state.ic_adaption_controller_state.adaption_controller_config.adaption_config = conf;
+    ic_state.ic_adaption_controller_state.adaption_controller_config.enable_adaption = 1;
+    ic_state.config_params.bypass = 0;
+    
+    // Set leakage_alpha to 1.0 for FORCE_OFF mode to prevent decay
+    if(conf == IC_ADAPTION_FORCE_OFF) {
+        ic_state.leakage_alpha.mant = (1 << 30);  // 1.0 in Q30 format
+        ic_state.leakage_alpha.exp = -30;
+    }
+    
     int indx = 0;
     for(int ph = 0; ph < IC_FILTER_PHASES; ph++){
-	// Python forms data in q29 format to fill some bigger values
-        ic_state.H_hat_bfp[0][ph].exp = -29;
-        memcpy(&ic_state.H_hat[0][ph][0], &H_data[indx], IC_FD_FRAME_LENGTH * sizeof(int32_t));
-        ic_state.H_hat_bfp[0][ph].hr = bfp_complex_s32_headroom(&ic_state.H_hat_bfp[0][ph]);
-        indx += IC_FD_FRAME_LENGTH;
+        // Copy the filter data directly
+        memcpy(&ic_state.H_hat[0][ph][0], &H_data[indx], IC_FD_FRAME_LENGTH * sizeof(complex_s32_t));
+        // Reinitialize BFP with the new data - this will recalculate everything properly
+        bfp_complex_s32_init(&ic_state.H_hat_bfp[0][ph], &ic_state.H_hat[0][ph][0], -29, IC_FD_FRAME_LENGTH, 1);
+        indx += IC_FD_FRAME_LENGTH * 2;
     }
 }
 

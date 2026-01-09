@@ -237,7 +237,8 @@ void ic_compute_T(
 // Adapt H_hat
 void ic_filter_adapt(ic_state_t *state){
     if((state->ic_adaption_controller_state.adaption_controller_config.enable_adaption == 0) ||
-       state->config_params.bypass) {
+       state->config_params.bypass ||
+       (state->ic_adaption_controller_state.adaption_controller_config.adaption_config == IC_ADAPTION_FORCE_OFF)) {
         return;
     }
     bfp_complex_s32_t *T_ptr = &state->T_bfp[0];
@@ -384,6 +385,16 @@ void ic_apply_leakage(
 
     if((ad_config->enable_adaption == 0) ||
        state->config_params.bypass) {
+        return;
+    }
+
+    // In FORCE_OFF mode the filter must not change (no leakage).
+    if(ad_config->adaption_config == IC_ADAPTION_FORCE_OFF) {
+        return;
+    }
+
+    // Skip leakage if leakage_alpha is 1.0 (no leakage)
+    if(float_s32_to_float(state->leakage_alpha) == 1.0f) {
         return;
     }
 

@@ -33,31 +33,3 @@ target_link_libraries(fwk_voice_module_aec
 ## Create an alias
 add_library(fwk_voice::aec ALIAS fwk_voice_module_aec)
 
-
-add_library(fwk_voice_module_lib_aec STATIC)
-
-target_sources(fwk_voice_module_lib_aec
-    PRIVATE
-        src/aec_impl.c
-        src/aec_l2_impl.c
-        src/aec_priv_impl.c
-        src/aec_process_frame.c
-        src/aec_schedule_defaults.c
-)
-
-target_include_directories(fwk_voice_module_lib_aec
-    PUBLIC
-        api
-        src ## this is needed for the IC
-)
-
-target_compile_options(fwk_voice_module_lib_aec
-    PRIVATE
-        -Os
-        -g
-)
-
-target_link_libraries(fwk_voice_module_lib_aec
-    PUBLIC
-        lib_xcore_math
-)

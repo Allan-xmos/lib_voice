@@ -39,19 +39,17 @@ INCLUDE_DIRS=[
 
 LIBRARY_DIRS=[
     '../../../build/modules/lib_ic',
-    '../../../build/modules/lib_aec',
     '../../../build/modules/lib_vnr',
     '../../../build/fwk_voice_deps/build',
     TFLITE_MICRO_LIB_DIR
 ]
 
 LIBRARIES = [
-    'fwk_voice_module_lib_ic', 
-    'fwk_voice_module_lib_aec', 
-    'fwk_voice_module_lib_vnr', 
+    'fwk_voice_module_lib_ic',
+    'fwk_voice_module_lib_vnr',
     'lib_xcore_math',
-    TFLITE_MICRO_LIB, 
-    'm', 
+    TFLITE_MICRO_LIB,
+    'm',
     'stdc++'
 ] # on Unix, link with the math library. Linking order is important here for gcc compile on Linux
 

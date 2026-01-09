@@ -257,9 +257,9 @@ typedef struct {
 //! [aec_shared_filter_state_t]
 
 /**
- * @brief AEC state structure.
+ * @brief AEC filter state structure.
  *
- * Data structures holding AEC persistent state. There are 2 instances of aec_filter_state_t maintained within AEC; one for
+ * Data structures holding AEC filter persistent state. There are 2 instances of aec_filter_state_t maintained within AEC; one for
  * main filter and one for shadow filter specific state.
  *
  * @ingroup aec_types
@@ -353,11 +353,23 @@ typedef struct {
 }aec_filter_state_t;
 //! [aec_filter_state_t]
 
+/**
+ * @brief AEC state struct.
+ *
+ * Data structure holding AEC module's persistent state.
+ *
+ * @ingroup aec_types
+ */
 typedef struct {
+    /** AEC main filter state */
     aec_filter_state_t DWORD_ALIGNED main_state;
+    /** AEC shadow filter state */
     aec_filter_state_t DWORD_ALIGNED shadow_state;
+    /** AEC state shared between the main and shadow filter */
     aec_shared_filter_state_t DWORD_ALIGNED shared_state;
+    /** Memory pool for the AEC main filter */
     aec_memory_pool_t DWORD_ALIGNED main_mem_pool;
+    /** Memory pool for the AEC shadow filter */
     aec_shadow_filt_memory_pool_t DWORD_ALIGNED shadow_mem_pool;
 }aec_state_t;
 

@@ -59,8 +59,8 @@ def test_calc_vnr_pred(target, show_plot=False):
 
         # Call Reference calc_vnr_pred()
         input_vnr_pred, output_vnr_pred = ifc.calc_vnr_pred(Error_ap)
-        ref_input_vnr_pred = np.append(ref_input_vnr_pred, input_vnr_pred[0])
-        ref_output_vnr_pred = np.append(ref_output_vnr_pred, output_vnr_pred[0])
+        ref_input_vnr_pred = np.append(ref_input_vnr_pred, ifc.input_vnr_pred[0])
+        ref_output_vnr_pred = np.append(ref_output_vnr_pred, ifc.output_vnr_pred[0])
     
     # Run DUT
     exe_name = xe

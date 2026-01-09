@@ -1,5 +1,5 @@
 import numpy as np
-import py_voice.modules.vnr.frame_preprocessor as fp
+import py_voice.modules.vnr as vnr
 import py_vs_c_utils as pvc
 from test_utils import rand_int32_arr, BATCH_SIZE
 
@@ -20,7 +20,7 @@ def test_vnr_inference(rng, vnr_obj, dut_runner):
 
         # Ref implementation
         this_patch = pvc.int32_to_double(data, exp)
-        this_patch = this_patch.reshape(1, 1, fp.PATCH_WIDTH, fp.MEL_FILTERS)
+        this_patch = this_patch.reshape(1, 1, vnr.PATCH_WIDTH, vnr.MEL_FILTERS)
         ref_output_double = np.append(ref_output_double, vnr_obj.run(this_patch))
 
     op = dut_runner(input_data)

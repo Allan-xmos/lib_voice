@@ -1,9 +1,9 @@
 
 import numpy as np
-import py_voice.modules.vnr.frame_preprocessor as fp
+import py_voice.modules.vnr as vnr
 from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 
-BATCH_SIZE = fp.PATCH_WIDTH * fp.MEL_FILTERS
+BATCH_SIZE = vnr.PATCH_WIDTH * vnr.MEL_FILTERS
 
 def rand_int32_arr(rng, size=None, hr_max=1, min=np.iinfo(np.int32).min, max=np.iinfo(np.int32).max+1):
     hr = rng.integers(hr_max)

@@ -6,7 +6,6 @@ import soundfile as sf
 import os
 import pytest
 from pathlib import Path
-import py_voice.modules.vnr.frame_preprocessor as fp
 import py_voice.modules.vnr as vnr
 
 from build import vnr_test_py
@@ -34,16 +33,16 @@ def bfp_s32_to_float(bfp_struct, data):
 class vnr_feature_comparison:
     def __init__(self):
         self.vnr_obj = vnr.vnr(vnr_conf_path, model_file=vnr_model_path) 
-        self.x_data = np.zeros(fp.FRAME_LEN, dtype=np.float64)
+        self.x_data = np.zeros(vnr.FRAME_LEN, dtype=np.float64)
         err = vnr_test_lib.test_init()
 
     def process_frame(self, new_x_frame):
         frame_int = pvc.float_to_int32(new_x_frame)
 
         # Ref
-        self.x_data = np.roll(self.x_data, -fp.FRAME_ADVANCE, axis = 0)
-        self.x_data[fp.FRAME_LEN - fp.FRAME_ADVANCE:] = new_x_frame
-        X_spect = np.fft.rfft(self.x_data, fp.FRAME_LEN)
+        self.x_data = np.roll(self.x_data, -vnr.FRAME_ADVANCE, axis = 0)
+        self.x_data[vnr.FRAME_LEN - vnr.FRAME_ADVANCE:] = new_x_frame
+        X_spect = np.fft.rfft(self.x_data, vnr.FRAME_LEN)
         # Features
         ref_features = self.vnr_obj.extract_features(X_spect)
         # Inference
@@ -54,7 +53,7 @@ class vnr_feature_comparison:
         dut_x_data = ffi.cast("int32_t *", ffi.from_buffer(frame_int[0].data))
         dut_features_bfp = np.zeros((20), dtype=np.int32)
         dut_features_bfp_ptr = ffi.cast("bfp_s32_t *", ffi.from_buffer(dut_features_bfp.data))
-        dut_features_data = np.zeros((fp.PATCH_WIDTH * fp.MEL_FILTERS), dtype=np.int32)
+        dut_features_data = np.zeros((vnr.PATCH_WIDTH * vnr.MEL_FILTERS), dtype=np.int32)
         dut_features_data_ptr = ffi.cast("int32_t *", ffi.from_buffer(dut_features_data.data))        
         # Features       
         vnr_test_lib.test_vnr_features(dut_features_bfp_ptr, dut_features_data_ptr, dut_x_data)
@@ -73,10 +72,10 @@ def test_frame_features(input_file):
     ref_ie_output = np.empty(0, dtype=np.float64)
     dut_ie_output = np.empty(0, dtype=np.float64)
 
-    for new_x_frame in sf.blocks(input_file, fp.FRAME_ADVANCE, always_2d=True):
+    for new_x_frame in sf.blocks(input_file, vnr.FRAME_ADVANCE, always_2d=True):
         # convert to [ch][samp]
         new_x_frame = new_x_frame.T
-        if len(new_x_frame[0]) < fp.FRAME_ADVANCE: continue
+        if len(new_x_frame[0]) < vnr.FRAME_ADVANCE: continue
 
         ref_features, dut_features, ref_ie, dut_ie = vnrc.process_frame(new_x_frame)
         ref_features_output = np.append(ref_features_output, ref_features)

@@ -68,7 +68,7 @@ void aec_task(const char *input_file_name, const char *output_file_name) {
     aec_state_t DWORD_ALIGNED aec_state;
     aec_init(&aec_state,
             AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS,
-            AEC_MAIN_FILTER_PHASES, AEC_SHADOW_FILTER_PHASES);
+            AEC_MAIN_FILTER_PHASES, AEC_SHADOW_FILTER_PHASES, &aec_tdist_chans2_threads1);
 
     for(unsigned b=0;b<block_count;b++){
         long input_location =  wav_get_frame_start(&input_header_struct, b * AEC_FRAME_ADVANCE, input_header_size);
@@ -89,7 +89,7 @@ void aec_task(const char *input_file_name, const char *output_file_name) {
         /* Reuse mic data memory for main filter output
          * Reuse ref data memory for shadow filter output.
          */
-        aec_process_frame(&aec_state, frame_y, frame_x, frame_y, frame_x, &tdist);
+        aec_process_frame(&aec_state, frame_y, frame_x, frame_y, frame_x);
 
         // Create interleaved output that can be written to wav file
         for (unsigned ch=0;ch<AEC_MAX_Y_CHANNELS;ch++){

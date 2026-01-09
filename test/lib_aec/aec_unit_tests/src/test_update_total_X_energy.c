@@ -81,7 +81,7 @@ void test_update_total_X_energy() {
     unsigned shadow_filter_phases = AEC_MAIN_FILTER_PHASES - 5;
 
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     unsigned X_energy_recalc_bin = 0;
     complex_s32_t X[AEC_MAX_X_CHANNELS][NUM_BINS];

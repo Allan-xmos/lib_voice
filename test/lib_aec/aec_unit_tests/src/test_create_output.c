@@ -80,7 +80,7 @@ void test_create_output() {
     unsigned num_phases = AEC_MAIN_FILTER_PHASES - 1;
 
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, num_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, num_phases, &aec_tdist_chans2_threads2);
     //Initialise floating point arrays
     double error_fp[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH];
     double output_fp[AEC_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];

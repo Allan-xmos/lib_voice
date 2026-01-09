@@ -39,7 +39,7 @@ void test_calc_corr_factor() {
 
     double y_fp[TEST_NUM_Y][AEC_PROC_FRAME_LENGTH], y_hat_fp[TEST_NUM_Y][AEC_PROC_FRAME_LENGTH];
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     unsigned seed = 10345;
     int32_t max_diff = 0;

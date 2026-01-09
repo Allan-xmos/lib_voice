@@ -35,7 +35,7 @@ void test_update_sigma_XX() {
     unsigned num_x_channels = 1;
     unsigned num_phases = 10;
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, 0);
+    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, 0, &aec_tdist_chans2_threads2);
     complex_s32_t X[AEC_MAX_X_CHANNELS][NUM_BINS];
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_complex_s32_init(&aec_state.main_state.shared_state->X[ch], X[ch], 0, NUM_BINS, 0);

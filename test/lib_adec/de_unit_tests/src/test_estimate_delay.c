@@ -73,7 +73,7 @@ void test_delay_estimate() {
     //Populate selected phase with energy to see if we can read peak
     de_output_t de_output;
     for(unsigned ph = 0; ph < num_phases; ph++){
-        aec_init(&aec_state, 1, 1, num_phases, 0);
+        aec_init(&aec_state, 1, 1, num_phases, 0, &aec_tdist_chans2_threads2);
         memset(H_hat, 0, sizeof(H_hat));
 
         unsigned length = aec_state.main_state.H_hat[ch][ph].length;
@@ -128,7 +128,7 @@ void test_delay_estimate() {
 
     //Now try a few corner cases
 
-    aec_init(&aec_state, 1, 1, num_phases, 0);
+    aec_init(&aec_state, 1, 1, num_phases, 0, &aec_tdist_chans2_threads2);
     memset(H_hat, 0, sizeof(H_hat));
 
     double sum_phase_powers;

@@ -556,7 +556,7 @@ void test_compare_filters_and_calc_mu() {
     shadow_filt_params_fp_t shadow_filt_coh_mu_params_fp;
 
     //Initialise fixed point
-    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
     //Initialise floating point
     init_shadow_config_fp(&shadow_filt_cfg_fp);
     init_coherence_mu_config_fp(&coh_mu_cfg_fp);

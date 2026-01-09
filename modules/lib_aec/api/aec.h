@@ -75,7 +75,8 @@ void aec_init(
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_main_filter_phases,
-        unsigned num_shadow_filter_phases);
+        unsigned num_shadow_filter_phases,
+        const aec_task_distribution_t *tdist);
 
 /**
  * @brief Process a frame of microphone samples using the AEC
@@ -100,8 +101,7 @@ void aec_process_frame(
         int32_t (*output_main)[AEC_FRAME_ADVANCE],
         int32_t (*output_shadow)[AEC_FRAME_ADVANCE],
         const int32_t (*y_data)[AEC_FRAME_ADVANCE],
-        const int32_t (*x_data)[AEC_FRAME_ADVANCE],
-        const aec_task_distribution_t *tdist);
+        const int32_t (*x_data)[AEC_FRAME_ADVANCE]);
 
 /** @brief Detect activity on input channels.
  *

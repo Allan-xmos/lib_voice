@@ -316,11 +316,11 @@ void aec_process_frame(
         int32_t (*output_main)[AEC_FRAME_ADVANCE],
         int32_t (*output_shadow)[AEC_FRAME_ADVANCE],
         const int32_t (*y_data)[AEC_FRAME_ADVANCE],
-        const int32_t (*x_data)[AEC_FRAME_ADVANCE],
-        const aec_task_distribution_t *tdist)
+        const int32_t (*x_data)[AEC_FRAME_ADVANCE])
 {
     aec_filter_state_t *main_state = &aec_state->main_state;
     aec_filter_state_t *shadow_state = &aec_state->shadow_state;
+    const aec_task_distribution_t *tdist = aec_state->shared_state.tdist;
 
     // Read number of mic and reference channels. These are specified as part of the configuration when aec_init() is called.
     int num_y_channels = main_state->shared_state->num_y_channels; //Number of mic channels

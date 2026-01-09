@@ -8,7 +8,7 @@ static void aec_switch_configuration(stage_1_state_t *state, aec_conf_t *conf)
 {
     aec_init(&state->aec_state,
             conf->num_y_channels, conf->num_x_channels,
-            conf->num_main_filt_phases, conf->num_shadow_filt_phases);
+            conf->num_main_filt_phases, conf->num_shadow_filt_phases, &tdist);
 }
 
 static inline void get_delayed_frame(
@@ -126,7 +126,7 @@ void stage_1_process_frame(stage_1_state_t *state, int32_t (*output_frame)[AP_FR
 #endif
 
     /** AEC*/
-    aec_process_frame(&state->aec_state, output_frame, NULL, input_y, input_x, &tdist);
+    aec_process_frame(&state->aec_state, output_frame, NULL, input_y, input_x);
 
     /** Update metadata*/
     *max_ref_energy = aec_calc_max_input_energy(input_x, state->aec_state.main_state.shared_state->num_x_channels);

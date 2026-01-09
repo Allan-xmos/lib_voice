@@ -10,6 +10,7 @@ target_sources(fwk_voice_module_aec
         src/aec_l2_impl.c
         src/aec_priv_impl.c
         src/aec_process_frame.c
+        src/aec_schedule_defaults.c
 )
 
 target_include_directories(fwk_voice_module_aec
@@ -41,6 +42,7 @@ target_sources(fwk_voice_module_lib_aec
         src/aec_l2_impl.c
         src/aec_priv_impl.c
         src/aec_process_frame.c
+        src/aec_schedule_defaults.c
 )
 
 target_include_directories(fwk_voice_module_lib_aec

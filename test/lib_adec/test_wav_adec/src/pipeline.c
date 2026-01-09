@@ -18,7 +18,7 @@ static void aec_switch_configuration(pipeline_state_t *state, aec_conf_t *conf)
 {
     aec_init(&state->aec_state,
             conf->num_y_channels, conf->num_x_channels,
-            conf->num_main_filt_phases, conf->num_shadow_filt_phases);
+            conf->num_main_filt_phases, conf->num_shadow_filt_phases, &tdist);
 }
 
 
@@ -112,7 +112,7 @@ void pipeline_process_frame(pipeline_state_t *state,
     prof(6, "start_aec_process_frame");
     int32_t aec_output_shadow[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
     // Writing main filter output to output_data directly
-    aec_process_frame(&state->aec_state, output_data, aec_output_shadow, input_y_data, input_x_data, &tdist);
+    aec_process_frame(&state->aec_state, output_data, aec_output_shadow, input_y_data, input_x_data);
     prof(7, "end_aec_process_frame");
 
     prof(8, "start_estimate_delay");

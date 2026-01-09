@@ -7,6 +7,7 @@
 #include <string.h>
 #include "aec_defines.h"
 #include "aec_memory_pool.h"
+#include "aec_schedule.h"
 #include "xmath/xmath.h"
 
 
@@ -250,6 +251,8 @@ typedef struct {
      * The index increments from 0 to AEC_PROC_FRAME_LENGTH/2, then decrements
      * back to 0 over successive frames.*/
     unsigned X_energy_recalc_bin;
+
+    const aec_task_distribution_t *tdist;
 }aec_shared_filter_state_t;
 //! [aec_shared_filter_state_t]
 

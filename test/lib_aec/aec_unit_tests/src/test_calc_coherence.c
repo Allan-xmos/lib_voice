@@ -89,7 +89,7 @@ void test_calc_coherence() {
     unsigned num_phases = AEC_MAIN_FILTER_PHASES - 1;
 
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, 0);
+    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, 0, &aec_tdist_chans2_threads2);
 
     //Initialize floating point
     coherence_mu_params_fp coh_params_fp;

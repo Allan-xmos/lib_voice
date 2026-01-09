@@ -100,7 +100,7 @@ void test_aec_inv_X_energy_div_by_zero() {
     unsigned shadow_filter_phases = 2;
 
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
     unsigned seed = 3507;
 
     aec_filter_state_t *state_ptr = &aec_state.shadow_state;
@@ -131,7 +131,7 @@ void test_aec_calc_normalisation_spectrum() {
     unsigned shadow_filter_phases = 2;
 
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
     //declare floating point memory
     double X_energy_fp[AEC_MAX_X_CHANNELS][NUM_BINS], sigma_XX_fp[AEC_MAX_X_CHANNELS][NUM_BINS];
     double inv_X_energy_fp[AEC_MAX_X_CHANNELS][NUM_BINS];

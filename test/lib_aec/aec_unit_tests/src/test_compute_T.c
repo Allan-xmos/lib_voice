@@ -32,7 +32,7 @@ void test_calc_T() {
     unsigned shadow_filter_phases = AEC_SHADOW_FILTER_PHASES - 1;
 
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     //initialise float arrays
     complex_double_t Error_fp[AEC_MAX_Y_CHANNELS][NUM_BINS];

@@ -71,5 +71,7 @@ typedef struct {
     aec_par_tasks_t par_2_tasks[AEC_LIB_MAX_THREADS][2];
 }aec_task_distribution_t;
 
+extern const aec_task_distribution_t aec_tdist_chans2_threads1;
+extern const aec_task_distribution_t aec_tdist_chans2_threads2;
 
 #endif

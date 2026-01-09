@@ -11,10 +11,14 @@ void aec_init(
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_main_filter_phases,
-        unsigned num_shadow_filter_phases) {
-
+        unsigned num_shadow_filter_phases,
+        const aec_task_distribution_t *tdist
+    )
+{
     aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, (uint8_t*)&aec_state->main_mem_pool, num_y_channels, num_x_channels, num_main_filter_phases);
     aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state, (uint8_t*)&aec_state->shadow_mem_pool, num_shadow_filter_phases);
+    assert(tdist);
+    aec_state->shared_state.tdist = tdist;
 }
 
 void aec_frame_init(
@@ -259,7 +263,9 @@ void aec_calc_freq_domain_energy(
         const bfp_complex_s32_t *input)
 {
     int32_t DWORD_ALIGNED scratch_mem[AEC_PROC_FRAME_LENGTH/2 + 1];
+#if (BFP_DEBUG_CHECK_LENGTHS)
     assert(input->length <= AEC_PROC_FRAME_LENGTH/2 + 1);
+#endif
     bfp_s32_t scratch;
     bfp_s32_init(&scratch, scratch_mem, 0, input->length, 0);
     bfp_complex_s32_squared_mag(&scratch, input);

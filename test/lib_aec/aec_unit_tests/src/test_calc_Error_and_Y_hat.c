@@ -70,7 +70,7 @@ void test_calc_Error_and_Y_hat() {
     unsigned shadow_filter_phases = TEST_SHADOW_PHASES;
 
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     //Declare floating point arrays
     complex_double_t H_hat_fp[TEST_NUM_Y][TEST_NUM_X*TEST_MAIN_PHASES][NUM_BINS];

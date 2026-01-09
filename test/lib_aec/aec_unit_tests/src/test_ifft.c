@@ -19,7 +19,7 @@ void test_ifft() {
     unsigned shadow_filter_phases = 2;
 
     aec_state_t aec_state;
-    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     unsigned seed = 78431;
     int32_t DWORD_ALIGNED new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];

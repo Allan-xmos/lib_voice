@@ -10,6 +10,8 @@
     #define LOG_DEBUG_INFO (0)
 #endif
 
+extern aec_task_distribution_t tdist;
+
 extern void pipeline_init(pipeline_state_t *state, aec_conf_t *de_conf, aec_conf_t *non_de_conf, adec_config_t *adec_config);
 extern void pipeline_process_frame(pipeline_state_t *state,
     int32_t (*output_data)[AEC_FRAME_ADVANCE],
@@ -164,6 +166,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     aec_de_mode_conf.num_y_channels = 1;
     aec_de_mode_conf.num_main_filt_phases = 30;
     aec_de_mode_conf.num_shadow_filt_phases = 0;
+    aec_de_mode_conf.tdist = &tdist;
 
     /** Non DE mode AEC config is runtime configurable, main reason being ADEC tests pass only for alt arch (1, 2, 15,
      * 5) config while for profiling I want to use the worst case (2, 2, 10, 5) config*/
@@ -171,6 +174,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     aec_non_de_mode_conf.num_x_channels = runtime_args[X_CHANNELS];
     aec_non_de_mode_conf.num_main_filt_phases = runtime_args[MAIN_FILTER_PHASES];
     aec_non_de_mode_conf.num_shadow_filt_phases = runtime_args[SHADOW_FILTER_PHASES];
+    aec_non_de_mode_conf.tdist = &tdist;
 
     adec_config_t adec_conf;
     adec_conf.bypass = 0;
@@ -238,8 +242,6 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_state.main_state.error_ema_energy[0]));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
         sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.aec_state.main_state.shared_state->y_ema_energy[0]));
-        file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%f\n", float_s32_to_float(pipeline_state.peak_to_average_ratio));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
 #endif
 

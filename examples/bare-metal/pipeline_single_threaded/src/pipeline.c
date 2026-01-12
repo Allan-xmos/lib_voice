@@ -8,7 +8,6 @@
 #include "ns_api.h"
 #include "pipeline_config.h"
 #include "pipeline_state.h"
-#include "stage_1.h"
 
 #define VNR_AGC_THRESHOLD (0.5)
 #define PRINT_VNR_PREDICTION (0)
@@ -29,11 +28,13 @@ void pipeline_tile0_init(pipeline_state_tile0_t *state) {
     aec_non_de_mode_conf.num_main_filt_phases = AEC_MAIN_FILTER_PHASES;
     aec_non_de_mode_conf.num_shadow_filt_phases = AEC_SHADOW_FILTER_PHASES;
 #endif
+    aec_non_de_mode_conf.tdist = &aec_tdist_chans2_threads1;
 
     aec_de_mode_conf.num_y_channels = 1;
     aec_de_mode_conf.num_x_channels = 1;
     aec_de_mode_conf.num_main_filt_phases = 30;
     aec_de_mode_conf.num_shadow_filt_phases = 0;
+    aec_de_mode_conf.tdist = &aec_tdist_chans2_threads1;
 
     // Disable ADEC's automatic mode. We only want to estimate and correct for the delay at startup
     adec_config_t adec_conf;
@@ -43,7 +44,7 @@ void pipeline_tile0_init(pipeline_state_tile0_t *state) {
 #else
     adec_conf.force_de_cycle_trigger = 1; // Force a delay correction cycle, so that delay correction happens once after initialisation. Make sure this is set back to 0 after adec has requested a transition into DE mode once, to stop any further delay correction (automatic or forced) by ADEC
 #endif
-    stage_1_init(&state->stage_1_state, &aec_de_mode_conf, &aec_non_de_mode_conf, &adec_conf);
+    stage1_init(&state->stage_1_state, &aec_de_mode_conf, &aec_non_de_mode_conf, &adec_conf);
 }
 
 void pipeline_tile1_init(pipeline_state_tile1_t *state) {
@@ -83,7 +84,7 @@ void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
 #if DISABLE_STAGE_1
     memcpy(&stage_1_out[0][0], &input_y_data[0][0], AEC_MAX_Y_CHANNELS*AP_FRAME_ADVANCE*sizeof(int32_t));
 #else
-    stage_1_process_frame(&state->stage_1_state, &stage_1_out[0], &md.max_ref_energy, &md.aec_corr_factor[0], &md.ref_active_flag, input_y_data, input_x_data);
+    stage1_process_frame(&state->stage_1_state, &stage_1_out[0], &md.max_ref_energy, &md.aec_corr_factor[0], &md.ref_active_flag, input_y_data, input_x_data);
 
     if(state->stage_1_state.aec_state.main_state.shared_state->num_y_channels < AP_MAX_Y_CHANNELS) {
         for(int ch=state->stage_1_state.aec_state.main_state.shared_state->num_y_channels; ch<AP_MAX_Y_CHANNELS; ch++) {

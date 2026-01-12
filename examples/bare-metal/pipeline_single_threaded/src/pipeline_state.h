@@ -2,7 +2,7 @@
 #define AP_STAGE_A_STATE_H
 
 #include "pipeline_config.h"
-#include "stage_1.h"
+#include "stage1.h"
 #include "ic_state.h"
 #include "ns_state.h"
 #include "agc_api.h"
@@ -16,7 +16,7 @@ typedef struct {
 
 typedef struct {
     // Stage1 - AEC, DE, ADEC
-    stage_1_state_t DWORD_ALIGNED stage_1_state;
+    stage1_t DWORD_ALIGNED stage_1_state;
 } pipeline_state_tile0_t;
 
 typedef struct {

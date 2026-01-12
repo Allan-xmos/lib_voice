@@ -5,6 +5,6 @@
 
 #define AP_MAX_Y_CHANNELS (AEC_MAX_Y_CHANNELS)
 #define AP_MAX_X_CHANNELS (AEC_MAX_X_CHANNELS)
-#define AP_FRAME_ADVANCE (240)
+#define AP_FRAME_ADVANCE  (AEC_FRAME_ADVANCE)
 
 #endif /* pipeline_config_h_ */

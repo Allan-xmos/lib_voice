@@ -12,13 +12,11 @@
 #include "profile.h"
 #endif
 
-extern aec_task_distribution_t tdist;
-
 static void aec_switch_configuration(pipeline_state_t *state, aec_conf_t *conf)
 {
     aec_init(&state->aec_state,
             conf->num_y_channels, conf->num_x_channels,
-            conf->num_main_filt_phases, conf->num_shadow_filt_phases, &tdist);
+            conf->num_main_filt_phases, conf->num_shadow_filt_phases, conf->tdist);
 }
 
 

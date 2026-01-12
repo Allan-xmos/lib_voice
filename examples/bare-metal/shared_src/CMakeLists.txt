@@ -2,30 +2,6 @@
 add_subdirectory(external_deps)
 
 ######
-add_library(fwk_voice_example_shared_src_delay_buffer  INTERFACE)
-target_sources(fwk_voice_example_shared_src_delay_buffer
-    INTERFACE
-        delay_buffer/delay_buffer.c
-)
-target_include_directories(fwk_voice_example_shared_src_delay_buffer
-    INTERFACE
-        delay_buffer
-)
-add_library(fwk_voice::example::delay_buffer ALIAS fwk_voice_example_shared_src_delay_buffer)
-
-######
-add_library(fwk_voice_example_shared_src_stage_1  INTERFACE)
-target_sources(fwk_voice_example_shared_src_stage_1
-    INTERFACE
-        pipeline_stage_1/stage_1.c
-)
-target_include_directories(fwk_voice_example_shared_src_stage_1
-    INTERFACE
-        pipeline_stage_1
-)
-add_library(fwk_voice::example::stage_1 ALIAS fwk_voice_example_shared_src_stage_1)
-
-######
 add_library(fwk_voice_example_shared_src_file_utils INTERFACE)
 target_sources(fwk_voice_example_shared_src_file_utils
     INTERFACE

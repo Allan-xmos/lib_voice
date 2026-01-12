@@ -10,8 +10,8 @@ Building Examples
 ==================
 
 After configuring the CMake project and installing `xmos-ai-tools <https://pypi.org/project/xmos-ai-tools/>`_
-into your python environment, all the examples can be built by using the ``make`` command within the build directory.
-Individual examples can be built using ``make EXAMPLE_NAME``, where ``EXAMPLE_NAME`` is the example to build. 
+into your python environment, all the examples can be built by using the ``xmake`` command within the build directory.
+Individual examples can be built using ``xmake EXAMPLE_NAME``, where ``EXAMPLE_NAME`` is the example to build. 
 
 Running Examples
 ================
@@ -29,8 +29,7 @@ build step has been completed prior to this.
 .. toctree::
    :maxdepth: 3
 
-   aec_1_thread
-   aec_2_threads
+   aec
    vnr
    pipeline_single_threaded
    pipeline_multi_threaded

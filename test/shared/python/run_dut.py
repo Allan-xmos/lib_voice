@@ -27,6 +27,22 @@ def get_binary_path(xe, target="xs3a"):
     else:
         assert 0, f"{target} target is unsupported"
 
+def run_with_xscope_fileio(xe_path, cwd):
+    target_stdout = []
+    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
+        print(f"Running on {adapter_id}")
+        with open(cwd / "prof.txt", "w+") as ff:
+            xscope_fileio.run_on_target(adapter_id, str(xe_path), cwd=str(cwd), stdout=ff)
+            ff.seek(0)
+            stdout = ff.readlines()
+
+    #ignore lines that don't contain [DEVICE]. Remove everything till and including [DEVICE] if [DEVICE] is present
+    for line in stdout:
+        m = re.search(r'^\s*\[DEVICE\]', line)
+        if m is not None:
+            target_stdout.append(re.sub(r'\[DEVICE\]\s*', '', line))
+    return target_stdout
+
 def run_dut(input_data, xe, target="xs3a"):
     target_stdout = []
     output_data = np.empty(0, dtype=np.int32)
@@ -39,17 +55,7 @@ def run_dut(input_data, xe, target="xs3a"):
         input_data.astype(np.int32).tofile(input_file)
 
         if xe_path.suffix == ".xe":  # xcore run
-            with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-                with open("prof.txt", "w+") as ff:
-                    xscope_fileio.run_on_target(adapter_id, str(xe_path), cwd=str(tmp_folder), stdout=ff)
-                    ff.seek(0)
-                    stdout = ff.readlines()
-
-            #ignore lines that don't contain [DEVICE]. Remove everything till and including [DEVICE] if [DEVICE] is present
-            for line in stdout:
-                m = re.search(r'^\s*\[DEVICE\]', line)
-                if m is not None:
-                    target_stdout.append(re.sub(r'\[DEVICE\]\s*', '', line))
+            target_stdout = run_with_xscope_fileio(xe_path, tmp_folder)
 
         else:  # native run
             res = subprocess.run([str(xe_path), "input.bin", "output.bin"], cwd=tmp_folder, stdout=subprocess.PIPE, text=True)

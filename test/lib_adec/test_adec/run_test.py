@@ -35,7 +35,8 @@ def generate_random_delay_changes(number, spacing, min_s, max_s):
 
 def run_test(pipeline_config, info, path_to_regression_files, input_audio_files, far_end_delay_changes, test_length_s=70, run_target="xcore", volume_changes=None, run_x86=False):
   if run_target == "xcore":
-    test_exe = (Path(__file__).parents[3] / "build" / "test" / "lib_adec" / "test_adec" / "bin").glob('*.xe')[0]
+    xe_files = (Path(__file__).parents[3] / "build" / "test" / "lib_adec" / "test_adec" / "bin").glob('*.xe')
+    test_exe = str(next(xe_files).resolve())
   elif run_target == "x86":
     test_exe = str((Path(__file__).parents[3] / "build" / "test" / "lib_adec" / "test_adec" / "bin" / "test_adec").resolve())
   else:

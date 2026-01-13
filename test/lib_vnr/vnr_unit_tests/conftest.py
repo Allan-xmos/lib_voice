@@ -29,7 +29,7 @@ def dequantise(model_details):
 
 @pytest.fixture
 def vnr_obj():
-    return vnr.vnr(vnr_conf, str(tflite_model))
+    return vnr.vnr(vnr_conf, model_file=str(tflite_model))
 
 @pytest.fixture
 def dut_runner(request, target):

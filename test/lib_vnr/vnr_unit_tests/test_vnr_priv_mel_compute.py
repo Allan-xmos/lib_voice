@@ -1,17 +1,17 @@
 
 import numpy as np
-import py_voice.modules.vnr.frame_preprocessor as fp
+import py_voice.modules.vnr as vnr
 import py_vs_c_utils as pvc
 from test_utils import rand_int32_arr
 
 def test_vnr_priv_mel_compute(rng, vnr_obj, dut_runner):
 
-    fd_frame_len = int(fp.NFFT/2 + 1)
+    fd_frame_len = int(vnr.NFFT/2 + 1)
     # No. of int32 values sent to dut as input per frame
     input_words_per_frame = fd_frame_len*2 + 1 #fd_frame_len complex values and 1 exponent per frame
 
     # No. of int32 output values expected from dut per frame (257 complex data values and 1 exponent)
-    output_words_per_frame = fp.MEL_FILTERS*2 #float_s32_t y[MEL_FILTERS]
+    output_words_per_frame = vnr.MEL_FILTERS*2 #float_s32_t y[MEL_FILTERS]
 
     input_data = np.array([input_words_per_frame, output_words_per_frame], dtype=np.int32)
 

@@ -22,6 +22,8 @@ def uint8_to_float(array_uint8):
 
 # turn a float into an int32 np array (Q1.31)
 def float_to_int32(array_float):
+    if np.any(np.array(array_float) * (2**31) > np.iinfo(np.int32).max) or np.any(np.array(array_float) * (2**31) < np.iinfo(np.int32).min):
+        raise ValueError("float_to_int32: value out of int32 range after scaling to Q31")
     array_int32 = np.clip((np.array(array_float) * (2**31)), np.iinfo(np.int32).min, np.iinfo(np.uint32).max).astype(np.int32)
     return array_int32
 
@@ -168,3 +170,31 @@ def basic_line_graph(name, data):
     filename = f'{name}.png'
     plt.savefig(filename, bbox_inches='tight', dpi=600)
     return filename
+
+def flatten_complex_array(comp_array):
+    h = comp_array.shape[0]  # phases
+    le = comp_array.shape[1]  # frequency bins
+    # C code expects: [all_complex_coeffs_phase0, all_complex_coeffs_phase1, ...]
+    # where each complex coeff is stored as [real, imag] pairs
+    array = np.zeros(le * h * 2)
+    for ph in range(h):
+        phase_offset = ph * le * 2  # Each phase takes le*2 elements (real+imag pairs)
+        for i in range(le):
+            indx = phase_offset + i * 2
+            array[indx] = comp_array[ph][i].real
+            array[indx + 1] = comp_array[ph][i].imag
+    return array
+
+
+def float_to_int32_qxx(array_float, q_format):
+
+    if np.any(np.array(array_float) * (2**q_format) > np.iinfo(np.int32).max) or np.any(np.array(array_float) * (2**q_format) < np.iinfo(np.int32).min):
+        raise ValueError(f"float_to_int32_q{q_format}: value out of int32 range after scaling to Q{q_format}")
+
+    array_int32 = np.clip(
+        (np.array(array_float) * (2**q_format)),
+        np.iinfo(np.int32).min,
+        np.iinfo(np.int32).max,
+    ).astype(np.int32)
+
+    return array_int32

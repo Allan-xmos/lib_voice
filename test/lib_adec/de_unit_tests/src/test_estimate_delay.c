@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "aec.h"
-#include "adec_api.h"
+#include "adec.h"
 
 //Note this is larger than AEC_LIB_MAIN_FILTER_PHASES but AEC_MAX_Y_CHANNELS and AEC_MAX_X_CHANNELS are 2 so it works..
 //i.e. 30 <= 10 * 2 * 2

@@ -2,7 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include "aec.h"
-#include "adec_api.h"
+#include "adec.h"
 
 void adec_estimate_delay (
         de_output_t *de_output,

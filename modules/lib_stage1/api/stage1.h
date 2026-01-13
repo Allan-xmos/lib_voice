@@ -2,7 +2,7 @@
 #define STAGE1_STATE_H
 
 #include "aec.h"
-#include "adec_api.h"
+#include "adec.h"
 #include "delay_buffer.h"
 
 #define REF_ACTIVE_THRESHOLD_dB (-60) // Reference input level above which it is considered active

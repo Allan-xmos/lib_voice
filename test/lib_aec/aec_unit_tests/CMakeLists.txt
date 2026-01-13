@@ -69,7 +69,7 @@ foreach( testfile ${TEST_SOURCES} )
 
     target_link_libraries(fwk_voice_${TESTNAME}
         PUBLIC
-            fwk_voice::adec
+            fwk_voice::aec
             fwk_voice::test::shared::test_utils
             fwk_voice::test::shared::unity)
 

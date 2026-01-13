@@ -1,9 +1,6 @@
 #ifndef ADEC_PRIV_H
 #define ADEC_PRIV_H
 
-#define MAX_DELAY_MS                ( 150 )
-#define MAX_DELAY_SAMPLES           ( 16000*MAX_DELAY_MS/1000 )
-
 #define ADEC_AGM_ONE                            (1<<24)           //Q24 1.0 MAX AGM
 #define ADEC_AGM_HALF                           (1<<23)           //Q24 0.5 INITIAL AGM
 #define ADEC_ERLE_BAD_BITS                      -0.066            //-0.2dB -> 0.95 -> -0.066b
@@ -22,7 +19,7 @@
 #define ADEC_AEC_DELAY_EST_TIME_MS              5000             //How long after mode change with far end present we need to be sure AEC is converged
 #define ADEC_DELAY_EST_MODE_TIME_MS             3000             //How long in delay estimator mode with far end present we need to be sure DE is converged
 #define ADEC_AEC_ESTIMATE_MIN_MS                20               //Do not restart AEC if delay is smaller than this (no point as we have most of tail anyhow)
-#define ADEC_DE_DELAY_OFFSET_SAMPS              (MAX_DELAY_SAMPLES - 1)//Delay offset applied before we run delay estimator for correct window positioning
+#define ADEC_DE_DELAY_OFFSET_SAMPS              (ADEC_DE_DELAY_SAMPS - 1)//Delay offset applied before we run delay estimator for correct window positioning
 #define ADEC_DE_DELAY_HEADROOM_SAMPS            240              //Number of samples padding to ensure that mics are always after reference. 240 = one phase
 #define ADEC_PEAK_LINREG_DECIMATE_RATIO         11               //Reduce computation when calculating slope, must be a factor of ADEC_PEAK_LINREG_HISTORY_SIZE.
 

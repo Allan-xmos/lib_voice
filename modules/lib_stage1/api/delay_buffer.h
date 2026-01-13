@@ -1,9 +1,10 @@
 #ifndef DELAY_BUFFER_H
 #define DELAY_BUFFER_H
 
+#include "adec_defines.h"
+
 #define MAX_DELAY_BUF_CHANNELS (2)
-#define DELAY_BUF_MAX_DELAY_MS                ( 150 )
-#define DELAY_BUF_MAX_DELAY_SAMPLES           ( 16000*DELAY_BUF_MAX_DELAY_MS/1000 )
+#define DELAY_BUF_MAX_DELAY_SAMPLES           ADEC_DE_DELAY_SAMPS 
 
 typedef struct {
     // Circular buffer to store the samples

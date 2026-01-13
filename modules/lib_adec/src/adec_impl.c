@@ -221,7 +221,7 @@ void adec_process_frame(
 
           //We have come from DE mode with a new estimate and need to reset AEC + adjust delay
           //so switch back to AEC normal mode + set delay from fresh
-          state->last_measured_delay = adec_in->from_de.measured_delay_samples - MAX_DELAY_SAMPLES;
+          state->last_measured_delay = adec_in->from_de.measured_delay_samples - ADEC_DE_DELAY_SAMPS;
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
           printf("DE MODE - Measured delay estimate: %ld (raw %ld)\n", state->last_measured_delay, adec_in->from_de.delay_estimate); //+ve means MIC delay
 #endif

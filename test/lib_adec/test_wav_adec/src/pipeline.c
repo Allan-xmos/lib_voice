@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "aec.h"
-#include "adec_api.h"
+#include "adec.h"
 
 #include "pipeline_state.h"
 

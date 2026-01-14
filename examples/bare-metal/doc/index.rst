@@ -32,5 +32,4 @@ build step has been completed prior to this.
    aec
    vnr
    pipeline_single_threaded
-   pipeline_multi_threaded
    pipeline_alt_arch

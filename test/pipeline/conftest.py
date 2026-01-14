@@ -3,19 +3,20 @@
 
 import os
 import subprocess
+from pathlib import Path
 
-hydra_audio_base_dir = os.path.expanduser("~/hydra_audio/")
-pipeline_input_dir = os.path.abspath("./pipeline_input/")
-pipeline_output_base_dir = os.path.abspath("./pipeline_output/")
-keyword_input_base_dir = os.path.abspath("./keyword_input/")
+hydra_audio_base_dir  = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio')).expanduser()
+pipeline_input_dir = Path(__file__).parent / "pipeline_input"
+pipeline_output_base_dir = "pipeline_output"
+keyword_input_base_dir = "keyword_input"
+bin_dir = Path(__file__).parents[2] / "build" / "test" / "pipeline" / "bin"
+results_log_file = Path(__file__).parent / "results.csv"
+
 pipeline_bins = {
-                "prev_arch" :    {"x86" : os.path.abspath("../../build/examples/bare-metal/pipeline_single_threaded/bin/fwk_voice_example_bare_metal_pipeline_single_thread"),
-                                "xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_bare_metal_pipeline_multi_thread.xe")},
-                "alt_arch"  :    {"x86" : os.path.abspath("../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_st"),
-                                "xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_mt.xe")},
-                "aec_ic_ns_agc_prev_arch" : {"xcore" : os.path.abspath("../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_pipeline_aec_ic_ns_agc.xe")}
+                "prev_arch" :    {"xcore" : bin_dir / "pipeline_std_arch.xe"},
+                "alt_arch"  :    {"xcore" : bin_dir / "pipeline_alt_arch.xe"},
+                "aec_ic_ns_agc_prev_arch" : {"xcore" : bin_dir / "pipeline_aec_ic_ns_agc.xe"}
                 }
-results_log_file = os.path.abspath("results.csv")
 xtag_aquire_timeout_s = int(8.5 * 60 * 1.2 * 2) # Add a generous timeout for xtag acquisition here. Max input wav is 8m21s so double & add 20%
                                                 # The time to run the multithreaded example on xcore is approximately the wav length
                                                 # we run 2 xcore targets so, even if we queue 4 xcore jobs, they should never timeout
@@ -37,7 +38,7 @@ def get_wav_info(input_file):
 
 
 def convert_input_wav(input_file, output_file):
-    chans, rate, samps, bits = get_wav_info(input_file)
+    chans, _, _, _ = get_wav_info(input_file)
     extra_args = "" #"trim 0 5" #to test with short wavs
     if chans == 6:
         #for 6 channel wav file, first 2 channels are the mic input, followed by 2 channels of far-end audio, followed by 2 channels of pipeline output
@@ -66,7 +67,7 @@ architectures = []# These are populated below depending on full_pipeline_run
 def pytest_sessionstart(session):
     global hydra_audio_base_dir, full_pipeline_run, architectures, all_tests_list
     try:
-        hydra_audio_base_dir = os.environ['hydra_audio_PATH']
+        hydra_audio_base_dir = Path(os.environ['hydra_audio_PATH']).expanduser()
     except:
         print(f'Warning: hydra_audio_PATH environment variable not set. Using local path {hydra_audio_base_dir}')
 
@@ -79,9 +80,11 @@ def pytest_sessionstart(session):
         print(f"PIPELINE_FULL_RUN: {full_pipeline_run}")
 
     if full_pipeline_run != 0:
-        hydra_audio_path = os.path.join(hydra_audio_base_dir, "xvf3510_no_processing_xmos_test_suite")
+        test_suite_dir = "xvf3510_no_processing_xmos_test_suite"
     else:
-        hydra_audio_path = os.path.join(hydra_audio_base_dir, "xvf3510_no_processing_xmos_test_suite_subset_avona")
+        test_suite_dir = "xvf3510_no_processing_xmos_test_suite_subset_avona"
+    
+    hydra_audio_path = hydra_audio_base_dir  / test_suite_dir 
     
     # prev-arch: Standard config, full pipeline
     # alt-arch: Alt-arch config, full pipeline
@@ -91,30 +94,29 @@ def pytest_sessionstart(session):
     else:
         architectures = ["alt_arch", "aec_ic_ns_agc_prev_arch"]
 
-    input_wav_files = [os.path.join(hydra_audio_path, filename) for filename in os.listdir(hydra_audio_path) if (filename.endswith(".wav"))]
-    #input_wav_files = [os.path.join(hydra_audio_path, "InHouse_XVF3510v080_v1.2_20190423_Loc3_Noise2_80dB__Take1.wav")]
-    #input_wav_files = [os.path.join(hydra_audio_path, "InHouse_XVF3510v080_v1.2_20190423_Loc1_Noise1_65dB_XMOS_DUT1_80dB_Take1.wav")]
+    input_wav_files = hydra_audio_path.glob("*wav")
 
+    #create pipeline input and sensory input directories
+    pipeline_input_dir.mkdir(exist_ok=True)
     for input_wav_file in input_wav_files:
         #We sometimes get weird files appearing in dir starting with "._InHouse_X..." so ignore
-        if '._InHouse' in input_wav_file:
+        if '._InHouse' in input_wav_file.stem:
             continue
         for target in targets:
             for arch in architectures:
+                test_wav_file = pipeline_input_dir / input_wav_file.name
+                convert_input_wav(str(input_wav_file), str(test_wav_file))
                 all_tests_list.append([input_wav_file, arch, target])
        
-    #create pipeline input and sensory input directories
-    os.makedirs(pipeline_input_dir, exist_ok=True)
     for target in targets:
         for arch in architectures:
-            os.makedirs(os.path.join(pipeline_output_base_dir+"_"+arch+"_"+target), exist_ok=True)
-            os.makedirs(os.path.join(keyword_input_base_dir+"_"+arch+"_"+target), exist_ok=True)
+            (Path(__file__).parent / f"{pipeline_output_base_dir}_{arch}_{target}").mkdir(exist_ok=True)
+            (Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}").mkdir(exist_ok=True)
     
     for test in all_tests_list:
         wav_file = test[0]
-        wav_name = os.path.basename(wav_file)
-        input_file = os.path.join(pipeline_input_dir, wav_name)
-        convert_input_wav(wav_file, input_file)
+        input_file = pipeline_input_dir / wav_file.name
+        convert_input_wav(str(wav_file), str(input_file))
 
     #Start with empty logfile
     open(results_log_file, "w").close()
@@ -133,12 +135,12 @@ def pytest_sessionfinish(session):
                         target_stripped_line = line.replace(target+",", "").replace(arch+",", "")
                         target_log.append(target_stripped_line) 
                 target_log = sorted(target_log)
-                target_specific_log_file = results_log_file.replace(".csv", "_Avona"+"_"+arch+"_"+target+".csv")
+                target_specific_log_file = Path(__file__).parent / f"{results_log_file.stem}_Avona_{arch}_{target}.csv"
                 with open(target_specific_log_file, "w") as tlf:
                     tlf.write("Input,Sensory_rpi-31000,Sensory_v6_1mb,Amazon_WR_250k.en-US\n")
                     tlf.writelines(target_log)
 
 
 def pytest_generate_tests(metafunc):
-    ids = [os.path.basename(item[0]) + ", " + item[1] + ", " + item[2] for item in all_tests_list]
+    ids = [item[0].name + ", " + item[1] + ", " + item[2] for item in all_tests_list]
     metafunc.parametrize("test", all_tests_list, ids=ids)

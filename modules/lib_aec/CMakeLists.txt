@@ -4,6 +4,8 @@
 
 add_library(fwk_voice_module_aec INTERFACE)
 
+include(schedule.cmake)
+
 target_sources(fwk_voice_module_aec
     INTERFACE
         src/aec_impl.c

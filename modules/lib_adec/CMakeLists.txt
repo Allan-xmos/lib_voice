@@ -2,26 +2,26 @@
 file( GLOB_RECURSE    LIB_ADEC_SOURCES       src/*.c )
 
 ## Create library target
-add_library(fwk_voice_module_lib_adec STATIC)
+add_library(fwk_voice_module_lib_adec INTERFACE)
 
 target_sources(fwk_voice_module_lib_adec
-    PRIVATE
+    INTERFACE
         ${LIB_ADEC_SOURCES}
 )
 
 target_include_directories(fwk_voice_module_lib_adec
-    PUBLIC
+    INTERFACE
         api
 )
 
 target_compile_options(fwk_voice_module_lib_adec
-    PRIVATE
+    INTERFACE
         -Os
         -g
 )
 
 target_link_libraries(fwk_voice_module_lib_adec
-    PUBLIC
+    INTERFACE
         fwk_voice::aec
 )
 

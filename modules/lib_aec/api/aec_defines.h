@@ -97,9 +97,7 @@
  *
  * @ingroup aec_defines
  */
-#define AEC_LIB_MAX_PHASES (2 * 2 * 10) /* this is used in adec as well which is still compiled as a static lib so wouldn't see
-                                         any overriding of AEC_MAX_Y_CHANNELS etc., hence leaving it hardcoded. TODO - to sort out, either ADEC is also
-                                         an interface lib or stops using defines from within AEC that the app is expected to override */
+#define AEC_LIB_MAX_PHASES (AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES)
 
 /** Overlap data length
  *

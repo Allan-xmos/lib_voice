@@ -188,6 +188,12 @@ pipeline {
                   dir("test/lib_aec/test_aec_xccm") {
                     xcoreBuild(archiveBins: false)
                   }
+                  dir("test/lib_ic/test_ic_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
+                  dir("test/lib_adec/test_stage1_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
                   unstash 'cmake_build_xcore'
                 }
               }

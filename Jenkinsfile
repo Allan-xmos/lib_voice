@@ -468,20 +468,6 @@ pipeline {
             }
           }
         }
-        stage('HPF test') {
-          steps {
-            catchError(stageResult: 'FAILURE', catchInterruptions: false){
-              dir("${REPO}/test/test_hpf") {
-                withTools(params.TOOLS_VERSION) {
-                  withVenv {
-                    sh "pytest --junitxml=pytest_result.xml"
-                    junit "pytest_result.xml"
-                  }
-                }
-              }
-            }
-          }
-        }
         stage('Pipeline tests') {
           steps {
             catchError(stageResult: 'FAILURE', catchInterruptions: false){

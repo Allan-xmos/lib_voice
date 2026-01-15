@@ -4,8 +4,7 @@ project(test_aec_xccm)
 
 set(APP_HW_TARGET XK-EVK-XU316)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
-set(APP_DEPENDENT_MODULES "lib_aec")
-set(XMOS_DEP_DIR_lib_aec ${XMOS_SANDBOX_DIR}/lib_voice/modules)
+set(APP_DEPENDENT_MODULES "lib_voice")
 
 set(APP_COMPILER_FLAGS_default_sched_1thr -DNUM_THREADS=1)
 set(APP_COMPILER_FLAGS_default_sched_2thr -DNUM_THREADS=2)

@@ -5,8 +5,8 @@ add_subdirectory( shared_src )
 
 add_subdirectory( aec )
 
-add_subdirectory( pipeline_single_threaded )
-
 add_subdirectory( vnr )
 
-add_subdirectory( pipeline_alt_arch )
+if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
+    add_subdirectory( pipeline )
+endif()

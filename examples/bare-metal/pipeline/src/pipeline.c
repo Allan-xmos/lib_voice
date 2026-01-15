@@ -81,9 +81,6 @@ void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
     /** Stage1 - AEC, DE, ADEC*/
     int32_t stage_1_out[AEC_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];// stage1 will not process the frame in-place since Mic input is needed to overwrite the output in certain cases
 
-#if DISABLE_STAGE_1
-    memcpy(&stage_1_out[0][0], &input_y_data[0][0], AEC_MAX_Y_CHANNELS*AP_FRAME_ADVANCE*sizeof(int32_t));
-#else
     stage1_process_frame(&state->stage_1_state, &stage_1_out[0], &md.max_ref_energy, &md.aec_corr_factor[0], &md.ref_active_flag, input_y_data, input_x_data);
 
     if(state->stage_1_state.aec_state.main_state.shared_state->num_y_channels < AP_MAX_Y_CHANNELS) {
@@ -91,7 +88,6 @@ void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
             md.aec_corr_factor[ch] = md.aec_corr_factor[0];
         }
     }
-#endif
     memcpy(&output_data[0][0], &stage_1_out[0][0], AEC_MAX_Y_CHANNELS*AP_FRAME_ADVANCE*sizeof(int32_t));
     memcpy(md_output, &md, sizeof(pipeline_metadata_t));
 }
@@ -105,9 +101,6 @@ void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metada
 
     /** IC and VNR*/
     int32_t ic_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
-#if DISABLE_STAGE_2
-    memcpy(&ic_output[0][0], &input_data[0][0], AEC_MAX_Y_CHANNELS*AP_FRAME_ADVANCE*sizeof(int32_t));
-#else
 
 #if ALT_ARCH_MODE
     if(md.ref_active_flag) {
@@ -123,10 +116,6 @@ void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metada
     // VNR
     float_s32_t input_vnr_pred, output_vnr_pred;
     ic_calc_vnr_pred(&state->ic_state, &input_vnr_pred, &output_vnr_pred);
-#if PRINT_VNR_PREDICTION
-        printf("VNR OUTPUT PRED: %ld %d\n", state->output_vnr_pred.mant, state->output_vnr_pred.exp);
-        printf("VNR INPUT PRED: %ld %d\n", state->input_vnr_pred.mant, state->input_vnr_pred.exp);
-#endif
     md.vnr_pred_flag = input_vnr_pred;
 
     ic_adapt(&state->ic_state);
@@ -135,22 +124,14 @@ void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metada
     for(int v = 0; v < AP_FRAME_ADVANCE; v++){
         ic_output[1][v] = ic_output[0][v];
     }
-#endif
 
     /** NS*/
     int32_t ns_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
-#if DISABLE_STAGE_3
-    memcpy(&ns_output[0][0], &ic_output[0][0], AEC_MAX_Y_CHANNELS*AP_FRAME_ADVANCE*sizeof(int32_t));
-#else
     for(int ch = 0; ch < AP_MAX_Y_CHANNELS; ch++){
         ns_process_frame(&state->ns_state[ch], ns_output[ch], ic_output[ch]);
     }
-#endif
 
     /** AGC*/
-#if DISABLE_STAGE_4
-    memcpy(&output_data[0][0], &ns_output[0][0], AEC_MAX_Y_CHANNELS*AP_FRAME_ADVANCE*sizeof(int32_t));
-#else
     agc_meta_data_t agc_md;
     agc_md.aec_ref_power = md.max_ref_energy;
     agc_md.vnr_flag = md.vnr_pred_flag;
@@ -160,6 +141,5 @@ void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metada
         agc_md.aec_corr_factor = md.aec_corr_factor[ch];
         agc_process_frame(&state->agc_state[ch], output_data[ch], ns_output[ch], &agc_md);
     }
-#endif
 }
 

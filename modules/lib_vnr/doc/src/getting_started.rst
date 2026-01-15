@@ -52,7 +52,7 @@ To integrate the new TensorFlow Lite model into the VNR module:
 
 #. Put an unoptimised model into ``fwk_voice/modules/lib_vnr/python/model/trained_model.tflite``
 
-#. Rerun the build tool of our choice (``xmake`` or ``ninja``, for example)
+#. Rerun ``xmake``
 
 This will use `xmos-ai-tools <https://pypi.org/project/xmos-ai-tools/>`_ to optimise ``.tflite`` model for xcore and generate ``.cpp`` and ``.h`` files
 into ``build/src.autogen/vnr_model/``. Those generated files will be picked by the build system and compiled into the VNR module.

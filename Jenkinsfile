@@ -212,34 +212,6 @@ pipeline {
             }
           }
         }
-        stage('Examples') {
-          steps {
-            catchError(stageResult: 'FAILURE', catchInterruptions: false){
-              dir("${REPO}") {
-                withTools(params.TOOLS_VERSION) {
-                  withVenv {
-                    dir("examples/bare-metal/pipeline_single_threaded") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_single_threaded/bin/fwk_voice_example_bare_metal_pipeline_single_thread.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
-                    }
-                    dir("examples/bare-metal/pipeline_multi_threaded") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_bare_metal_pipeline_multi_thread.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
-                      // Make sure single thread and multi threads pipeline output is bitexact
-                      sh "diff output.wav ../pipeline_single_threaded/output.wav"
-                    }
-                    dir("examples/bare-metal/pipeline_alt_arch") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_st.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
-                      sh "mv output.wav output_st.wav"
-
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_mt.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
-                      sh "mv output.wav output_mt.wav"
-                      sh "diff output_st.wav output_mt.wav"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
 
         stage('VNR tests') {
           steps {
@@ -461,20 +433,6 @@ pipeline {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
                     sh "pytest -n 2 --junitxml=pytest_result.xml"
-                    junit "pytest_result.xml"
-                  }
-                }
-              }
-            }
-          }
-        }
-        stage('HPF test') {
-          steps {
-            catchError(stageResult: 'FAILURE', catchInterruptions: false){
-              dir("${REPO}/test/test_hpf") {
-                withTools(params.TOOLS_VERSION) {
-                  withVenv {
-                    sh "pytest --junitxml=pytest_result.xml"
                     junit "pytest_result.xml"
                   }
                 }

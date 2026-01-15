@@ -1,7 +1,7 @@
 # Copyright 2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-import os, sys
+import sys
 from pipeline_test_utils import process_file, convert_keyword_wav, log_vnr
 from conftest import pipeline_input_dir, results_log_file, full_pipeline_run, quick_test_pass_thresholds, get_wav_info
 from run_sensory import run_sensory
@@ -14,20 +14,20 @@ import time, fcntl
 
 def test_pipelines(test, record_property):
     wav_file = test[0] 
-    wav_name = os.path.basename(wav_file)
+    wav_name = wav_file.name
     arch = test[1]
     target = test[2]
     
-    input_file = os.path.join(pipeline_input_dir, wav_name)
+    input_file = pipeline_input_dir / wav_name
 
-    chans, rate, samps, bits = get_wav_info(input_file)
+    _, rate, samps, _ = get_wav_info(str(input_file))
     print(f"Processing a {samps//rate}s track")
     t0 = time.time()
     output_file, stdo = process_file(input_file, arch, target)
     tot = time.time() - t0
     print(f"Processing took {tot:.2f}s")
 
-    if not os.path.isfile(output_file): 
+    if not output_file.is_file(): 
         return 
 
     keyword_file = convert_keyword_wav(output_file, arch, target)
@@ -59,7 +59,7 @@ def test_pipelines(test, record_property):
         if arch == "alt_arch" and target != "python": # Only test keywords on quick run on full pipeline alt_arch. Python pipeline doesn't exist for alt-arch at the moment.
             passed = True
             for key in quick_test_pass_thresholds:
-                if key in keyword_file:
+                if key in str(keyword_file):
                     pass_mark = quick_test_pass_thresholds[key]
                     if amazon_detections < pass_mark:
                         print(f"Quick test failed for file {wav_name}, architecture {arch}, target {target}. Expected {pass_mark} keywords, got {sensory_old_detections}", file=sys.stderr)

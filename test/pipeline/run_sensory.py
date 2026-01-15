@@ -8,6 +8,7 @@ import sys
 import tempfile
 import shutil
 import stat
+from pathlib import Path
 
 if sys.platform == "darwin":
     SPOT_EVAL_EXE = "spot-eval_x86_64-apple-darwin"
@@ -25,33 +26,30 @@ def parse_arguments():
 
 def run_file(input_filename, sensory_model):
     try:
-        sensory_path = os.environ['SENSORY_PATH']
+        sensory_path = Path(os.environ['SENSORY_PATH']).expanduser()
         print("sensory_path = %s"%(sensory_path))
     except:
-        sensory_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../sensory_sdk/')
+        sensory_path = Path(__file__).parents[3] / "sensory_sdk"
         print('env variable SENSORY_PATH not set. looking for sensory in the default path ',sensory_path)
 
-    spot_eval_exe = os.path.expanduser(os.path.join(sensory_path, "spot_eval_exe", SPOT_EVAL_EXE))
-    spot_model = os.path.expanduser(os.path.join(sensory_path, "model", sensory_model))
-    if not os.path.isfile(spot_eval_exe):
+    spot_eval_exe = sensory_path / "spot_eval_exe" / SPOT_EVAL_EXE
+    spot_model = sensory_path / "model" / sensory_model
+    if not spot_eval_exe.is_file():
         print('spot-eval not present in %s ',spot_eval_exe)
         assert(False)
-    if not os.path.isfile(spot_model):
+    if not spot_model.is_file():
         print('model not present in %s ',spot_model)
         assert(False)
 
     #There is an issue when lots of instances running the same kw bin, so make a copy and run own version
-    tmp_folder = tempfile.mkdtemp(suffix=os.path.basename(__file__))
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
-    shutil.copyfile(spot_eval_exe, "kw_bin")
-    os.chmod("kw_bin", stat.S_IXUSR)
-    shutil.copyfile(spot_model, "kw_model")
+    with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
+        tmp_folder = Path(tmp_folder)
 
-    output = subprocess.check_output('%s -t %s -s operating-point=5 -v %s' %("./kw_bin", "kw_model", input_filename), shell=True)
+        shutil.copyfile(spot_eval_exe, tmp_folder / "kw_bin")
+        os.chmod(tmp_folder / "kw_bin", stat.S_IXUSR)
+        shutil.copyfile(spot_model, tmp_folder / "kw_model")
 
-    os.chdir(prev_path)
-    shutil.rmtree(tmp_folder)
+        output = subprocess.check_output('%s -t %s -s operating-point=5 -v %s' %("./kw_bin", "kw_model", input_filename), shell=True, cwd=tmp_folder)
 
     # Compute the number of occurrences of 'alexa' to get the number of detection
     detections = len(output.decode().split('alexa')) - 1
@@ -68,5 +66,5 @@ if __name__ == "__main__":
 
     args = parse_arguments()
     assert(args.input != None), "Specify Input wav file"
-    detections = run_sensory(os.path.abspath(args.input))
+    detections = run_sensory(Path(args.input))
     print("detections = %d"%(detections))

@@ -26,51 +26,46 @@ def parse_arguments():
 
 def run_file(input_filename, model):
     try:
-        wwe_path = os.environ['AMAZON_WWE_PATH']
+        wwe_path = Path(os.environ['AMAZON_WWE_PATH']).expanduser()
         print("wwe_path = %s"%(wwe_path))
     except:
-        wwe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../amazon_wwe/')
+        wwe_path = Path(__file__).parents[3] / "amazon_wwe"
         print('env variable AMAZON_WWE_PATH not set. looking for Amazon WWE in the default path ', wwe_path)
 
-    filesim_exe = os.path.expanduser(os.path.join(wwe_path, "x86/", WW_FILESIM_EXE))
-    ww_model = os.path.expanduser(os.path.join(wwe_path, "models/common", model))
-    if not os.path.isfile(filesim_exe):
+    filesim_exe = wwe_path / "x86" / WW_FILESIM_EXE
+    ww_model = wwe_path / "models" / "common" / model
+    if not filesim_exe.is_file():
         print('filesim executable not present in %s ', filesim_exe)
         assert(False)
-    if not os.path.isfile(ww_model):
+    if not ww_model.is_file():
         print('model not present in %s ',ww_model)
         assert(False)
 
     #There is an issue when lots of instances running the same kw bin, so make a copy and run own version
-    tmp_folder = tempfile.mkdtemp(suffix=os.path.basename(input_filename), dir=".")
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
-    shutil.copyfile(filesim_exe, "kw_bin")
-    os.chmod("kw_bin", stat.S_IXUSR)
-    shutil.copyfile(ww_model, "kw_model")
-    # There's this really srtange error where if the input stream path starts with a /, amazon_ww_filesim issues a warning, Warning: Can't open file and detects 0 keywords
-    shutil.copy2(input_filename, "./")
-    os.system(f"echo {os.path.basename(input_filename)} > list.txt")
-    
-    run_cmd = '%s list.txt -t 500 -m %s' %("./kw_bin", "kw_model")
-    print("run_cmd = ", run_cmd)
-    output = subprocess.check_output(run_cmd, shell=True)
+    with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
+        tmp_folder = Path(tmp_folder)
 
-    os.chdir(prev_path)
-    shutil.rmtree(tmp_folder)
+        shutil.copyfile(filesim_exe, tmp_folder / "kw_bin")
+        os.chmod(tmp_folder / "kw_bin", stat.S_IXUSR)
+        shutil.copyfile(ww_model, tmp_folder / "kw_model")
+        # There's this really srtange error where if the input stream path starts with a /, amazon_ww_filesim issues a warning, Warning: Can't open file and detects 0 keywords
+        shutil.copy2(input_filename, tmp_folder)
+        os.system(f"echo {input_filename.name} > {tmp_folder}/list.txt")
+
+        run_cmd = '%s list.txt -t 500 -m %s' %("./kw_bin", "kw_model")
+        print("run_cmd = ", run_cmd)
+        output = subprocess.check_output(run_cmd, shell=True, cwd=tmp_folder)
 
     # Compute the number of occurrences of 'alexa' to get the number of detection
-    filename = os.path.splitext(input_filename)[0]
-    filename = os.path.basename(Path(filename))
-    detections = len(output.decode().split(f"{filename}: 'ALEXA'")) - 1
+    detections = len(output.decode().split(f"{input_filename.stem}: 'ALEXA'")) - 1
     return detections
 
 def run_amazon_wwe(input_filename):
-    detections = run_file(os.path.abspath(input_filename), WW_MODEL)
+    detections = run_file(input_filename, WW_MODEL)
     return detections
 
 if __name__ == "__main__":
     args = parse_arguments()
     assert(args.input != None), "Specify Input wav file"
-    detections = run_amazon_wwe(os.path.abspath(args.input))
+    detections = run_amazon_wwe(Path(args.input))
     print("detections = %d"%(detections))

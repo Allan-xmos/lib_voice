@@ -27,11 +27,11 @@ def get_binary_path(xe, target="xs3a"):
     else:
         assert 0, f"{target} target is unsupported"
 
-def run_with_xscope_fileio(xe_path, cwd):
+def run_with_xscope_fileio(xe_path, cwd, timeout=600):
     target_stdout = []
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
+    with xtagctl.acquire("XCORE-AI-EXPLORER", timeout=timeout) as adapter_id:
         print(f"Running on {adapter_id}")
-        with open(Path(cwd, "prof.txt"), "w+") as ff:
+        with open(Path(cwd, "stdout.txt"), "w+") as ff:
             xscope_fileio.run_on_target(adapter_id, str(xe_path), cwd=str(cwd), stdout=ff)
             ff.seek(0)
             stdout = ff.readlines()

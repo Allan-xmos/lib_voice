@@ -27,23 +27,23 @@ target_include_directories(${APP_NAME}
 
 add_library(fwk_voice_deps::xscope_fileio ALIAS fwk_voice_deps_xscope_fileio)
 
-add_library(fwk_voice_example_shared_src_file_utils INTERFACE)
-target_sources(fwk_voice_example_shared_src_file_utils
+add_library(fwk_voice_test_shared_file_utils INTERFACE)
+target_sources(fwk_voice_test_shared_file_utils
     INTERFACE
         src/fileio.c
         src/wav_utils.c
 )
-target_include_directories(fwk_voice_example_shared_src_file_utils
+target_include_directories(fwk_voice_test_shared_file_utils
     INTERFACE
         src
 )
 if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    target_link_libraries(fwk_voice_example_shared_src_file_utils
+    target_link_libraries(fwk_voice_test_shared_file_utils
         INTERFACE
             fwk_voice_deps::xscope_fileio)
-    target_compile_definitions(fwk_voice_example_shared_src_file_utils
+    target_compile_definitions(fwk_voice_test_shared_file_utils
         INTERFACE
             TEST_WAV_XSCOPE=1)
 endif()
 
-add_library(fwk_voice::example::fileutils ALIAS fwk_voice_example_shared_src_file_utils)
+add_library(fwk_voice::test::fileutils ALIAS fwk_voice_test_shared_file_utils)

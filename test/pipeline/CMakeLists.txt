@@ -19,7 +19,7 @@ target_link_libraries(pipeline_multi_thread_interface
         fwk_voice::agc
         fwk_voice::ic
         fwk_voice::stage1
-        fwk_voice::example::fileutils
+        fwk_voice::test::fileutils
         )
 
 target_compile_definitions(pipeline_multi_thread_interface

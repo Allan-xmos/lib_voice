@@ -38,22 +38,22 @@ endif()
 ### Add executable
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
-add_executable(fwk_voice_example_bare_metal_pipeline_std_arch)
+add_executable(fwk_voice_example_pipeline_std_arch)
 
-target_link_libraries(fwk_voice_example_bare_metal_pipeline_std_arch
+target_link_libraries(fwk_voice_example_pipeline_std_arch
     PRIVATE
         fwk_voice_example_pipeline_interface
         )
 
 ####### alt arch pipeline
-add_executable(fwk_voice_example_bare_metal_pipeline_alt_arch)
+add_executable(fwk_voice_example_pipeline_alt_arch)
 
-target_link_libraries(fwk_voice_example_bare_metal_pipeline_alt_arch
+target_link_libraries(fwk_voice_example_pipeline_alt_arch
     PUBLIC
         fwk_voice_example_pipeline_interface
         )
 
-target_compile_definitions(fwk_voice_example_bare_metal_pipeline_alt_arch
+target_compile_definitions(fwk_voice_example_pipeline_alt_arch
     PRIVATE
         ALT_ARCH_MODE=1
     )

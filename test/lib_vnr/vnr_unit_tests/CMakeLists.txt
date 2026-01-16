@@ -32,7 +32,7 @@ foreach(testfile ${TEST_SOURCES})
     target_link_libraries(${APP_NAME}
         PUBLIC
             fwk_voice::vnr
-            fwk_voice::example::fileutils)
+            fwk_voice::test::fileutils)
 
     if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
         target_sources(${APP_NAME} PRIVATE ${COMMON_SOURCES_XC})

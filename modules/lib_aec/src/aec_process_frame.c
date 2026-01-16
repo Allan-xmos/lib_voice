@@ -306,7 +306,7 @@ do {                                                            \
 
 #endif
 
-/* This is a bare-metal example of processing one frame of data through the AEC pipeline stage. This example
+/* This is an example of processing one frame of data through the AEC pipeline stage. This example
  * demonstrates distributing AEC functions across 2 cores in parallel using lib_xcore PAR functionality.
  * Task distribution across cores is done using the scheme defined in aec_task_distribution.h and
  * aec_task_distribution.c

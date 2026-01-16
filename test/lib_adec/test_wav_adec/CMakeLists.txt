@@ -13,7 +13,7 @@ target_link_libraries(fwk_voice_test_shared_test_wav_adec
     INTERFACE
         fwk_voice::adec
         fwk_voice::stage1
-        fwk_voice::example::fileutils)
+        fwk_voice::test::fileutils)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
     target_sources(fwk_voice_test_shared_test_wav_adec

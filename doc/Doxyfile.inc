@@ -4,7 +4,7 @@ PROJECT_NAME = Avona
 PROJECT_BRIEF = "Avona Reference Design"
 
 # AEC module
-INPUT += ../modules/lib_aec/api ../examples/bare-metal/shared_src/aec/
+INPUT += ../modules/lib_aec/api
 
 # NS module
 INPUT += ../modules/lib_ns/api

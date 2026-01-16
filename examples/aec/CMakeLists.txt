@@ -4,7 +4,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(THREADS_CONF 1 2)
 
 foreach (BUILD_CONFIG ${THREADS_CONF})
-    set(EXAMPLE_NAME fwk_voice_example_bare_metal_aec_${BUILD_CONFIG}th)
+    set(EXAMPLE_NAME fwk_voice_example_aec_${BUILD_CONFIG}th)
 
     add_executable(${EXAMPLE_NAME})
 

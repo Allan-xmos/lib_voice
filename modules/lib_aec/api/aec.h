@@ -20,8 +20,7 @@
  */
 
 /**
- * @defgroup aec_func     High Level API Functions
- * @defgroup aec_low_level_func   Low Level API Functions (STILL WIP)
+ * @defgroup aec_func     AEC API Functions
  */
 
 /**

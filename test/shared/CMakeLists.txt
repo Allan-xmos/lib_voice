@@ -43,3 +43,7 @@ add_library(fwk_voice::test::shared::unity ALIAS fwk_voice_test_shared_unity)
 
 #################
 add_subdirectory(legacy_compat)
+
+#################
+
+add_subdirectory(file_utils)

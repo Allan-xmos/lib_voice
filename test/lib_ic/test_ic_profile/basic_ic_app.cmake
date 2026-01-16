@@ -25,6 +25,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
         INTERFACE
             "-target=${XCORE_TARGET}"
             "-report"
-            "${CMAKE_CURRENT_SOURCE_DIR}/config.xscope")
+            "${CONFIG_XSCOPE_PATH}/config.xscope")
 endif()
 add_library(fwk_voice::example::test_wav_ic ALIAS fwk_voice_example_shared_ic_test_wav)

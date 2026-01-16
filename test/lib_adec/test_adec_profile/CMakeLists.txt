@@ -38,6 +38,6 @@ foreach( BUILD_CONFIG ${TEST_ADEC_PROFILE_BUILD_CONFIG} )
             PRIVATE
                 "-target=${XCORE_TARGET}"
                 "-report"
-                "${CMAKE_CURRENT_SOURCE_DIR}/config.xscope")
+                "${CONFIG_XSCOPE_PATH}/config.xscope")
     endif()
 endforeach()

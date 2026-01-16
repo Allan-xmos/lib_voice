@@ -46,13 +46,13 @@ Building
 
 To build the example, run the following from the root of the repository:
 
-.. code-block:: console 
+.. code-block:: console
 
    git submodule update --init --recursive
    pip install -r requirements.txt
    cmake -G "Unix Makefiles" -B build --toolchain xmos_cmake_toolchain/xs3a.cmake
-   xmake -C build fwk_voice_example_bare_metal_aec_1th
-   xmake -C build fwk_voice_example_bare_metal_aec_2th
+   xmake -C build fwk_voice_example_aec_1th
+   xmake -C build fwk_voice_example_aec_2th
 
 
 Running
@@ -62,8 +62,8 @@ To run the example, run the following from the root of the repository:
 
 .. code-block:: console
 
-   xrun --io build/examples/bare-metal/aec/bin/fwk_voice_example_bare_metal_aec_1th.xe
-   xrun --io build/examples/bare-metal/aec/bin/fwk_voice_example_bare_metal_aec_2th.xe
+   xrun --io build/examples/aec/bin/fwk_voice_example_aec_1th.xe
+   xrun --io build/examples/aec/bin/fwk_voice_example_aec_2th.xe
 
 Output
 ------
@@ -81,12 +81,12 @@ Building
 
 To build the example, run the following from the root of the repository:
 
-.. code-block:: console 
+.. code-block:: console
 
    git submodule update --init --recursive
    pip install -r requirements.txt
    cmake -G "Unix Makefiles" -B build --toolchain xmos_cmake_toolchain/xs3a.cmake
-   xmake -C build fwk_voice_example_bare_metal_vnr
+   xmake -C build fwk_voice_example_vnr
 
 Running
 -------
@@ -95,7 +95,7 @@ To run the example, run the following from the root of the repository:
 
 .. code-block:: console
 
-   xrun --io build/examples/bare-metal/vnr/bin/fwk_voice_example_bare_metal_vnr.xe
+   xrun --io build/examples/vnr/bin/fwk_voice_example_vnr.xe
 
 Output
 ------
@@ -153,7 +153,7 @@ In this manner, it tries to cancel the room noise. However, to avoid cancelling 
 Hence the VNR is called to calculate the voice to noise ratio estimation. The output of the VNR will allow IC to modulate the rate
 at which it adapts its coefficients. The output of the IC is copied to the second channel as well.
 
-The NS is a single channel API, so two instances of NS should be initialised for 2 channel processing. The NS is configured the same way 
+The NS is a single channel API, so two instances of NS should be initialised for 2 channel processing. The NS is configured the same way
 for both the channels. It will try to predict the background noise and cancel it from the frame before passing it to AGC.
 
 The AGC is configured for ASR engine suitable gain control on both the channels. The
@@ -165,13 +165,13 @@ Building
 
 To build the example, run the following from the root of the repository:
 
-.. code-block:: console 
+.. code-block:: console
 
    git submodule update --init --recursive
    pip install -r requirements.txt
    cmake -G "Unix Makefiles" -B build --toolchain xmos_cmake_toolchain/xs3a.cmake
-   xmake -C build fwk_voice_example_bare_metal_pipeline_std_arch
-   xmake -C build fwk_voice_example_bare_metal_pipeline_alt_arch
+   xmake -C build fwk_voice_example_pipeline_std_arch
+   xmake -C build fwk_voice_example_pipeline_alt_arch
 
 
 Running
@@ -181,8 +181,8 @@ To run the example, run the following from the root of the repository:
 
 .. code-block:: console
 
-   xrun --io build/examples/bare-metal/pipeline/bin/fwk_voice_example_bare_metal_pipeline_std_arch.xe
-   xrun --io build/examples/bare-metal/pipeline/bin/fwk_voice_example_bare_metal_pipeline_alt_arch.xe
+   xrun --io build/examples/pipeline/bin/fwk_voice_example_pipeline_std_arch.xe
+   xrun --io build/examples/pipeline/bin/fwk_voice_example_pipeline_alt_arch.xe
 
 Output
 ------

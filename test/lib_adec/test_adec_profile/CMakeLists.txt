@@ -4,7 +4,7 @@ if( NOT ${Python3_FOUND} )
   message(FATAL_ERROR "Python3 not found for running . ")
 endif()
 
-set( GEN_SCHEDULE_SCRIPT ${SHARED_SRC_PATH}/python/generate_task_distribution_scheme.py )
+set( GEN_SCHEDULE_SCRIPT ${TEST_SHARED_SRC_PATH}/python/generate_task_distribution_scheme.py )
 
 ## Build each config
 foreach( BUILD_CONFIG ${TEST_ADEC_PROFILE_BUILD_CONFIG} )
@@ -13,7 +13,7 @@ foreach( BUILD_CONFIG ${TEST_ADEC_PROFILE_BUILD_CONFIG} )
     message( STATUS "test_adec_profile ${CONFIG_STR}" )
 
     file( GLOB_RECURSE SOURCES_APP  ${CMAKE_CURRENT_SOURCE_DIR}/../test_wav_adec/src/*.c )
-    file( GLOB SOURCES_AEC_PROCESS_FRAME  ${SHARED_SRC_PATH}/aec/*.c )
+    file( GLOB SOURCES_AEC_PROCESS_FRAME  ${TEST_SHARED_SRC_PATH}/aec/*.c )
 
 #######
     add_executable(fwk_voice_test_adec_profile_${CONFIG_STR})

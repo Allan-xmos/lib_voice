@@ -7,7 +7,7 @@ target_sources(fwk_voice_example_shared_ic_test_wav
 target_link_libraries(fwk_voice_example_shared_ic_test_wav
     INTERFACE
         fwk_voice::ic
-        fwk_voice::example::fileutils
+        fwk_voice::test::fileutils
         )
 if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
     target_sources(fwk_voice_example_shared_ic_test_wav

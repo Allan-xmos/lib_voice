@@ -482,7 +482,7 @@ pipeline {
       post {
         always {
           // Examples artifacts
-          archiveArtifacts artifacts: "${REPO}/build/**/fwk_voice_example_bare_metal_*", fingerprint: true
+          archiveArtifacts artifacts: "${REPO}/build/**/fwk_voice_example_*", fingerprint: true
           // AEC aretfacts
           archiveArtifacts artifacts: "${REPO}/test/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
           // IC artefacts

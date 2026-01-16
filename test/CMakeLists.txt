@@ -1,5 +1,5 @@
 set( TEST_ONLY_DEPS_ROOT ${CMAKE_SOURCE_DIR}/.. ) #test only dependencies present in the sandbox as part of fwk_voice viewfile
-set( SHARED_SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/shared )
+set( TEST_SHARED_SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/shared )
 set( UNITY_PATH ${TEST_ONLY_DEPS_ROOT}/Unity )
 
 include(etc/build_options.cmake)

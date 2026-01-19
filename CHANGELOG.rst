@@ -8,6 +8,7 @@ UNRELEASED
   * ADDED: `lib_stage1` module
   * ADDED: `aec_process_frame()` to `lib_aec`
   * ADDED: `vnr_process_frame()` to `lib_vnr`
+  * ADDED: `ic_process_frame()` to `lib_ic`
   * ADDED: AEC memory pool structs (`aec_memory_pool_t` and `aec_shadow_filt_memory_pool_t`) to `lib_aec`
   * CHANGED: All bare metal examples have been moved from `examples/bare-metal` to `examples`
   * CHANGED: All examples have been rewritten to demonstrate the API only and any fileio support has been removed
@@ -16,6 +17,7 @@ UNRELEASED
   * CHANGED: Merged `fwk_voice::vnr::features` and `fwk_voice::vnr::inference` cmake targets into `fwk_voice::vnr`
   * CHANGED: Moved the VNR model into `modules/lib_vnr/python/model/trained_model.tflite`
   * CHANGED: Moved the VNR MEL generation script into `modules/lib_vnr/python/gen_mel_filters.py`
+  * CHANGED: `ic_calc_vnr_pred` now only calculates and outputs an input VNR prediction 
   * CHANGED: Updated AGC and Loss Control algorithms
   * CHANGED: Renamed all module top-level headers from `<module>_api.h` to `<module>.h`
   * REMOVED: IC example

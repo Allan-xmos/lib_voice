@@ -25,12 +25,16 @@ filesystem_support/target-xn*
 **/.python-version
 **/*.pyc
 **/__pycache__/*
+**/*egg-info
 
 # venv
 .venv
 
 # test cruft
 **/test_*.log
+*.bin
+examples/**/*.png
+test/**/*.png
 
 # macOS cruft
 .DS_Store

@@ -3,8 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 #include "aec_priv.h"
 #include "xmath/xmath.h"
 
@@ -12,16 +11,16 @@
 #define FLOAT_S32_ONE (float_s32_t){1073741824, -30}
 
 void aec_priv_main_init(
-        aec_state_t *state,
-        aec_shared_state_t *shared_state,
+        aec_filter_state_t *state,
+        aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_phases)
-{ 
-    memset(state, 0, sizeof(aec_state_t));
+{
+    memset(state, 0, sizeof(aec_filter_state_t));
     //reset shared_state. Only done in main_init()
-    memset(shared_state, 0, sizeof(aec_shared_state_t));
+    memset(shared_state, 0, sizeof(aec_shared_filter_state_t));
 
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
@@ -52,54 +51,54 @@ void aec_priv_main_init(
         bfp_s32_init(&state->shared_state->prev_x[ch], (int32_t*)available_mem_start, AEC_INPUT_EXP, (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE), 0); //input data is 1.31 so initialising with exp -31
         available_mem_start += ((AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
     }
-    
+
     //H_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
             bfp_complex_s32_init(&state->H_hat[ch][ph], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-            available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t)); 
+            available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
         }
     }
     //X_fifo
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         for(unsigned ph=0; ph<num_phases; ph++) {
             bfp_complex_s32_init(&state->shared_state->X_fifo[ch][ph], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-            available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t)); 
+            available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
         }
     }
     //initialise Error
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_complex_s32_init(&state->Error[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t)); 
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
     //Initiaise Y_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_complex_s32_init(&state->Y_hat[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t)); 
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
 
-    //X_energy 
+    //X_energy
     for(unsigned ch=0; ch<num_x_channels; ch++) {
-        bfp_s32_init(&state->X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0); 
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t)); 
+        bfp_s32_init(&state->X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
     //sigma_XX
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->shared_state->sigma_XX[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t)); 
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
     //inv_X_energy
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->inv_X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t)); 
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
 
     //overlap
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_s32_init(&state->overlap[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, 32, 0);
-        available_mem_start += (32*sizeof(int32_t)); 
+        available_mem_start += (32*sizeof(int32_t));
     }
-    uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool; 
+    uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -137,17 +136,17 @@ void aec_priv_main_init(
 }
 
 void aec_priv_shadow_init(
-        aec_state_t *state,
-        aec_shared_state_t *shared_state,
+        aec_filter_state_t *state,
+        aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_phases)
 {
     if(state == NULL) {
         return;
     }
-    memset(state, 0, sizeof(aec_state_t));
+    memset(state, 0, sizeof(aec_filter_state_t));
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
-    
+
     //initialise number of phases
     state->num_phases = num_phases;
 
@@ -159,43 +158,43 @@ void aec_priv_shadow_init(
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
             bfp_complex_s32_init(&state->H_hat[ch][ph], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-            available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t)); 
+            available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
         }
     }
     //initialise Error
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_complex_s32_init(&state->Error[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t)); 
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
     //Initiaise Y_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_complex_s32_init(&state->Y_hat[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t)); 
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
     //initialise T
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_complex_s32_init(&state->T[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t)); 
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
 
     //X_energy
     for(unsigned ch=0; ch<num_x_channels; ch++) {
-       bfp_s32_init(&state->X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0); 
-       available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t)); 
+       bfp_s32_init(&state->X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
+       available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
     //inv_X_energy
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->inv_X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t)); 
+        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
 
     //overlap
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_s32_init(&state->overlap[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, 32, 0);
-        available_mem_start += (32*sizeof(int32_t)); 
+        available_mem_start += (32*sizeof(int32_t));
     }
 
-    uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool; 
+    uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -269,10 +268,10 @@ void aec_priv_copy_filter(
 }
 
 void aec_priv_compare_filters(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state)
+        aec_filter_state_t *main_state,
+        aec_filter_state_t *shadow_state)
 {
-    aec_shared_state_t *shared_state = main_state->shared_state;
+    aec_shared_filter_state_t *shared_state = main_state->shared_state;
     shadow_filt_config_params_t *shadow_conf = &shared_state->config_params.shadow_filt_conf;
     shadow_filter_params_t *shadow_params = &shared_state->shadow_filter_params;
 
@@ -322,7 +321,7 @@ void aec_priv_compare_filters(
                 shadow_params->shadow_flag[ch] = EQUAL;
             }
         }
-        else if(float_s32_gte(shadow_state->overall_Error[ch], shadow_reset_thresh_x_Ov_Error) && 
+        else if(float_s32_gte(shadow_state->overall_Error[ch], shadow_reset_thresh_x_Ov_Error) &&
                 shadow_params->shadow_reset_count[ch] >= 0)
         {
             //# if shadow filter is worse than reference, reset provided that
@@ -346,7 +345,7 @@ void aec_priv_compare_filters(
             }
         }
         else {
-            //# shadow filter is comparable to main filter, 
+            //# shadow filter is comparable to main filter,
             //# or we're waiting for it to reconverge after zeroing
             shadow_params->shadow_better_count[ch] = 0;
             shadow_params->shadow_flag[ch] = EQUAL;
@@ -371,7 +370,7 @@ void aec_priv_compare_filters(
 }
 
 void aec_priv_calc_erle(
-    aec_state_t *main_state,
+    aec_filter_state_t *main_state,
     const int32_t *shadow_flag,
     coherence_mu_params_t *coh_mu_state,
     const coherence_mu_config_params_t *coh_conf)
@@ -389,10 +388,10 @@ void aec_priv_calc_erle(
             float_s32_t erle_thresh_val = float_s32_mul(coh_mu_state[ch].mov_erle, coh_conf->erle_thresh);
             if(float_s32_gt(coh_mu_state[ch].erle, erle_thresh_val)) {
                 if(float_s32_gt(coh_mu_state[ch].mov_erle, coh_mu_state[ch].erle)) {
-                    coh_mu_state[ch].mov_erle = float_s32_ema(coh_mu_state[ch].mov_erle, coh_mu_state[ch].erle, coh_conf->erle_alpha_fall); 
+                    coh_mu_state[ch].mov_erle = float_s32_ema(coh_mu_state[ch].mov_erle, coh_mu_state[ch].erle, coh_conf->erle_alpha_fall);
                 }
                 else {
-                    coh_mu_state[ch].mov_erle = float_s32_ema(coh_mu_state[ch].mov_erle, coh_mu_state[ch].erle, coh_conf->erle_alpha_rise); 
+                    coh_mu_state[ch].mov_erle = float_s32_ema(coh_mu_state[ch].mov_erle, coh_mu_state[ch].erle, coh_conf->erle_alpha_rise);
                 }
             }
         }
@@ -508,7 +507,7 @@ void aec_priv_calc_coherence_mu(
                             coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ZERO;
                         }
                     }
-                    
+
                 }
                 else{
                     //# slow coherence is low, filter has not converged.
@@ -534,7 +533,7 @@ void aec_priv_calc_coherence_mu(
         //np.max(ref_energy_log)-20 is done as (max_ref_energy_not_log*(pow(10, -20/10)))
         float_s32_t max_ref_energy_minus_20dB = float_s32_mul(max_ref_energy, coh_conf->thresh_minus20dB);
         for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-            //if not self.ref_flag or ref_energy_log[x_ch] < np.max(ref_energy_log)-20: 
+            //if not self.ref_flag or ref_energy_log[x_ch] < np.max(ref_energy_log)-20:
             //        self.mu[:, x_ch] = 0
             if(ref_active_flag == 0 ||
                 float_s32_gt(max_ref_energy_minus_20dB, sum_X_energy[x_ch])
@@ -570,7 +569,7 @@ void aec_priv_calc_coherence_mu(
     /*for(unsigned y_ch=0; y_ch<num_y_channels; y_ch++) {
       for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
         printf("mu[%d][%d] = %f\n",y_ch, x_ch, float_s32_to_double(coh_mu_state[y_ch].coh_mu[x_ch]));
-        
+
       }
     }*/
 }
@@ -597,7 +596,7 @@ void aec_priv_bfp_complex_s32_recalc_energy_one_bin(
         bfp_s32_add(&sum_out, &sum_out, &temp_out);
     }
     bfp_complex_s32_init(&temp_in, &X->data[recalc_bin], X->exp, 1, 1);
-    
+
     bfp_complex_s32_squared_mag(&temp_out, &temp_in);
     bfp_s32_add(&sum_out, &sum_out, &temp_out);
     bfp_s32_use_exponent(&sum_out, X_energy->exp);
@@ -653,7 +652,7 @@ void aec_priv_update_total_X_energy(
     //Scenario 1 (All bins 0 mant) fix
     if(max_X_energy->mant == 0) {
         X_energy->exp = AEC_ZEROVAL_EXP;
-    }    
+    }
 }
 
 void aec_priv_update_X_fifo_and_calc_sigmaXX(
@@ -679,7 +678,7 @@ void aec_priv_update_X_fifo_and_calc_sigmaXX(
     X_fifo[0].exp = X->exp;
     X_fifo[0].hr = X->hr;
     X_fifo[0].length = X->length;
-    
+
     //update sigma_XX
     int32_t DWORD_ALIGNED sigma_scratch_mem[AEC_PROC_FRAME_LENGTH/2 + 1];
     bfp_s32_t scratch;
@@ -747,7 +746,7 @@ void aec_priv_calc_coherence(
     float_s32_t t2 = float_s32_mul(one_minus_alpha, this_coh);
     coh_mu_state->coh = float_s32_add(t1, t2);
 
-    // only update slow moving average if reference is active and coherence 
+    // only update slow moving average if reference is active and coherence
     // is above threshold
     if (ref_flag == 1){
         if (float_s32_gt(coh_mu_state->coh, coh_conf->coh_thresh_abs)){
@@ -763,8 +762,8 @@ void aec_priv_calc_coherence(
 
 float_s32_t aec_priv_calc_corr_factor(bfp_s32_t *y, bfp_s32_t *yhat) {
     // abs(sigma_yyhat)/(sigma_abs(y)abs(yhat))
-    int32_t DWORD_ALIGNED y_abs_mem[AEC_FRAME_ADVANCE]; 
-    int32_t DWORD_ALIGNED yhat_abs_mem[AEC_FRAME_ADVANCE]; 
+    int32_t DWORD_ALIGNED y_abs_mem[AEC_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED yhat_abs_mem[AEC_FRAME_ADVANCE];
     bfp_s32_t y_abs, yhat_abs;
 
     bfp_s32_init(&y_abs, &y_abs_mem[0], 0, y->length, 0);
@@ -778,7 +777,7 @@ float_s32_t aec_priv_calc_corr_factor(bfp_s32_t *y, bfp_s32_t *yhat) {
     num = float_s64_to_float_s32(bfp_s32_dot(y, yhat));
     // sigma_abs(y)abs(yhat)
     denom = float_s64_to_float_s32(bfp_s32_dot(&y_abs, &yhat_abs));
-    
+
     // abs(sigma_yyhat)/sigma_abs(y)abs(yhat)
     if(denom.mant == 0) {
         /** denom 0 implies sigma_abs(y)abs(yhat) is 0 which in turn means y or y_hat is 0. y 0 means no near end, y_hat
@@ -800,10 +799,10 @@ static const uq1_31 WOLA_window_q31[AEC_UNUSED_TAPS_PER_PHASE*2] = {
 };
 
 static const uq1_31 WOLA_window_flpd_q31[AEC_UNUSED_TAPS_PER_PHASE*2] = {
-    2142621660, 2128079733, 2103989558, 2070569300, 2028121618, 1977030925, 1917759906, 1850845329, 
-    1776893182, 1696573187, 1610612735, 1519790297, 1424928374, 1326886052, 1226551217, 1124832516, 
-    1022651130, 920932429, 820597594, 722555272, 627693349, 536870911, 450910459, 370590464, 
-    296638317, 229723740, 170452721, 119362028, 76914346, 43494088, 19403913, 4861986, 
+    2142621660, 2128079733, 2103989558, 2070569300, 2028121618, 1977030925, 1917759906, 1850845329,
+    1776893182, 1696573187, 1610612735, 1519790297, 1424928374, 1326886052, 1226551217, 1124832516,
+    1022651130, 920932429, 820597594, 722555272, 627693349, 536870911, 450910459, 370590464,
+    296638317, 229723740, 170452721, 119362028, 76914346, 43494088, 19403913, 4861986,
 };
 
 void aec_priv_create_output(
@@ -832,7 +831,7 @@ void aec_priv_create_output(
     uint32_t min_hr = (chunks[0].hr < chunks[1].hr) ? chunks[0].hr : chunks[1].hr;
     min_hr = (min_hr < error->hr) ? min_hr : error->hr;
     error->hr = min_hr;
-    
+
     //copy error to output
     if(output->data != NULL) {
         memcpy(output->data, &error->data[AEC_FRAME_ADVANCE], AEC_FRAME_ADVANCE*sizeof(int32_t));
@@ -851,7 +850,7 @@ void aec_priv_create_output(
         bfp_s32_use_exponent(&chunks[1], AEC_INPUT_EXP); //bring the rest of output to 1.31 since output is same format as input
         output->hr = (chunks[0].hr < chunks[1].hr) ? chunks[0].hr : chunks[1].hr;
     }
-    
+
     //update overlap
     memcpy(overlap->data, &error->data[2*AEC_FRAME_ADVANCE], (AEC_UNUSED_TAPS_PER_PHASE*2)*sizeof(int32_t));
     overlap->hr = error->hr;
@@ -867,8 +866,8 @@ void aec_priv_calc_inverse(
 
 
 void bfp_new_add_scalar(
-    bfp_s32_t* a, 
-    const bfp_s32_t* b, 
+    bfp_s32_t* a,
+    const bfp_s32_t* b,
     const float_s32_t c)
 {
 #if (BFP_DEBUG_CHECK_LENGTHS)
@@ -878,14 +877,14 @@ void bfp_new_add_scalar(
 
     right_shift_t b_shr, c_shr;
 
-    vect_s32_add_scalar_prepare(&a->exp, &b_shr, &c_shr, b->exp, c.exp, 
+    vect_s32_add_scalar_prepare(&a->exp, &b_shr, &c_shr, b->exp, c.exp,
                                     b->hr, HR_S32(c.mant));
 
     int32_t cc = 0;
     if (c_shr < 32)
         cc = (c_shr >= 0)? (c.mant >> c_shr) : (c.mant << -c_shr);
 
-    a->hr = vect_s32_add_scalar(a->data, b->data, cc, b->length, 
+    a->hr = vect_s32_add_scalar(a->data, b->data, cc, b->length,
                                     b_shr);
 }
 
@@ -897,7 +896,7 @@ void aec_priv_calc_inv_X_energy_denom(
         float_s32_t delta,
         unsigned is_shadow,
         unsigned normdenom_apply_factor_of_2) {
-    
+
     int gamma_log2 = conf->aec_core_conf.gamma_log2;
     if(!is_shadow) { //frequency smoothing
         int32_t norm_denom_buf[AEC_PROC_FRAME_LENGTH/2 + 1];
@@ -907,7 +906,7 @@ void aec_priv_calc_inv_X_energy_denom(
         bfp_s32_t sigma_times_gamma;
         bfp_s32_init(&sigma_times_gamma, sigma_XX->data, sigma_XX->exp+gamma_log2, sigma_XX->length, 0);
         sigma_times_gamma.hr = sigma_XX->hr;
-        //TODO 3610 AEC calculates norm_denom as normDenom = 2*self.X_energy[:,k] + self.sigma_xx*gamma 
+        //TODO 3610 AEC calculates norm_denom as normDenom = 2*self.X_energy[:,k] + self.sigma_xx*gamma
         //instead of normDenom = self.X_energy[:,k] + self.sigma_xx*gamma and ADEC tests pass only with the former.
         bfp_s32_t temp = *X_energy;
         if(normdenom_apply_factor_of_2) {
@@ -915,7 +914,7 @@ void aec_priv_calc_inv_X_energy_denom(
         }
         bfp_s32_add(&norm_denom, &sigma_times_gamma, &temp);
 
-        //self.taps = [0.5, 1, 1, 1, 0.5] 
+        //self.taps = [0.5, 1, 1, 1, 0.5]
         uq2_30 taps_q30[5] = {0x20000000, 0x40000000, 0x40000000, 0x40000000, 0x20000000};
         for(int i=0; i<5; i++) {
             taps_q30[i] = taps_q30[i] >> 2;//This is equivalent to a divide by 4
@@ -1043,7 +1042,7 @@ void aec_priv_init_config_params(
     shadow_cfg->shadow_reset_timer = 20; //# number of frames between zeroing resets
     shadow_cfg->shadow_mu = f64_to_float_s32(1.0);
 
-    //coherence_mu_config_params_t 
+    //coherence_mu_config_params_t
     coherence_mu_config_params_t *coh_cfg = &config_params->coh_mu_conf;
     coh_cfg->coh_alpha = f64_to_float_s32(0.0);
     coh_cfg->coh_slow_alpha = f64_to_float_s32(0.99);
@@ -1064,7 +1063,7 @@ void aec_priv_init_config_params(
 }
 
 void aec_priv_calc_delta(
-        float_s32_t *delta, 
+        float_s32_t *delta,
         const float_s32_t *max_X_energy,
         aec_config_params_t *conf,
         float_s32_t scale,

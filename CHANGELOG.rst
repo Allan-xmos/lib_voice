@@ -1,9 +1,22 @@
 XMOS Voice Framework Change Log
 ===============================
 
-0.9.0
------
+UNRELEASED
+----------
+
+  * ADDED: `xcommon_cmake` support for `lib_vnr`
+  * ADDED: `xcommon_cmake` support for `lib_agc`
+  * ADDED: `xcommon_cmake` support for `lib_ns`
+  * ADDED: `aec_process_frame()` to `lib_aec`
+  * ADDED: AEC memory pool structs (`aec_memory_pool_t` and `aec_shadow_filt_memory_pool_t`) to `lib_aec`
+  * CHANGED: Merged `fwk_voice::vnr::features` and `fwk_voice::vnr::inference` cmake targets into `fwk_voice::vnr`
+  * CHANGED: Moved the VNR model into `modules/lib_vnr/python/model/trained_model.tflite`
+  * CHANGED: Moved the VNR MEL generation script into `modules/lib_vnr/python/gen_mel_filters.py`
   * CHANGED: Updated AGC and Loss Control algorithms
+  * CHANGED: Renamed `aec_api.h` to `aec.h`
+  * REMOVED: IC example
+  * REMOVED: AGC example
+
 
 0.8.1
 -----

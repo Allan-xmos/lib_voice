@@ -1,5 +1,6 @@
-project: fwk_voice
-title: XCORE Voice Framework
+lib_name: fwk_voice
+project: '{{lib_name}}'
+title: '{{lib_name}}: Voice processing framework'
 version: 0.9.0
 
 documentation:
@@ -9,9 +10,6 @@ documentation:
     fwk_voice:
       doxyfile_path: doc/Doxyfile.inc
   pdfs:
-    doc/getting_started/index:
-      pdf_title: "{{title}} - Getting Started"
-      pdf_filename: "{{project}}_getting_started_v{{version}}"
-    doc/user_guide/index:
-      pdf_title: "{{title}} - User Guide"
-      pdf_filename: "{{project}}_user_guide_v{{version}}"
+    doc/index.rst:
+      pdf_title: "{{title}}"
+      pdf_filename: "{{lib_name}}_v{{version}}"

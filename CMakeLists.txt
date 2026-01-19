@@ -22,6 +22,19 @@ if(PROJECT_IS_TOP_LEVEL)
 
     message( STATUS "System name ${CMAKE_SYSTEM_NAME}" )
 
+    ## Fetch lib_xcore_math
+    set(XCORE_MATH_PATH ${CMAKE_BINARY_DIR}/fwk_voice_deps)
+    include(FetchContent)
+    FetchContent_Declare(
+        xcore_math
+        GIT_REPOSITORY https://github.com/xmos/lib_xcore_math.git
+        GIT_TAG        develop
+        GIT_SHALLOW    FALSE
+        SOURCE_DIR     ${XCORE_MATH_PATH}/lib_xcore_math
+    )
+    FetchContent_Populate(xcore_math)
+    add_subdirectory(${XCORE_MATH_PATH}/lib_xcore_math/lib_xcore_math ${XCORE_MATH_PATH}/build)
+
     ## Platform-specific C/C++ compile flags
     if(CMAKE_SYSTEM_NAME STREQUAL XCORE_XS3A)
         set(XCORE_TARGET "XCORE-AI-EXPLORER")
@@ -32,5 +45,6 @@ if(PROJECT_IS_TOP_LEVEL)
     add_compile_options( ${COMPILE_FLAGS} )
     add_subdirectory( examples )
 
+    set( CONFIG_XSCOPE_PATH ${CMAKE_SOURCE_DIR}/test/shared/file_utils)
     add_subdirectory( test )
 endif()

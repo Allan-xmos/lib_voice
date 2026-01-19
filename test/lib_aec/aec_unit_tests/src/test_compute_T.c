@@ -3,11 +3,10 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define NUM_BINS ((AEC_PROC_FRAME_LENGTH/2) + 1)
- 
+
 void aec_calc_T_fp(
         complex_double_t (*T)[AEC_MAX_X_CHANNELS][NUM_BINS],
         complex_double_t (*Error)[NUM_BINS],
@@ -30,37 +29,34 @@ void test_calc_T() {
     unsigned num_y_channels = 2;
     unsigned num_x_channels = 2;
     unsigned main_filter_phases = AEC_MAIN_FILTER_PHASES - 1;
-    unsigned shadow_filter_phases = AEC_MAIN_FILTER_PHASES - 1;
+    unsigned shadow_filter_phases = AEC_SHADOW_FILTER_PHASES - 1;
 
-    aec_memory_pool_t aec_memory_pool;
-    aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
-    aec_state_t state, shadow_state;
-    aec_shared_state_t aec_shared_state;
-    aec_init(&state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_state_t aec_state;
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     //initialise float arrays
     complex_double_t Error_fp[AEC_MAX_Y_CHANNELS][NUM_BINS];
     double inv_X_energy_fp[AEC_MAX_X_CHANNELS][NUM_BINS];
     double mu_fp[AEC_MAX_Y_CHANNELS][AEC_MAX_X_CHANNELS];
     complex_double_t T_fp[AEC_MAX_Y_CHANNELS][AEC_MAX_X_CHANNELS][NUM_BINS];
-    
+
     unsigned seed = 45;
     double max_diff_percentage = 0.0;
     for(int iter=0; iter<(1<<11)/F; iter++) {
         int32_t new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
-        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
-        aec_state_t *state_ptr;
+        aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
+        aec_filter_state_t *state_ptr;
         int is_main_filter = pseudo_rand_uint32(&seed) % 2;
         if(is_main_filter) {
-            state_ptr = &state;
+            state_ptr = &aec_state.main_state;
         }
         else {
-            state_ptr = &shadow_state;
+            state_ptr = &aec_state.shadow_state;
         }
 
         for(int ch=0; ch<num_y_channels; ch++) {
             state_ptr->Error[ch].exp = pseudo_rand_int(&seed, -3, 4) - 31;
-            state_ptr->Error[ch].hr = pseudo_rand_uint32(&seed) % 3;                
+            state_ptr->Error[ch].hr = pseudo_rand_uint32(&seed) % 3;
             for(int i=0; i<NUM_BINS; i++) {
                 state_ptr->Error[ch].data[i].re = pseudo_rand_int32(&seed) >> state_ptr->Error[ch].hr;
                 state_ptr->Error[ch].data[i].im = pseudo_rand_int32(&seed) >> state_ptr->Error[ch].hr;
@@ -82,7 +78,7 @@ void test_calc_T() {
         for(int ych=0; ych<num_y_channels; ych++) {
             for(int xch=0; xch<num_y_channels; xch++) {
                 state_ptr->mu[ych][xch].exp = pseudo_rand_int(&seed, -3, 4) - 31;
-                int hr = pseudo_rand_uint32(&seed) % 3;                
+                int hr = pseudo_rand_uint32(&seed) % 3;
                 state_ptr->mu[ych][xch].mant = pseudo_rand_int32(&seed) >> hr;
 
                 mu_fp[ych][xch] = ldexp(state_ptr->mu[ych][xch].mant, state_ptr->mu[ych][xch].exp);
@@ -101,7 +97,7 @@ void test_calc_T() {
         for(int ych=0; ych<num_y_channels; ych++) {
             for(int xch=0; xch<num_x_channels; xch++) {
                 aec_calc_T(state_ptr, ych, xch);
-            } 
+            }
             //Since T memory will be overwritten when computing for next y-channel, do error checking now
             for(int xch=0; xch<num_x_channels; xch++) {
                 for(int i=0; i<NUM_BINS; i++) {

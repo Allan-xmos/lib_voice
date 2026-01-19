@@ -1,12 +1,25 @@
 
 add_library(fwk_voice_test_shared_test_utils INTERFACE)
 
-file( GLOB_RECURSE SHARED_SOURCES *.c)
-target_sources(fwk_voice_test_shared_test_utils INTERFACE ${SHARED_SOURCES})
+target_sources(fwk_voice_test_shared_test_utils
+    INTERFACE
+        pseudo_rand/pseudo_rand.c
+        testing/testing_misc.c
+        testing/floating_fft.c)
 
 target_include_directories(fwk_voice_test_shared_test_utils INTERFACE pseudo_rand testing)
 
-add_library(fwk_voice::test::shared::test_utils ALIAS fwk_voice_test_shared_test_utils) 
+add_library(fwk_voice::test::shared::test_utils ALIAS fwk_voice_test_shared_test_utils)
+
+#################
+
+add_library(fwk_voice_test_shared_profile_xcore INTERFACE)
+
+target_sources(fwk_voice_test_shared_profile_xcore INTERFACE profile/profile.c)
+
+target_include_directories(fwk_voice_test_shared_profile_xcore INTERFACE profile)
+
+add_library(fwk_voice::test::shared::profile_xcore ALIAS fwk_voice_test_shared_profile_xcore)
 
 #################
 
@@ -18,7 +31,7 @@ target_sources(fwk_voice_test_shared_unity INTERFACE ${UNITY_SOURCES})
 
 target_include_directories(fwk_voice_test_shared_unity
     INTERFACE
-        ${UNITY_PATH}/src 
+        ${UNITY_PATH}/src
         ${UNITY_PATH}/extras/fixture/src
         ${UNITY_PATH}/extras/memory/src)
 
@@ -30,3 +43,7 @@ add_library(fwk_voice::test::shared::unity ALIAS fwk_voice_test_shared_unity)
 
 #################
 add_subdirectory(legacy_compat)
+
+#################
+
+add_subdirectory(file_utils)

@@ -1,7 +1,7 @@
 #include <string.h>
 #include <math.h>
 #include <limits.h>
-#include "adec_api.h"
+#include "adec.h"
 #include "adec_priv.h"
 #include "aec_state.h" // For shadow_state_e enum
 
@@ -11,7 +11,7 @@ void adec_init(adec_state_t *adec_state, adec_config_t *config){
   adec_state->adec_config.force_de_cycle_trigger = config->force_de_cycle_trigger;
   adec_state->agm_q24 = ADEC_AGM_HALF;
 
-  //Using bits log2(erle) with q7_28 gives us up to 10log(2^127) = 382dB ERLE measurement range.. 
+  //Using bits log2(erle) with q7_28 gives us up to 10log(2^127) = 382dB ERLE measurement range..
   adec_state->erle_bad_bits_q24 = FLOAT_TO_Q24(ADEC_ERLE_BAD_BITS);
   adec_state->erle_good_bits_q24 = FLOAT_TO_Q24(ADEC_ERLE_GOOD_BITS);
   adec_state->peak_phase_energy_trend_gain_q24 = FLOAT_TO_Q24(ADEC_PEAK_PHASE_ENERGY_TREND_GAIN);
@@ -21,7 +21,7 @@ void adec_init(adec_state_t *adec_state, adec_config_t *config){
   adec_state->max_peak_to_average_ratio_since_reset = f64_to_float_s32(1.0);
 
   float_s32_t v = ADEC_PEAK_TO_AVERAGE_GOOD_AEC;
-  adec_state->aec_peak_to_average_good_aec_threshold = v; 
+  adec_state->aec_peak_to_average_good_aec_threshold = v;
 
   adec_state->mode = ADEC_NORMAL_AEC_MODE;
   adec_state->gated_milliseconds_since_mode_change = 0;
@@ -53,7 +53,7 @@ static void start_de_cycle(adec_state_t *state, adec_output_t *adec_output) {
 
 void adec_process_frame(
     adec_state_t *state,
-    adec_output_t *adec_output, 
+    adec_output_t *adec_output,
     const adec_input_t *adec_in
 ){
   adec_output->reset_aec_flag = 0;
@@ -64,15 +64,15 @@ void adec_process_frame(
 
   const float_s32_t aec_peak_to_average_good_de_threshold       = ADEC_PEAK_TO_AVERAGE_GOOD_DE;
   const float_s32_t aec_peak_to_average_ruined_aec_threshold    = ADEC_PEAK_TO_AVERAGE_RUINED_AEC;
- 
+
   //The XC AEC, despite being reset, sometimes starts up with some odd phase energies which make it
   //appear there is a strong pk:ave before it converges. These erode as it converges and a genuine peak
-  //forms later. So we have logic to ensure that the pk:ave is not descending at first 
+  //forms later. So we have logic to ensure that the pk:ave is not descending at first
   //before rising back up. We apply a some filtering (moving average) to reduce noise and init to a large value (1000),
   //so we are sure the numbers drop at first.
   //Previously we used a total phase energy threshold but this was difficult to set (depends on relative far/near levels).
   //Following that a hysteresis was used but that sometimes didn't trigger, so now we look for a +ve trend.
-  //This all takes 892 cyc in the sim which could be 1427 cyc in device (62.5MHz) so about 14us  
+  //This all takes 892 cyc in the sim which could be 1427 cyc in device (62.5MHz) so about 14us
 
   // Shift them along
   for(int i = ADEC_PEAK_TO_AVERAGE_HISTORY_DEPTH; i > 0; i--){
@@ -84,7 +84,7 @@ void adec_process_frame(
   for(int i = 0; i < ADEC_PEAK_TO_AVERAGE_HISTORY_DEPTH; i++){
     last_n_total = float_s32_add(last_n_total, state->peak_to_average_ratio_history[i]);
   }
- 
+
   float_s32_t penultimate_n_total = f64_to_float_s32(0.0);
   for(int i = 1; i < ADEC_PEAK_TO_AVERAGE_HISTORY_DEPTH + 1; i++){
     penultimate_n_total = float_s32_add(penultimate_n_total, state->peak_to_average_ratio_history[i]);
@@ -105,7 +105,7 @@ void adec_process_frame(
   }
 
   //Log the biggest peak:ave ratio since AEC reset - gives inidication of convergence
-  if (float_s32_gte(adec_in->from_de.peak_to_average_ratio, state->max_peak_to_average_ratio_since_reset) 
+  if (float_s32_gte(adec_in->from_de.peak_to_average_ratio, state->max_peak_to_average_ratio_since_reset)
     && (state->peak_to_average_ratio_valid_flag == 1)){
     state->max_peak_to_average_ratio_since_reset = adec_in->from_de.peak_to_average_ratio;
   }
@@ -147,7 +147,7 @@ void adec_process_frame(
         if (adec_in->from_aec.shadow_flag_ch0 == COPY) {
           state->sf_copy_flag = 1;
         }
-        
+
         //In normal AEC mode, check to see if we have converged but have left significant tail on the table
         //But only change mode if the delay change is big enough - else reset of AEC not worth it
         if ((state->gated_milliseconds_since_mode_change > ADEC_AEC_DELAY_EST_TIME_MS) &&
@@ -159,7 +159,7 @@ void adec_process_frame(
           //We have a new estimate RELATIVE to current delay settings
           state->last_measured_delay += adec_in->from_de.measured_delay_samples;
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
-          printf("AEC MODE - Measured delay estimate: %ld (raw %ld)\n", state->last_measured_delay, adec_in->from_de.delay_estimate); //+ve means MIC delay
+          printf("AEC MODE - Measured delay estimate: %ld (raw %ld)\n", state->last_measured_delay, adec_in->from_de.measured_delay_samples); //+ve means MIC delay
 #endif
           set_delay_params_from_signed_delay(state->last_measured_delay, &adec_output->requested_mic_delay_samples, &adec_output->requested_delay_samples_debug);
           adec_output->reset_aec_flag = 1;
@@ -204,7 +204,7 @@ void adec_process_frame(
           if ((state->agm_q24 < 0 || watchdog_triggered) &&
                (state->shadow_flag_counter >= ADEC_SHADOW_FLAG_COUNTER_LIMIT ||
                 state->convergence_counter >= ADEC_CONVERGENCE_COUNTER_LIMIT)) {
-		  
+
             if (!state->adec_config.bypass) {
                 // Trigger a DE cycle
                 start_de_cycle(state, adec_output);
@@ -221,14 +221,14 @@ void adec_process_frame(
 
           //We have come from DE mode with a new estimate and need to reset AEC + adjust delay
           //so switch back to AEC normal mode + set delay from fresh
-          state->last_measured_delay = adec_in->from_de.measured_delay_samples - MAX_DELAY_SAMPLES;
+          state->last_measured_delay = adec_in->from_de.measured_delay_samples - ADEC_DE_DELAY_SAMPS;
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
-          printf("DE MODE - Measured delay estimate: %ld (raw %ld)\n", state->last_measured_delay, adec_in->from_de.delay_estimate); //+ve means MIC delay
+          printf("DE MODE - Measured delay estimate: %ld (raw %ld)\n", state->last_measured_delay, adec_in->from_de.measured_delay_samples); //+ve means MIC delay
 #endif
           set_delay_params_from_signed_delay(state->last_measured_delay, &adec_output->requested_mic_delay_samples, &adec_output->requested_delay_samples_debug);
           state->mode = ADEC_NORMAL_AEC_MODE;
           adec_output->delay_estimator_enabled_flag = 0;
-           
+
           adec_output->delay_change_request_flag = 1;
         }
       break;

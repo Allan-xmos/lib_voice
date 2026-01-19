@@ -3,35 +3,34 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 #include "aec_priv.h"
 
 void aec_init(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state,
-        aec_shared_state_t *shared_state,
-        uint8_t *main_mem_pool,
-        uint8_t *shadow_mem_pool,
+        aec_state_t *aec_state,
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_main_filter_phases,
-        unsigned num_shadow_filter_phases) {
-
-    aec_priv_main_init(main_state, shared_state, main_mem_pool, num_y_channels, num_x_channels, num_main_filter_phases);
-    aec_priv_shadow_init(shadow_state, shared_state, shadow_mem_pool, num_shadow_filter_phases);
+        unsigned num_shadow_filter_phases,
+        const aec_task_distribution_t *tdist
+    )
+{
+    assert(tdist);
+    aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, (uint8_t*)&aec_state->main_mem_pool, num_y_channels, num_x_channels, num_main_filter_phases);
+    aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state, (uint8_t*)&aec_state->shadow_mem_pool, num_shadow_filter_phases);
+    aec_state->shared_state.tdist = tdist;
 }
 
 void aec_frame_init(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state,
+        aec_filter_state_t *main_state,
+        aec_filter_state_t *shadow_state,
         const int32_t (*y_data)[AEC_FRAME_ADVANCE],
         const int32_t (*x_data)[AEC_FRAME_ADVANCE])
 {
     unsigned num_y_channels = main_state->shared_state->num_y_channels;
     unsigned num_x_channels = main_state->shared_state->num_x_channels;
 
-    // y frame 
+    // y frame
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         /* Create 512 samples frame */
         // Copy previous y samples
@@ -53,7 +52,7 @@ void aec_frame_init(
         // Update exp just in case
         main_state->shared_state->prev_y[ch].exp = AEC_INPUT_EXP;
     }
-    // x frame 
+    // x frame
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         /* Create 512 samples frame */
         // Copy previous x samples
@@ -135,10 +134,10 @@ void aec_forward_fft(
 {
     //Input bfp_s32_t structure will get overwritten since FFT is computed in-place. Keep a copy of input->length and assign it back after fft call.
     //This is done to avoid having to call bfp_s32_init() on the input every frame
-    uint32_t len = input->length; 
+    uint32_t len = input->length;
     bfp_complex_s32_t *temp = bfp_fft_forward_mono(input);
     temp->hr = bfp_complex_s32_headroom(temp); // TODO Workaround till https://github.com/xmos/lib_xcore_math/issues/96 is fixed
-    
+
     memcpy(output, temp, sizeof(bfp_complex_s32_t));
     bfp_fft_unpack_mono(output);
     input->length = len;
@@ -147,14 +146,14 @@ void aec_forward_fft(
 //per x-channel
 //API: calculate X-energy (per x-channel)
 void aec_calc_X_fifo_energy(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch,
-        unsigned recalc_bin) 
+        unsigned recalc_bin)
 {
     if((state == NULL) || (!state->num_phases)) {
         return;
     }
- 
+
     bfp_s32_t *X_energy_ptr = &state->X_energy[ch];
     bfp_complex_s32_t *X_ptr = &state->shared_state->X[ch];
     float_s32_t *max_X_energy_ptr = &state->max_X_energy[ch];
@@ -162,7 +161,7 @@ void aec_calc_X_fifo_energy(
 }
 //per x-channel
 void aec_update_X_fifo_and_calc_sigmaXX(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch)
 {
     bfp_s32_t *sigma_XX_ptr = &state->shared_state->sigma_XX[ch];
@@ -174,7 +173,7 @@ void aec_update_X_fifo_and_calc_sigmaXX(
 
 //per y-channel
 void aec_calc_Error_and_Y_hat(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch)
 {
     if(state == NULL) {
@@ -202,7 +201,7 @@ void aec_inverse_fft(
 }
 
 float_s32_t aec_calc_corr_factor(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch) {
     // We need yhat[240:480-32] and y[240:480-32]
     int frame_window = 32;
@@ -219,7 +218,7 @@ float_s32_t aec_calc_corr_factor(
 }
 
 void aec_calc_coherence(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch)
 {
     if(state->shared_state->config_params.aec_core_conf.bypass) {
@@ -239,7 +238,7 @@ void aec_calc_coherence(
 }
 
 void aec_calc_output(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         int32_t (*output)[AEC_FRAME_ADVANCE],
         unsigned ch)
 {
@@ -265,7 +264,9 @@ void aec_calc_freq_domain_energy(
         const bfp_complex_s32_t *input)
 {
     int32_t DWORD_ALIGNED scratch_mem[AEC_PROC_FRAME_LENGTH/2 + 1];
+#if (BFP_DEBUG_CHECK_LENGTHS)
     assert(input->length <= AEC_PROC_FRAME_LENGTH/2 + 1);
+#endif
     bfp_s32_t scratch;
     bfp_s32_init(&scratch, scratch_mem, 0, input->length, 0);
     bfp_complex_s32_squared_mag(&scratch, input);
@@ -275,7 +276,7 @@ void aec_calc_freq_domain_energy(
 }
 
 void aec_calc_normalisation_spectrum(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned ch,
         unsigned is_shadow)
 {
@@ -291,7 +292,7 @@ void aec_calc_normalisation_spectrum(
 }
 
 void aec_filter_adapt(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned y_ch)
 {
     if(state == NULL) {
@@ -306,7 +307,7 @@ void aec_filter_adapt(
 }
 
 void aec_calc_T(
-        aec_state_t *state,
+        aec_filter_state_t *state,
         unsigned y_ch,
         unsigned x_ch)
 {
@@ -321,8 +322,8 @@ void aec_calc_T(
 }
 
 void aec_compare_filters_and_calc_mu(
-        aec_state_t *main_state,
-        aec_state_t *shadow_state)
+        aec_filter_state_t *main_state,
+        aec_filter_state_t *shadow_state)
 {
     if(main_state->shared_state->config_params.aec_core_conf.bypass) {
         return;
@@ -338,14 +339,14 @@ void aec_compare_filters_and_calc_mu(
     aec_priv_calc_coherence_mu(coh_mu_state_ptr, coh_mu_conf_ptr, main_state->shared_state->sum_X_energy,
             main_state->shared_state->shadow_filter_params.shadow_flag, main_state->shared_state->num_y_channels, main_state->shared_state->num_x_channels,
             main_state->shared_state->ref_active_flag);
-    
+
     //calculate delta. Done here instead of aec_l2_calc_inv_X_energy_denom() since max_X_energy across all x-channels is needed in delta computation.
     //aec_l2_calc_inv_X_energy_denom() is called per x channel
     aec_priv_calc_delta(&main_state->delta, &main_state->max_X_energy[0], &main_state->shared_state->config_params, main_state->delta_scale, main_state->shared_state->num_x_channels);
     if(shadow_state != NULL) {
         aec_priv_calc_delta(&shadow_state->delta, &shadow_state->max_X_energy[0], &shadow_state->shared_state->config_params, shadow_state->delta_scale, shadow_state->shared_state->num_x_channels);
     }
-    
+
     //Update main and shadow filter mu
     for(unsigned y_ch=0; y_ch<main_state->shared_state->num_y_channels; y_ch++) {
         for(unsigned x_ch=0; x_ch<main_state->shared_state->num_x_channels; x_ch++) {
@@ -358,7 +359,7 @@ void aec_compare_filters_and_calc_mu(
 }
 
 void aec_update_X_fifo_1d(
-        aec_state_t *state)
+        aec_filter_state_t *state)
 {
     if(state == NULL) {
         return;
@@ -372,8 +373,10 @@ void aec_update_X_fifo_1d(
     }
 }
 
-void aec_reset_state(aec_state_t *main_state, aec_state_t *shadow_state){
-    aec_shared_state_t *shared_state = main_state->shared_state; 
+void aec_reset_state(aec_state_t *aec_state){
+    aec_filter_state_t *main_state = &aec_state->main_state;
+    aec_filter_state_t *shadow_state = &aec_state->shadow_state;
+    aec_shared_filter_state_t *shared_state = main_state->shared_state;
     uint32_t y_channels = shared_state->num_y_channels;
     uint32_t x_channels = shared_state->num_x_channels;
     uint32_t main_phases = main_state->num_phases;
@@ -422,7 +425,7 @@ uint32_t aec_detect_input_activity(const int32_t (*input_data)[AEC_FRAME_ADVANCE
         float_s32_t max = bfp_s32_max(&abs);
         if(float_s32_gt(max, active_threshold)) {
             return 1;
-        }  
+        }
     }
     return 0;
 }

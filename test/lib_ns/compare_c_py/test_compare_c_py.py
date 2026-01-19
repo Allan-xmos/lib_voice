@@ -1,8 +1,6 @@
 # Copyright 2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-from __future__ import print_function
-from builtins import zip
 import pytest
 from compare_c_py import get_attenuation_c_py
 import numpy as np

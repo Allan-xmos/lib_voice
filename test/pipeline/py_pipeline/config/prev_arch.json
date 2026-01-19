@@ -27,7 +27,8 @@
         "shadow_delta_exp": -3,
         "leakage": 1.0,
         "freq_smooth": true,
-        "low_ref_threshold": -60
+        "low_ref_threshold": -60,
+        "low_ref_hold_s": 3
     },
 "ic":
     {
@@ -54,7 +55,7 @@
         "y_channel_count": 2,
         "mic_shift": 0,
         "mic_saturate": 0,
-        "use_mcra": true, 
+        "use_mcra": true,
         "enable_aes": false,
         "enable_ns": true
     },

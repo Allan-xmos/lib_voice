@@ -25,7 +25,7 @@ class pipeline(object):
         self.disable_agc = disable_agc 
         return
 
-    def process_frame(self, new_frame, vnr_input_override=None, mu_override=None):
+    def process_frame(self, new_frame, mu_override=None):
 
         # AEC
         error_aec, self.pp_metadata = self.aec_obj.process_frame(new_frame, self.pp_metadata, self.disable_aec)
@@ -42,9 +42,7 @@ class pipeline(object):
             if self.ic_obj.vnr_obj != None:
                 py_vnr_in, py_vnr_out = self.ic_obj.calc_vnr_pred(Error)
                 #self.pp_metadata["ic"]["vnr_pred"] = py_vnr_out
-                self.pp_metadata = self.ic_obj.write_metadata("ic", self.pp_metadata, {"vnr_pred" : py_vnr_out})
-                if vnr_input_override != None:
-                    self.ic_obj.input_vnr_pred = vnr_input_override
+                self.pp_metadata = self.ic_obj.write_metadata("ic", self.pp_metadata, {"vnr_pred" : py_vnr_in})
                 self.vnr_pred_log = np.append(self.vnr_pred_log, self.ic_obj.input_vnr_pred)
 
             mu, control_flag = self.ic_obj.mu_control_system()

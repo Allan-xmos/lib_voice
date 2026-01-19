@@ -132,7 +132,7 @@ pipeline {
             sh "git clone --depth 1 --branch v2.5.2 git@github.com:ThrowTheSwitch/Unity.git"
             sh "git clone --depth 1 --branch v3.0.0 git@github0.xmos.com:xmos-int/xtagctl.git"
             sh "git clone --depth 1 --branch develop git@github.com:xmos/audio_test_tools.git"
-            sh "git clone --depth 1 --branch main git@github.com:xmos/py_voice.git"
+            sh "git clone --depth 1 --branch develop git@github.com:xmos/py_voice.git"
             sh "git clone --depth 1 --branch main git@github.com:xmos/amazon_wwe.git"
             sh "git clone --depth 1 --branch master git@github.com:xmos/sensory_sdk.git"
 
@@ -167,11 +167,32 @@ pipeline {
                     sh "python build_ic_frame_proc.py"
                   }
                   // We do this again on the NUCs for verification later, but this just checks we have no build error
-                  dir("test/lib_vnr/py_c_feature_compare") {
-                    sh "python build_vnr_feature_extraction.py"
+                  dir("test/lib_vnr/test_vnr_cffi") {
+                    sh "python build_vnr_cffi.py"
                   }
                   dir("test/stage_b") {
                     sh "python build_c_code.py"
+                  }
+                  // test VNR xcommon_cmake build
+                  dir("test/lib_vnr/test_vnr_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
+                  // test NS xcommon_cmake build
+                  dir("test/lib_ns/test_ns_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
+                  // test AGC xcommon_cmake build
+                  dir("test/lib_agc/test_agc_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
+                  dir("test/lib_aec/test_aec_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
+                  dir("test/lib_ic/test_ic_xccm") {
+                    xcoreBuild(archiveBins: false)
+                  }
+                  dir("test/lib_adec/test_stage1_xccm") {
+                    xcoreBuild(archiveBins: false)
                   }
                   unstash 'cmake_build_xcore'
                 }
@@ -191,54 +212,6 @@ pipeline {
             }
           }
         }
-        stage('Examples') {
-          steps {
-            catchError(stageResult: 'FAILURE', catchInterruptions: false){
-              dir("${REPO}") {
-                withTools(params.TOOLS_VERSION) {
-                  withVenv {
-                    dir("examples/bare-metal/aec_1_thread") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/aec_1_thread/bin/fwk_voice_example_bare_metal_aec_1_thread.xe --input ../shared_src/test_streams/aec_example_input.wav"
-                    }
-                    dir("examples/bare-metal/aec_2_threads") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/aec_2_threads/bin/fwk_voice_example_bare_metal_aec_2_thread.xe --input ../shared_src/test_streams/aec_example_input.wav"
-                      // Make sure 1 thread and 2 threads output is bitexact
-                      sh "diff output.wav ../aec_1_thread/output.wav"
-                    }
-                    dir("examples/bare-metal/ic") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/ic/bin/fwk_voice_example_bare_metal_ic.xe"
-                      sh "mv output.wav ic_example_output.wav"
-                    }
-                    dir("examples/bare-metal/pipeline_single_threaded") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_single_threaded/bin/fwk_voice_example_bare_metal_pipeline_single_thread.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
-                    }
-                    dir("examples/bare-metal/pipeline_multi_threaded") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_multi_threaded/bin/fwk_voice_example_bare_metal_pipeline_multi_thread.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
-                      // Make sure single thread and multi threads pipeline output is bitexact
-                      sh "diff output.wav ../pipeline_single_threaded/output.wav"
-                    }
-                    dir("examples/bare-metal/pipeline_alt_arch") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_st.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
-                      sh "mv output.wav output_st.wav"
-
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/pipeline_alt_arch/bin/fwk_voice_example_bare_metal_pipeline_alt_arch_mt.xe --input ../shared_src/test_streams/pipeline_example_input.wav"
-                      sh "mv output.wav output_mt.wav"
-                      sh "diff output_st.wav output_mt.wav"
-                    }
-                    dir("examples/bare-metal/agc") {
-                      sh "python ../shared_src/python/run_xcoreai.py ../../../build/examples/bare-metal/agc/bin/fwk_voice_example_bare_metal_agc.xe --input ../shared_src/test_streams/agc_example_input.wav"
-                    }
-                    dir("examples/bare-metal/vnr") {
-                      sh "python host_app.py test_stream_1.wav vnr_out2.bin --run-with-xscope-fileio" // With xscope host in lib xscope_fileio
-                      sh "python host_app.py test_stream_1.wav vnr_out1.bin" // With xscope host in python
-                      sh "diff vnr_out1.bin vnr_out2.bin"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
 
         stage('VNR tests') {
           steps {
@@ -247,16 +220,16 @@ pipeline {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
                     withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                      dir("test_wav_vnr") {
-                        sh "pytest -n 1 --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
                       dir("vnr_unit_tests") {
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
-                      dir("py_c_feature_compare") {
-                        sh "python build_vnr_feature_extraction.py"
+                      dir("test_vnr_cffi") {
+                        sh "python build_vnr_cffi.py"
+                        sh "pytest -n 4 --junitxml=pytest_result.xml"
+                        junit "pytest_result.xml"
+                      }
+                      dir("test_vnr_profile") {
                         sh "pytest -s --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
@@ -312,7 +285,7 @@ pipeline {
                         junit "pytest_result.xml"
                       }
                       dir("test_ic_profile"){
-                        sh "pytest --junitxml=pytest_result.xml"
+                        sh "pytest -s --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
                       dir("test_ic_spec"){
@@ -330,7 +303,7 @@ pipeline {
                       dir("characterise_c_py"){
                         // This test compares the suppression performance across angles between model and C implementation
                         // and fails if they differ significantly. It requires that the C implementation run with fixed mu
-                        sh "pytest -s --junitxml=pytest_result.xml" // -n 2 fails often so run single threaded and also print result
+                        sh "pytest -s --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                         // This script sweeps the y_delay value to find what the optimum suppression is across RT60 and angle.
                         // It's more of a model develpment tool than testing the implementation so not run. It take a few minutes.
@@ -397,8 +370,10 @@ pipeline {
                         junit "pytest_result.xml"
                       }
                       dir("test_adec_profile") {
-                        sh "pytest -n 1 --junitxml=pytest_result.xml"
+                        sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
+                        // Testing bit exactness of the AEC scheduling
+                        sh "diff output_1_2_2_10_5.wav output_2_2_2_10_5.wav"
                       }
                     }
                   }
@@ -465,20 +440,6 @@ pipeline {
             }
           }
         }
-        stage('HPF test') {
-          steps {
-            catchError(stageResult: 'FAILURE', catchInterruptions: false){
-              dir("${REPO}/test/test_hpf") {
-                withTools(params.TOOLS_VERSION) {
-                  withVenv {
-                    sh "pytest --junitxml=pytest_result.xml"
-                    junit "pytest_result.xml"
-                  }
-                }
-              }
-            }
-          }
-        }
         stage('Pipeline tests') {
           steps {
             catchError(stageResult: 'FAILURE', catchInterruptions: false){
@@ -492,7 +453,7 @@ pipeline {
                         // Note we have 2 xcore targets and we can run x86 threads too. But in case we have only xcore jobs in the config, limit to 4 so we don't timeout waiting for xtags
                         sh "pytest -n 4 --junitxml=pytest_result.xml -vv"
                         junit "pytest_result.xml"
-                        sh "python compare_keywords.py results_Avona_aec_ic_prev_arch_xcore.csv results_Avona_aec_ic_prev_arch_python.csv --pass-threshold=1"
+                        sh "python compare_keywords.py results_Avona_aec_ic_ns_agc_prev_arch_xcore.csv results_Avona_aec_ic_ns_agc_prev_arch_python.csv --pass-threshold=1"
                       }
                     }
                   }
@@ -511,7 +472,7 @@ pipeline {
                 withVenv {
                   copyArtifacts filter: '**/results_*.csv', fingerprintArtifacts: true, projectName: '../lib_audio_pipelines/master', selector: lastSuccessful()
                   runPython("python plot_results.py lib_audio_pipelines/tests/pipelines/results_lib_ap_prev_arch_xcore.csv results_Avona_prev_arch_xcore.csv --single-plot --ww-column='0_2 1_2' --figname=results_benchmark_prev_arch")
-                  runPython("python plot_results.py lib_audio_pipelines/tests/pipelines/results_lib_ap_alt_arch_xcore.csv results_Avona_alt_arch_xcore.csv --single-plot --ww-column='0_2 1_2' --figname=results_benchmark_alt_arch")                    
+                  runPython("python plot_results.py lib_audio_pipelines/tests/pipelines/results_lib_ap_alt_arch_xcore.csv results_Avona_alt_arch_xcore.csv --single-plot --ww-column='0_2 1_2' --figname=results_benchmark_alt_arch")
                 }
               }
             }
@@ -521,8 +482,7 @@ pipeline {
       post {
         always {
           // Examples artifacts
-          archiveArtifacts artifacts: "${REPO}/build/**/fwk_voice_example_bare_metal_*", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/examples/bare-metal/**/output*.wav", fingerprint: true
+          archiveArtifacts artifacts: "${REPO}/build/**/fwk_voice_example_*", fingerprint: true
           // AEC aretfacts
           archiveArtifacts artifacts: "${REPO}/test/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
           // IC artefacts
@@ -531,10 +491,8 @@ pipeline {
           // NS artefacts
           archiveArtifacts artifacts: "${REPO}/test/lib_ns/test_ns_profile/ns_prof.log", fingerprint: true
           // VNR artifacts
-          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_wav_vnr/*.png", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_wav_vnr/*.csv", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/examples/bare-metal/vnr/*.png", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/examples/bare-metal/vnr/vnr_prof.log", fingerprint: true
+          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_vnr_profile/*.png", fingerprint: true
+          archiveArtifacts artifacts: "${REPO}/test/lib_vnr/test_vnr_profile/vnr_prof.log", fingerprint: true
           // Pipelines tests
           archiveArtifacts artifacts: "${REPO}/test/pipeline/**/results_*.csv", fingerprint: true
           archiveArtifacts artifacts: "${REPO}/test/pipeline/**/results_*.png", fingerprint: true, allowEmptyArchive: true

@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define TEST_NUM_Y (1)
 #define TEST_NUM_X (2)
@@ -24,7 +23,7 @@ void aec_filter_adapt_fp(
     }
     complex_double_t scratch[AEC_PROC_FRAME_LENGTH];
     int N = AEC_PROC_FRAME_LENGTH;
-    
+
     for(int i=0; i<N/2+1; i++) {
         complex_double_t T_mult_conj_X;
         T_mult_conj_X.re = (T[i].re*X_fifo[i].re + T[i].im*X_fifo[i].im);
@@ -53,7 +52,7 @@ void aec_filter_adapt_fp(
     }
     bit_reverse((complex_double_t*)scratch, N);
     forward_fft((complex_double_t*)scratch, N, sine_lut);
-    
+
     for(int i=0; i<N/2+1; i++) {
         H_hat[i].re = scratch[i].re;
         H_hat[i].im = scratch[i].im;
@@ -65,12 +64,9 @@ void test_aec_filter_adapt() {
     unsigned main_filter_phases = TEST_MAIN_PHASES;
     unsigned shadow_filter_phases = TEST_SHADOW_PHASES;
 
-    aec_state_t state, shadow_state;
-    aec_memory_pool_t aec_memory_pool;
-    aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
-    aec_shared_state_t aec_shared_state;
+    aec_state_t aec_state;
 
-    aec_init(&state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
 
     //Declare floating point arrays
     complex_double_t H_hat_fp[TEST_NUM_Y][TEST_NUM_X*TEST_MAIN_PHASES][NUM_BINS];
@@ -85,16 +81,16 @@ void test_aec_filter_adapt() {
     for(int itt=0; itt<(100)/F; itt++) {
         int32_t new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
         unsigned is_main = pseudo_rand_uint32(&seed) % 2;
-        aec_state_t *state_ptr;
+        aec_filter_state_t *state_ptr;
         if(is_main) {
-            state_ptr = &state;
+            state_ptr = &aec_state.main_state;
         }
         else {
-            state_ptr = &shadow_state;
+            state_ptr = &aec_state.shadow_state;
         }
         state_ptr->shared_state->config_params.aec_core_conf.bypass = pseudo_rand_uint32(&seed) % 2;
         unsigned test_l2_api = pseudo_rand_uint32(&seed) % 2;
-        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);        
+        aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
         //Generate H_hat
         for(int ch=0; ch<num_y_channels; ch++) {
             for(int ph=0; ph<num_x_channels*state_ptr->num_phases; ph++) {
@@ -114,8 +110,8 @@ void test_aec_filter_adapt() {
                 H_hat_fp[ch][ph][NUM_BINS-1].im = 0.0;
             }
         }
-        //Generate X_fifo, (always for number of phases in main_state)
-        aec_state_t *main_state_ptr = &state;
+        //Generate X_fifo, (always for number of phases in aec_state.main_state)
+        aec_filter_state_t *main_state_ptr = &aec_state.main_state;
         for(int ch=0; ch<num_x_channels; ch++) {
             for(int ph=0; ph<main_state_ptr->num_phases; ph++) {
                 state_ptr->shared_state->X_fifo[ch][ph].exp = pseudo_rand_int(&seed, -31, 32);
@@ -162,7 +158,7 @@ void test_aec_filter_adapt() {
             }
         }
         //dut
-        if(!test_l2_api) { 
+        if(!test_l2_api) {
             for(int ch=0; ch<num_y_channels; ch++) {
                 aec_filter_adapt(state_ptr, ch);
             }

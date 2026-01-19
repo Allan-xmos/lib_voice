@@ -18,3 +18,4 @@ add_subdirectory( lib_agc )
 
 add_subdirectory( lib_adec )
 
+add_subdirectory( lib_stage1 )

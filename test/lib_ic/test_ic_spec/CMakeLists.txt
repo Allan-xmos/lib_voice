@@ -1,4 +1,14 @@
-#same as test_wav_ic so reuse cmake file
-set( APP_NAME  test_ic_spec )
-set(ADDITIONAL_COMPILE_FLAGS  DISABLE_ADAPTION_CONTROLLER=1 ) #Fixed mu and leakage=1.0
-include(../test_wav_ic/CMakeLists.txt)
+## executable output directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+
+#######
+add_executable(fwk_voice_test_ic_spec)
+
+target_link_libraries(fwk_voice_test_ic_spec
+    PUBLIC
+        fwk_voice::example::test_wav_ic
+        )
+
+target_compile_definitions(fwk_voice_test_ic_spec 
+    PRIVATE
+        DISABLE_ADAPTION_CONTROLLER=1)

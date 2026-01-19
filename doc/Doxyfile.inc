@@ -4,7 +4,7 @@ PROJECT_NAME = Avona
 PROJECT_BRIEF = "Avona Reference Design"
 
 # AEC module
-INPUT += ../modules/lib_aec/api ../examples/bare-metal/shared_src/aec/
+INPUT += ../modules/lib_aec/api
 
 # NS module
 INPUT += ../modules/lib_ns/api
@@ -19,9 +19,7 @@ INPUT += ../modules/lib_adec/api
 INPUT += ../modules/lib_ic/api
 
 # VNR module
-INPUT += ../modules/lib_vnr/api/common
-INPUT += ../modules/lib_vnr/api/features
-INPUT += ../modules/lib_vnr/api/inference
+INPUT += ../modules/lib_vnr/api
 
 PREDEFINED             = C_API= EXTERN_C= DWORD_ALIGNED=
 

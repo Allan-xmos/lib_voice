@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 static void calc_fd_frame_energy_fp(double *output, complex_double_t *input, int length) {
     *output = 0.0;
@@ -19,10 +18,10 @@ void test_calc_fd_frame_energy() {
     bfp_complex_s32_t dut_in;
     bfp_complex_s32_init(&dut_in, mem, 0, TEST_LEN, 0);
     complex_double_t ref_in[TEST_LEN];
-    
+
     unsigned seed = 34575;
     for(int iter = 0; iter<(1<<12)/F; iter++) {
-        dut_in.exp = pseudo_rand_int(&seed, -31, 32);        
+        dut_in.exp = pseudo_rand_int(&seed, -31, 32);
         dut_in.hr = pseudo_rand_uint32(&seed) % 4;
         for(int i=0; i<TEST_LEN; i++) {
             dut_in.data[i].re = pseudo_rand_int32(&seed) >> dut_in.hr;

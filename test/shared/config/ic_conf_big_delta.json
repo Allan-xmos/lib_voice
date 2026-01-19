@@ -4,6 +4,8 @@
         "fs": 16000,
         "frame_advance": 240,
         "proc_frame_length": 512,
+        "input_channel_count": 2,
+        "output_channel_count": 1,
         "modules": ["ic"] 
     },
 

@@ -7,6 +7,6 @@
  * This is designed for non-real time dumping of the H_hat filter
  * for reconstruction in python.
  */
-void aec_dump_H_hat(aec_state_t *state, file_t *file_handle);
+void aec_dump_H_hat(aec_filter_state_t *state, file_t *file_handle);
 
 #endif

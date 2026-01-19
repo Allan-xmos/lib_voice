@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 #define NUM_BINS ((AEC_PROC_FRAME_LENGTH/2) + 1)
 
@@ -33,7 +32,7 @@ void aec_calc_X_fifo_energy_fp(
     for(unsigned ch=0; ch<num_channels; ch++) {
         for(int i=0; i<NUM_BINS; i++) {
             double temp = (X_fifo[ch][last_ph][i].re * X_fifo[ch][last_ph][i].re) + (X_fifo[ch][last_ph][i].im * X_fifo[ch][last_ph][i].im);
-            
+
             X_energy[ch][i] -= temp; //subtract energy of phase rolling out
             temp = (X[ch][i].re * X[ch][i].re) + (X[ch][i].im * X[ch][i].im);
             X_energy[ch][i] += temp; //Add latest X data energy
@@ -70,7 +69,7 @@ void update_X_fifo_fp(
             X_fifo[ch][mapping[0]][i].im = X[ch][i].im;
         }
     }
-    
+
 
 
 }
@@ -81,16 +80,13 @@ void test_update_total_X_energy() {
     unsigned main_filter_phases = AEC_MAIN_FILTER_PHASES - 1;
     unsigned shadow_filter_phases = AEC_MAIN_FILTER_PHASES - 5;
 
-    aec_memory_pool_t aec_memory_pool;
-    aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
-    aec_state_t state, shadow_state;
-    aec_shared_state_t aec_shared_state;
-    aec_init(&state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases);
-    
+    aec_state_t aec_state;
+    aec_init(&aec_state, num_y_channels, num_x_channels, main_filter_phases, shadow_filter_phases, &aec_tdist_chans2_threads2);
+
     unsigned X_energy_recalc_bin = 0;
     complex_s32_t X[AEC_MAX_X_CHANNELS][NUM_BINS];
     for(unsigned ch=0; ch<num_x_channels; ch++) {
-        bfp_complex_s32_init(&state.shared_state->X[ch], X[ch], 0, NUM_BINS, 0);
+        bfp_complex_s32_init(&aec_state.main_state.shared_state->X[ch], X[ch], 0, NUM_BINS, 0);
     }
 
     //Initialise floating point stuff. mapping, X_energy_fp and X_fifo_fp
@@ -105,25 +101,25 @@ void test_update_total_X_energy() {
             X_energy_fp[ch][bin] = 0.0;
             X_energy_shadow_fp[ch][bin] = 0.0;
         }
-        for(int p=0; p<state.num_phases; p++) {
+        for(int p=0; p<aec_state.main_state.num_phases; p++) {
             for(int bin=0; bin<NUM_BINS; bin++) {
                 X_fifo_fp[ch][p][bin].re = 0.0;
                 X_fifo_fp[ch][p][bin].im = 0.0;
             }
             mapping[p] = p;
         }
-    } 
-    
+    }
+
     double max_diff_percentage_shadow = 0.0;
     double max_diff_percentage = 0.0;
     int max_diff = 0;
     unsigned seed = 2;
     for(unsigned iter=0; iter<(1<<12)/F; iter++) {
         for(unsigned ch=0; ch<num_x_channels; ch++) {
-            bfp_complex_s32_t *X_ptr = &state.shared_state->X[ch];
+            bfp_complex_s32_t *X_ptr = &aec_state.main_state.shared_state->X[ch];
             X_ptr->exp = pseudo_rand_int(&seed, -3, 4) - 30;
             X_ptr->hr = (pseudo_rand_uint32(&seed) % 3);
-            
+
             //Generate X
             for(unsigned bin=0; bin<NUM_BINS; bin++)
             {
@@ -133,31 +129,31 @@ void test_update_total_X_energy() {
                 X_fp[ch][bin].im = ldexp(X_ptr->data[bin].im, X_ptr->exp);
             }
         }
-        
+
         //Calculate X_energy
         for(unsigned ch=0; ch<num_x_channels; ch++) {
-            aec_calc_X_fifo_energy(&state, ch, X_energy_recalc_bin);
-            aec_calc_X_fifo_energy(&shadow_state, ch, X_energy_recalc_bin);
+            aec_calc_X_fifo_energy(&aec_state.main_state, ch, X_energy_recalc_bin);
+            aec_calc_X_fifo_energy(&aec_state.shadow_state, ch, X_energy_recalc_bin);
         }
-        aec_calc_X_fifo_energy_fp(X_energy_fp, &max_X_energy_fp[0], X_fp, X_fifo_fp, mapping, num_x_channels, state.num_phases, X_energy_recalc_bin); 
-        aec_calc_X_fifo_energy_fp(X_energy_shadow_fp, &max_X_energy_shadow_fp[0], X_fp, X_fifo_fp, mapping, num_x_channels, shadow_state.num_phases, X_energy_recalc_bin); 
+        aec_calc_X_fifo_energy_fp(X_energy_fp, &max_X_energy_fp[0], X_fp, X_fifo_fp, mapping, num_x_channels, aec_state.main_state.num_phases, X_energy_recalc_bin);
+        aec_calc_X_fifo_energy_fp(X_energy_shadow_fp, &max_X_energy_shadow_fp[0], X_fp, X_fifo_fp, mapping, num_x_channels, aec_state.shadow_state.num_phases, X_energy_recalc_bin);
         //Update X_fifo
         for(unsigned ch=0; ch<num_x_channels; ch++) {
-            aec_update_X_fifo_and_calc_sigmaXX(&state, ch);
+            aec_update_X_fifo_and_calc_sigmaXX(&aec_state.main_state, ch);
         }
-        update_X_fifo_fp(X_fifo_fp, mapping, X_fp, num_x_channels, state.num_phases);
+        update_X_fifo_fp(X_fifo_fp, mapping, X_fp, num_x_channels, aec_state.main_state.num_phases);
 
-        aec_update_X_fifo_1d(&state);
-        aec_update_X_fifo_1d(&shadow_state);
+        aec_update_X_fifo_1d(&aec_state.main_state);
+        aec_update_X_fifo_1d(&aec_state.shadow_state);
 
         //Check 1d fifo update
         int count = 0;
         for(int i=0; i<num_x_channels; i++) {
-            for(int j=0; j<state.num_phases; j++) {
-                TEST_ASSERT_EQUAL_INT32(state.X_fifo_1d[count].data, state.shared_state->X_fifo[i][j].data);
-                TEST_ASSERT_EQUAL_INT32(state.X_fifo_1d[count].exp, state.shared_state->X_fifo[i][j].exp);
-                TEST_ASSERT_EQUAL_INT32(state.X_fifo_1d[count].hr, state.shared_state->X_fifo[i][j].hr);
-                TEST_ASSERT_EQUAL_INT32(state.X_fifo_1d[count].length, state.shared_state->X_fifo[i][j].length);
+            for(int j=0; j<aec_state.main_state.num_phases; j++) {
+                TEST_ASSERT_EQUAL_INT32(aec_state.main_state.X_fifo_1d[count].data, aec_state.main_state.shared_state->X_fifo[i][j].data);
+                TEST_ASSERT_EQUAL_INT32(aec_state.main_state.X_fifo_1d[count].exp, aec_state.main_state.shared_state->X_fifo[i][j].exp);
+                TEST_ASSERT_EQUAL_INT32(aec_state.main_state.X_fifo_1d[count].hr, aec_state.main_state.shared_state->X_fifo[i][j].hr);
+                TEST_ASSERT_EQUAL_INT32(aec_state.main_state.X_fifo_1d[count].length, aec_state.main_state.shared_state->X_fifo[i][j].length);
                 count++;
             }
         }
@@ -166,8 +162,8 @@ void test_update_total_X_energy() {
         //compare X_energy
         //printf("iter %d\n",iter);
         for(unsigned ch=0; ch < num_x_channels; ch++){
-            bfp_s32_t *X_energy_ptr = &state.X_energy[ch];
-            bfp_s32_t *X_energy_shadow_ptr = &shadow_state.X_energy[ch];
+            bfp_s32_t *X_energy_ptr = &aec_state.main_state.X_energy[ch];
+            bfp_s32_t *X_energy_shadow_ptr = &aec_state.shadow_state.X_energy[ch];
             for(unsigned i=0; i<NUM_BINS; i++) {
                 double ref_double = X_energy_fp[ch][i];
                 double dut_double = ldexp(X_energy_ptr->data[i], X_energy_ptr->exp);
@@ -178,7 +174,7 @@ void test_update_total_X_energy() {
                 if(diff_double > 0.0002*(ref_double < 0.0 ? -ref_double : ref_double) + pow(10, -8))
                 {
                     printf("Main filter: iter %d. ch: %d, bin: %d, diff %f outside pass limits. ref %f, dut %f\n", iter, ch, i, diff_double, ref_double, dut_double);
-                    printf("Main filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_ptr->data[i], X_energy_ptr->exp);                    
+                    printf("Main filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_ptr->data[i], X_energy_ptr->exp);
                     assert(0);
                 }
                 ref_double = X_energy_shadow_fp[ch][i];
@@ -190,13 +186,13 @@ void test_update_total_X_energy() {
                 if(diff_double > 0.002*(ref_double < 0.0 ? -ref_double : ref_double) + pow(10, -8))
                 {
                     printf("Shadow filter: iter %d, ch: %d, bin: %d, diff %f outside pass limits. ref %f, dut %f\n", iter, ch, i, diff_double, ref_double, dut_double);
-                    printf("Shadow filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_shadow_ptr->data[i], X_energy_shadow_ptr->exp);                    
+                    printf("Shadow filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_shadow_ptr->data[i], X_energy_shadow_ptr->exp);
                     assert(0);
                 }
             }
             //max_X_energy
             double ref_double = max_X_energy_fp[ch];
-            double dut_double = ldexp(state.max_X_energy[ch].mant, state.max_X_energy[ch].exp);
+            double dut_double = ldexp(aec_state.main_state.max_X_energy[ch].mant, aec_state.main_state.max_X_energy[ch].exp);
             double diff_double = ref_double - dut_double;
             if(diff_double < 0.0) {diff_double = -diff_double;}
             if(diff_double > 0.0002*(ref_double < 0.0 ? -ref_double : ref_double) + pow(10, -8))
@@ -206,7 +202,7 @@ void test_update_total_X_energy() {
             }
 
             ref_double = max_X_energy_shadow_fp[ch];
-            dut_double = ldexp(shadow_state.max_X_energy[ch].mant, shadow_state.max_X_energy[ch].exp);
+            dut_double = ldexp(aec_state.shadow_state.max_X_energy[ch].mant, aec_state.shadow_state.max_X_energy[ch].exp);
             diff_double = ref_double - dut_double;
             if(diff_double < 0.0) {diff_double = -diff_double;}
             if(diff_double > 0.002*(ref_double < 0.0 ? -ref_double : ref_double) + pow(10, -8))
@@ -218,7 +214,7 @@ void test_update_total_X_energy() {
         X_energy_recalc_bin += 1;
         if(X_energy_recalc_bin == (AEC_PROC_FRAME_LENGTH/2) + 1) {
             X_energy_recalc_bin = 0;
-        }        
+        }
     }
     printf("max_diff_percentage = %f\n",max_diff_percentage);
     printf("max_diff_percentage_shadow = %f\n",max_diff_percentage_shadow);

@@ -4,15 +4,23 @@
         "fs": 16000,
         "frame_advance": 240,
         "proc_frame_length": 512,
+        "input_channel_count": 2,
+        "output_channel_count": 1,
         "modules": ["ic"] 
     },
 
     "ic":
     {
+        "input_channel_count": 2,
+        "output_channel_count": 1,
+        "x_channel_count": 1,
+        "y_channel_count": 1,
         "phases": 10,
         "mu_scalar" : 1.0,
         "delta" : 7.450580593454381e-09,
+        "delta_exp": null,
         "y_channel_delay": 600,
+        "sigma_xx_shift": 11,
         "gamma_log2" : 1.0,
         "leakage" : 0.995,
         "vnr_model" : "../../../../py_voice/py_voice/data/vnr/model_output/trained_model.h5",

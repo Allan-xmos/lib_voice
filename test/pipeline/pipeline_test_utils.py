@@ -2,70 +2,60 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import numpy as np
-import os, shutil, tempfile, sys
-import xscope_fileio, xtagctl
+import shutil, tempfile
 import subprocess
 from conftest import pipeline_bins, pipeline_output_base_dir, keyword_input_base_dir, xtag_aquire_timeout_s
 import re
 from pathlib import Path
 import sys
-thisfile_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(thisfile_path, "py_pipeline"))
+import pytest 
+from run_dut import run_with_xscope_fileio
+
+sys.path.append(str(Path(__file__).parent / "py_pipeline"))
 import wav_pipeline
 
 def process_xcore(xe_file, input_file, output_file):
-    input_file = os.path.abspath(input_file)
 
-    tmp_folder = tempfile.mkdtemp(suffix=os.path.splitext(output_file)[0].replace('/', '_'), dir=thisfile_path)
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
-    shutil.copyfile(input_file, "input.wav")
+    with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
+        tmp_folder = Path(tmp_folder)
+        shutil.copyfile(input_file, tmp_folder / "input.wav")
 
-    #Make sure we can wait for 2 processing occurances to finish
-    with xtagctl.acquire("XCORE-AI-EXPLORER", timeout=xtag_aquire_timeout_s) as adapter_id:
-        with open("stdout.txt", "w+") as ff:
-            try:
-                xscope_fileio.run_on_target(adapter_id, xe_file, stdout=ff)
-            except Exception as e:
-                print(e, file=sys.stderr)
-                assert 0, f"FAILURE RUNNING: xscope_fileio.run_on_target({adapter_id} , {xe_file})"
-            ff.seek(0)
-            stdout = ff.readlines()
+        #Make sure we can wait for 2 processing occurances to finish
+        stdout = run_with_xscope_fileio(xe_file, tmp_folder, xtag_aquire_timeout_s)
 
-    shutil.copyfile("output.wav", output_file)
-    os.chdir(prev_path)
-    shutil.rmtree(tmp_folder)
+        shutil.copyfile(tmp_folder / "output.wav", output_file)
 
-    return stdout
-
-def process_x86(bin_file, input_file, output_file):
-    cmd = (bin_file, input_file, output_file)
-    stdout = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
     return stdout
 
 def process_python(input_file, output_file, arch):
-    config_file = os.path.join(thisfile_path, "py_pipeline/config/prev_arch.json")
-    if arch == 'aec_ic_prev_arch':
-        wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True, disable_agc=True)
-    elif arch == 'aec_ic_ns_prev_arch':
-        wav_pipeline.test_file(input_file, output_file, config_file, disable_agc=True)
-    elif arch == 'aec_ic_agc_prev_arch':
-        wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True)
-    elif arch == 'aec_ic_ns_agc_prev_arch':
+    # currently this test only runs python pipelines without ADEC, and skips those with.
+    config_file = Path(__file__).parent / "py_pipeline/config/prev_arch.json"
+    if arch == 'aec_ic_ns_agc_prev_arch':
         wav_pipeline.test_file(input_file, output_file, config_file)
+    elif arch == 'alt_arch':
+        # alt arch not originally supported in python pipeline, so skip for now
+        pytest.skip("alt arch python not tested")
+    elif arch == 'prev_arch':
+        # prev arch not originally supported in python pipeline, so skip for now
+        pytest.skip("prev arch python not tested")
+    else:
+        raise ValueError(f"Unknown architecture for python processing: {arch}")
+        if arch == 'aec_ic_prev_arch':
+            wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True, disable_agc=True)
+        elif arch == 'aec_ic_ns_prev_arch':
+            wav_pipeline.test_file(input_file, output_file, config_file, disable_agc=True)
+        elif arch == 'aec_ic_agc_prev_arch':
+            wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True)
     stdo = ""
     return stdo
 
 def process_file(input_file, arch, target="xcore"):
-    wav_name = os.path.basename(input_file)
-    output_file = os.path.join(pipeline_output_base_dir + "_" + arch + "_" + target, wav_name)
+    wav_name = input_file.name
+    output_file = Path(__file__).parent / f"{pipeline_output_base_dir}_{arch}_{target}" / wav_name 
 
     if target == "xcore":
         pipeline_bin = pipeline_bins[arch][target]
         stdout = process_xcore(pipeline_bin, input_file, output_file)
-    elif target == "x86":
-        pipeline_bin = pipeline_bins[arch][target]
-        stdout = process_x86(pipeline_bin, input_file, output_file)
     elif target == "python":
         stdout = process_python(input_file, output_file, arch)
     else:
@@ -75,22 +65,13 @@ def process_file(input_file, arch, target="xcore"):
 
 
 def convert_keyword_wav(input_file, arch, target):
-    wav_name = os.path.basename(input_file)
-    keyword_file = os.path.join(keyword_input_base_dir + "_" + arch + "_" + target, wav_name)
+    keyword_file = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / input_file.name
     # Strip off comms channel leaving just ASR. Sensory needs a 16b wav file
     subprocess.run(f"sox {input_file} -b 16 {keyword_file} remix 1".split())
     return keyword_file
 
 def log_vnr(stdo, input_file, arch, target): # Read VNR predicitions from stdo and store in .npy files of the same name as input files
-    xcore_stdo = []
-    if target == "xcore":
-        for line in stdo:
-            m = re.search(r'^\s*\[DEVICE\]', line)
-            if m is not None:
-                xcore_stdo.append(re.sub(r'\[DEVICE\]\s*', '', line))
-    else:
-        for line in stdo.split('\n'):
-            xcore_stdo.append(line)
+    xcore_stdo = stdo
     
     vnr_output_pred = np.empty(0, dtype=np.float64)
     vnr_input_pred = np.empty(0, dtype=np.float64)
@@ -118,16 +99,16 @@ def log_vnr(stdo, input_file, arch, target): # Read VNR predicitions from stdo a
             mu_log = np.append(mu_log, mu)
     
     if(len(vnr_input_pred) > 0):
-        filename = f"vnr_input_pred_{os.path.splitext(Path(os.path.basename(input_file)))[0]}.npy"
-        filename = os.path.join(keyword_input_base_dir + "_" + arch + "_" + target, filename)
+        filename = f"vnr_input_pred_{input_file.stem}.npy"
+        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / filename
         np.save(filename, vnr_input_pred)
 
     if(len(vnr_output_pred) > 0):
-        filename = f"vnr_output_pred_{os.path.splitext(Path(os.path.basename(input_file)))[0]}.npy"
-        filename = os.path.join(keyword_input_base_dir + "_" + arch + "_" + target, filename)
+        filename = f"vnr_output_pred_{input_file.stem}.npy"
+        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / filename
         np.save(filename, vnr_output_pred)
 
     if(len(mu_log) > 0):
-        filename = f"mu_{os.path.splitext(Path(os.path.basename(input_file)))[0]}.npy"
-        filename = os.path.join(keyword_input_base_dir + "_" + arch + "_" + target, filename)
+        filename = f"mu_{input_file.stem}.npy"
+        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / filename
         np.save(filename, mu_log)

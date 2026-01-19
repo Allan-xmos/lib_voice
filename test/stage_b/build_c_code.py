@@ -30,32 +30,26 @@ FLAGS = [
 INCLUDE_DIRS=[
     f"{MODULE_ROOT}/lib_ic/api/",
     f"{MODULE_ROOT}/lib_ic/src/",
-    f"{MODULE_ROOT}/lib_vnr/api/common",
-    f"{MODULE_ROOT}/lib_vnr/api/features",
-    f"{MODULE_ROOT}/lib_vnr/src/features",
-    f"{MODULE_ROOT}/lib_vnr/api/inference",
-    f"{MODULE_ROOT}/lib_vnr/src/inference/model",
-    f"{MODULE_ROOT}/lib_vnr/src/inference",
+    f"{MODULE_ROOT}/lib_vnr/api/",
+    f"{MODULE_ROOT}/lib_vnr/src/model",
+    f"{MODULE_ROOT}/lib_vnr/src/",
     f"{XCORE_MATH}/lib_xcore_math/api",
     TFLITE_MICRO_INCLUDE
 ]
 
 LIBRARY_DIRS=[
     '../../../build/modules/lib_ic',
-    '../../../build/modules/lib_aec',
     '../../../build/modules/lib_vnr',
     '../../../build/fwk_voice_deps/build',
     TFLITE_MICRO_LIB_DIR
 ]
 
 LIBRARIES = [
-    'fwk_voice_module_lib_ic', 
-    'fwk_voice_module_lib_aec', 
-    'fwk_voice_module_lib_vnr_inference', 
-    'fwk_voice_module_lib_vnr_features', 
+    'fwk_voice_module_lib_ic',
+    'fwk_voice_module_lib_vnr',
     'lib_xcore_math',
-    TFLITE_MICRO_LIB, 
-    'm', 
+    TFLITE_MICRO_LIB,
+    'm',
     'stdc++'
 ] # on Unix, link with the math library. Linking order is important here for gcc compile on Linux
 
@@ -93,7 +87,7 @@ ffibuilder.cdef(predefs)
 # Contains the C source necessary to allow the cdefs to work
 ffibuilder.set_source("ic_vnr_test_py",  # name of the output C extension
 """
-    #include "ic_api.h"
+    #include "ic.h"
     #include "ic_low_level.h"
     int test_init(void);
     ic_state_t test_get_ic_state(void);

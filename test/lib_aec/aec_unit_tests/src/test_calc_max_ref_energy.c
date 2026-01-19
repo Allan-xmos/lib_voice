@@ -3,7 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_api.h"
+#include "aec.h"
 double calc_max_ref_energy_fp(double (*input)[AEC_FRAME_ADVANCE], int channels) {
     double max=0.0;
     for(int ch=0; ch<channels; ch++) {
@@ -21,7 +21,7 @@ void test_calc_max_ref_energy() {
     float_s32_t dut_max;
     double ref[CHANNELS][AEC_FRAME_ADVANCE];
     double ref_max;
-    
+
     unsigned seed = 568762;
     int max_diff = 0;
     for(int iter=0; iter<(1<<12)/F; iter++) {

@@ -3,8 +3,7 @@
 #include "aec_unit_tests.h"
 #include <stdio.h>
 #include <assert.h>
-#include "aec_defines.h"
-#include "aec_api.h"
+#include "aec.h"
 
 static const double WOLA_window_fp[32] = {
         0.0022640387134577056, 0.009035651368646647, 0.020253513192751316,
@@ -80,11 +79,8 @@ void test_create_output() {
     unsigned num_x_channels = 1;
     unsigned num_phases = AEC_MAIN_FILTER_PHASES - 1;
 
-    aec_memory_pool_t aec_memory_pool;
-    aec_shadow_filt_memory_pool_t aec_shadow_memory_pool;
-    aec_state_t state, shadow_state;
-    aec_shared_state_t aec_shared_state;
-    aec_init(&state, &shadow_state, &aec_shared_state, (uint8_t*)&aec_memory_pool, (uint8_t*)&aec_shadow_memory_pool, num_y_channels, num_x_channels, num_phases, num_phases);
+    aec_state_t aec_state;
+    aec_init(&aec_state, num_y_channels, num_x_channels, num_phases, num_phases, &aec_tdist_chans2_threads2);
     //Initialise floating point arrays
     double error_fp[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH];
     double output_fp[AEC_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
@@ -98,14 +94,14 @@ void test_create_output() {
     //Generate error data
     for(unsigned iter=0; iter<(1<<12)/F; iter++) {
         int32_t new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
-        aec_frame_init(&state, &shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
+        aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
         int is_main_filter = pseudo_rand_uint32(&seed) % 2;
-        aec_state_t *state_ptr;
+        aec_filter_state_t *state_ptr;
         if(is_main_filter) {
-            state_ptr = &state;
+            state_ptr = &aec_state.main_state;
         }
         else {
-            state_ptr = &shadow_state;
+            state_ptr = &aec_state.shadow_state;
         }
 
         //state_ptr->error is initialised in the Error->error IFFT call. Initialise here for standalone testing
@@ -114,7 +110,7 @@ void test_create_output() {
         }
 
         for(int ch=0; ch<num_y_channels; ch++) {
-            bfp_s32_t *error_ptr = &state_ptr->error[ch]; 
+            bfp_s32_t *error_ptr = &state_ptr->error[ch];
             error_ptr->exp = pseudo_rand_int(&seed, -31, 32);
             error_ptr->hr = (pseudo_rand_uint32(&seed) % 3);
             for(int i=0; i<AEC_PROC_FRAME_LENGTH; i++) {
@@ -133,7 +129,7 @@ void test_create_output() {
 
         for(int ch=0; ch<state_ptr->shared_state->num_y_channels; ch++) {
             //check error
-            bfp_s32_t *error_ptr = &state_ptr->error[ch]; 
+            bfp_s32_t *error_ptr = &state_ptr->error[ch];
             for(int i=0; i<AEC_PROC_FRAME_LENGTH; i++) {
                 check_error(error_fp[ch][i], error_ptr->data[i], error_ptr->exp, 0.0000002, pow(10, -8), ch, iter, "error wrong");
             }

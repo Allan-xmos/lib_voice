@@ -1,5 +1,5 @@
 Repository Structure
-********************
+--------------------
 
 * ``modules/lib_aec`` - The actual ``lib_aec`` library directory within ``https://github.com/xmos/fwk_voice/``. Within ``lib_aec``
 
@@ -9,14 +9,13 @@ Repository Structure
 
 
 Requirements
-************
+------------
 
 ``lib_aec`` is included as part of the ``fwk_voice`` github repository
-and all requirements for cloning and building ``fwk_voice`` apply. ``lib_aec`` is compiled as a static library as part of
-overall ``fwk_voice`` build. It depends on `lib_xcore_math <https://github.com/xmos/lib_xcore_math/>`_.
+and all requirements for cloning and building ``fwk_voice`` apply.
 
 API Structure
-*************
+-------------
 
 The API can be categorised into high level and low level functions.
 
@@ -35,7 +34,7 @@ Depending on the low level API used, functions can be run in parallel to work ov
 This API is still a work in progress and will be fully supported in the future.
 
 Getting and Building
-********************
+--------------------
 
 ``lib_aec`` is part of the ``fwk_voice`` repository and is provided as a CMake interface component,
 with its source compiled as part of the consuming application. To use, link the ``fwk_voice::aec`` target in

@@ -29,7 +29,7 @@ pipeline {
                  description: 'Enables pipelines characterisation test which takes 5.0hrs by itself. Normally run nightly')
   }
   environment {
-    REPO = 'fwk_voice'
+    REPO = 'lib_voice'
     FULL_TEST = """${(params.FULL_TEST_OVERRIDE
                     || env.BRANCH_NAME == 'develop'
                     || env.BRANCH_NAME == 'main'

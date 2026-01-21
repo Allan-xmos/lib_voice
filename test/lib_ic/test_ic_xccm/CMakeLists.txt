@@ -5,7 +5,6 @@ project(test_ic_xccm)
 
 set(APP_HW_TARGET XK-EVK-XU316)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
-set(XMOS_DEP_DIR_lib_ic ${XMOS_SANDBOX_DIR}/lib_voice/modules)
-set(APP_DEPENDENT_MODULES "lib_ic")
+set(APP_DEPENDENT_MODULES "lib_voice")
 
 XMOS_REGISTER_APP()

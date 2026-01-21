@@ -10,8 +10,8 @@ from cffi import FFI
 from extract_state import extract_pre_defs
 
 # One more ../ than necessary - builds in the 'build' folder
-MODULE_ROOT = "../../../modules"
-XCORE_MATH = "../../../build/fwk_voice_deps/lib_xcore_math/"
+MODULE_ROOT = "../../../lib_voice"
+XCORE_MATH = "../../../../lib_xcore_math/"
 
 # TFLite Micro configuration
 TFLITE_MICRO_ROOT = os.path.dirname(rt.__file__)
@@ -28,19 +28,18 @@ FLAGS = [
 ]
 
 INCLUDE_DIRS=[
-    f"{MODULE_ROOT}/lib_ic/api/",
-    f"{MODULE_ROOT}/lib_ic/src/",
-    f"{MODULE_ROOT}/lib_vnr/api/",
-    f"{MODULE_ROOT}/lib_vnr/src/model",
-    f"{MODULE_ROOT}/lib_vnr/src/",
+    f"{MODULE_ROOT}/src/ic/",
+    f"{MODULE_ROOT}/api/ic/",
+    f"{MODULE_ROOT}/api/vnr/",
+    f"{MODULE_ROOT}/src/vnr",
+    f"{MODULE_ROOT}/src/vnr/model/",
     f"{XCORE_MATH}/lib_xcore_math/api",
     TFLITE_MICRO_INCLUDE
 ]
 
 LIBRARY_DIRS=[
-    '../../../build/modules/lib_ic',
-    '../../../build/modules/lib_vnr',
-    '../../../build/fwk_voice_deps/build',
+    '../../../build/lib_voice',
+    '../../../build/lib_xcore_math',
     TFLITE_MICRO_LIB_DIR
 ]
 

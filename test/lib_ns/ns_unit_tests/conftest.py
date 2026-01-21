@@ -13,16 +13,6 @@ def pytest_collect_file(parent, file_path):
 
 class UnityTestSource(pytest.File):
     def collect(self):
-        # Find the binary built from the runner for this test file
-        #
-        # Assume the following directory layout:
-        # unit_tests/       <- Test root directory
-        # |-- bin/          <- Compiled binaries of the test runners
-        # |-- conftest.py   <- This file
-        # |-- runners/      <- Auto-generated buildable source of test binaries
-        # |-- src/          <- Unity test functions
-        # `-- wscript       <- Build system file used to generate/build runners
-        print("self.name ", self.fspath)
         yield UnityTestExecutable.from_parent(self, fspath=self.fspath, name=self.name)
 
 

@@ -7,6 +7,6 @@ set(APP_HW_TARGET XK-EVK-XU316)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
 set(APP_DEPENDENT_MODULES "lib_agc")
 
-set(XMOS_DEP_DIR_lib_agc ${XMOS_SANDBOX_DIR}/fwk_voice/modules)
+set(XMOS_DEP_DIR_lib_agc ${XMOS_SANDBOX_DIR}/lib_voice/modules)
 
 XMOS_REGISTER_APP()

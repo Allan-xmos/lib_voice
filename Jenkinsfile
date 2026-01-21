@@ -44,16 +44,47 @@ pipeline {
   stages {
     stage('Build and Docs') {
       parallel {
-        stage('Build Docs') {
+        stage('Examples, docs, repo checks') {
           agent {
-            label "documentation"
+            label "documentation&&x86_64&&linux"
           }
-          steps {
-            checkout scm
-            warnError("Docs") {
-              buildDocs()
-            }
-          }
+          stages {
+            stage("Examples build") {
+              steps {
+                runningOn(env.NODE_NAME)
+
+                dir("${REPO}") {
+                  checkoutScmShallow()
+                  createVenv(reqFile: "requirements.txt")
+                }
+                dir("${REPO}/examples") {
+                  withVenv {
+                    xcoreBuild()
+                  }
+                }
+              }
+            } // Examples build
+
+            stage("Repo checks") {
+              steps {
+                warnError("Repo checks failed") {
+                  // repo checks will go here
+                }
+              }
+            } // Repo checks
+
+            stage("Docs build") {
+              steps {
+                dir("${REPO}") {
+                  warnError("Docs build failed") {
+                    buildDocs()
+                  }
+                }
+              }
+            } // Docs build
+
+          } // stages
+
           post {
             cleanup {
               xcoreCleanSandbox()
@@ -104,10 +135,10 @@ pipeline {
                     withVenv {
                       script {
                           if (env.FULL_TEST == "1") {
-                            sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DFWK_VOICE_BUILD_TESTS=ON -DUSE_CUSTOM_CMAKE=ON'
+                            sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DUSE_CUSTOM_CMAKE=ON'
                           }
                           else {
-                            sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DTEST_SPEEDUP_FACTOR=4 -DFWK_VOICE_BUILD_TESTS=ON -DUSE_CUSTOM_CMAKE=ON'
+                            sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DTEST_SPEEDUP_FACTOR=4 -DUSE_CUSTOM_CMAKE=ON'
                           }
                       }
                       sh 'make -j$(nproc)'
@@ -169,7 +200,7 @@ pipeline {
                   // Build x86 versions locally as we had problems with moving bins and libs over from previous build due to brew
                   dir("build") {
                     sh "cmake --version"
-                    sh 'cmake -S.. -DTEST_WAV_ADEC_BUILD_CONFIG="1 2 2 10 5" -DFWK_VOICE_BUILD_TESTS=ON -DUSE_CUSTOM_CMAKE=ON'
+                    sh 'cmake -S.. -DTEST_WAV_ADEC_BUILD_CONFIG="1 2 2 10 5" -DUSE_CUSTOM_CMAKE=ON'
                     sh 'make -j$(nproc)'
 
                     // We need to put this here because it is not fetched until we build

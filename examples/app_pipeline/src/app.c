@@ -16,7 +16,7 @@ extern void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
 
 extern void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metadata_t *md_input,
         int32_t (*input_data)[AP_FRAME_ADVANCE],
-        int32_t (*output_data)[AP_FRAME_ADVANCE]);
+        int32_t output_data[AP_FRAME_ADVANCE]);
 
 static inline void producer(int32_t frame_y[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE],
                             int32_t frame_x[AP_MAX_X_CHANNELS][AP_FRAME_ADVANCE]) {
@@ -32,7 +32,7 @@ static inline void producer(int32_t frame_y[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE]
     }
 }
 
-static inline void consumer(int32_t frame_y[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE]) {
+static inline void consumer(int32_t frame_y[AP_FRAME_ADVANCE]) {
     (void)frame_y;
     printf("frame done\n");
 }
@@ -65,7 +65,7 @@ void pipeline_wrapper_tile1(chanend_t c_pcm_in)
     pipeline_state_tile1_t DWORD_ALIGNED pipeline_tile1_state;
     pipeline_metadata_t md;
     int32_t DWORD_ALIGNED tile0_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
-    int32_t DWORD_ALIGNED pipeline_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED pipeline_output[AP_FRAME_ADVANCE];
 
     pipeline_tile1_init(&pipeline_tile1_state);
     while(1) {

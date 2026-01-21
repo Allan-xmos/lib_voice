@@ -1,14 +1,14 @@
-#####################################
-fwk_voice: Voice processing framework
-#####################################
+###################################
+lib_voice: Voice processing library
+###################################
 
-********
-Overview
-********
+************
+Introduction
+************
 
-``fwk_voice`` is a collection of DSP components used to build a front-end voice processing pipeline.
+``lib_voice`` is a collection of DSP components used to build a front-end voice processing pipeline.
 
-At its core, the framework provides high-performance audio processing algorithms that are combined
+At its core, the library provides high-performance audio processing algorithms that are combined
 into a configurable pipeline. The pipeline takes input from a pair of microphones and applies
 a sequence of signal processing stages to extract a clean voice signal from complex acoustic environments.
 An optional reference signal from a host system can be provided to enable Acoustic Echo Cancellation (AEC),
@@ -17,10 +17,34 @@ removing echo from the microphone signal.
 The pipeline produces two output streams: one optimized for Automatic Speech Recognition (ASR)
 systems and another suitable for voice communications.
 
-``fwk_voice`` includes a flexible audio routing infrastructure and supports a range of
+``lib_voice`` includes a flexible audio routing infrastructure and supports a range of
 digital inputs and outputs, allowing it to be integrated into a wide variety of system configurations.
 The pipeline can be configured at startup and adjusted during operation via a set configuration parameters.
 All source code is provided, enabling full customization and the integration of additional audio processing algorithms.
+
+*****
+Usage
+*****
+
+``lib_voice`` is intended to be used with the `XCommon CMake <https://www.xmos.com/file/xcommon-cmake-documentation/?version=latest>`_
+, the `XMOS` application build and dependency management system.
+
+To use this library in an application include ``lib_voice`` in the application's ``APP_DEPENDENT_MODULES`` list in
+`CMakeLists.txt`, for example:
+
+.. code-block:: cmake
+
+    set(APP_DEPENDENT_MODULES "lib_voice")
+
+.. note:: Dependent modules should be pinned to release versions where possible, otherwise the
+   latest commit on the `develop` branch will be used.  For further details on managing modules,
+   pinning to a release version and other options, please see the page `xcommon-cmake Dependency Management <https://www.xmos.com/documentation/XM-015090-PC/html/doc/dependency_management.html>`_.
+
+All ``lib_voice`` functions can be accessed via the ``voice.h`` header file, for example:
+
+.. code-block:: C
+
+    #include "voice.h"
 
 ***************************
 Voice Processing Components
@@ -42,7 +66,7 @@ Voice Processing Components
 Examples
 ********
 
-Various example applications are provided along side the ``fwk_voice`` that demonstrate basic usage.
+Various example applications are provided alongside the ``lib_voice`` that demonstrate basic usage.
 These are located in the ``examples`` directory.
 
 Requirements
@@ -52,7 +76,7 @@ To build or run any examples the user is expected to have the following:
 
 * XTC Tools 15.3.1
 * CMake 3.20 or higher
-* Python 3.10 or higher
+* Python 3.11
 
 The python is required since library depends on the `xmos-ai-tools <https://pypi.org/project/xmos-ai-tools/>`_
 This is required for the ``cmake`` to configure the project,
@@ -63,34 +87,30 @@ AEC example
 
 The AEC example demonstrates the use of API to run a frame of data through the AEC.
 It also shows how to configure AEC to run on one or two threads.
-For that purpose, this example is built with 2 build configs ``_1th`` and ``_2th``.
+``AEC_THREADS`` define toggles the AEC to use 1-threaded or 2-threaded scheduling structs:
 
-Building
---------
+.. literalinclude:: ../examples/app_aec/src/main.c
+    :language: c
+    :start-at: #if AEC_THREADS == 1
+    :end-before: // Allocate signal data
 
-To build the example, run the following from the root of the repository:
+The build system will automatically create both configs called ``app_aec_1th`` and ``app_aec_2th``.
 
-.. code-block:: console
+After the application has decided which thread distribution scheme to run,
+it allocates memory for the AEC and initialises it:
 
-   git submodule update --init --recursive
-   pip install -r requirements.txt
-   cmake -G "Unix Makefiles" -B build --toolchain xmos_cmake_toolchain/xs3a.cmake
-   xmake -C build fwk_voice_example_aec_1th
-   xmake -C build fwk_voice_example_aec_2th
+.. literalinclude:: ../examples/app_aec/src/main.c
+    :language: c
+    :start-at: // Allocate signal data
+    :end-at: AEC_MAIN_FILTER_PHASES, AEC_SHADOW_FILTER_PHASES, &tdist);
 
+After the AEC has been initialised, it is ready to process data.
+In this example, ``frame_y`` and ``frame_x`` memory is reused for AEC output:
 
-Running
--------
-
-To run the example, run the following from the root of the repository:
-
-.. code-block:: console
-
-   xrun --io build/examples/aec/bin/fwk_voice_example_aec_1th.xe
-   xrun --io build/examples/aec/bin/fwk_voice_example_aec_2th.xe
-
-Output
-------
+.. literalinclude:: ../examples/app_aec/src/main.c
+    :language: c
+    :start-at: producer(frame_y, frame_x);
+    :end-at: consumer(frame_y);
 
 Upon execution, the example will print "frame done" when the AEC has processed a frame.
 
@@ -100,29 +120,20 @@ VNR example
 The VNR example demonstrates the use of API to run a frame of data through the VNR
 and get the estimation of how much voice is present in it.
 
-Building
---------
+To run the VNR, the application should first allocate memory for its data and initialise it:
 
-To build the example, run the following from the root of the repository:
+.. literalinclude:: ../examples/app_vnr/src/main.c
+    :language: c
+    :start-at: // Allocate input and output memory
+    :end-at: vnr_state_init(&vnr);
 
-.. code-block:: console
+After the VNR has been initialised, it is ready to process data.
+The VNR output is in ``float_s32_t`` format, so there's an extra step if the user wants it in ``float``.
 
-   git submodule update --init --recursive
-   pip install -r requirements.txt
-   cmake -G "Unix Makefiles" -B build --toolchain xmos_cmake_toolchain/xs3a.cmake
-   xmake -C build fwk_voice_example_vnr
-
-Running
--------
-
-To run the example, run the following from the root of the repository:
-
-.. code-block:: console
-
-   xrun --io build/examples/vnr/bin/fwk_voice_example_vnr.xe
-
-Output
-------
+.. literalinclude:: ../examples/app_vnr/src/main.c
+    :language: c
+    :start-at: producer(input);
+    :end-at: consumer(res);
 
 Upon execution, the example will use the pseudo-random generator to get an input data.
 This data will be run through the VNR and the score will be printed in the terminal.
@@ -141,7 +152,37 @@ maximise AEC performance.  ADEC processing happens on the same thread as the AEC
 to give the IC and the AGC information about the speech presence in a frame.
 
 There are two pipelines supported in this example: Standard Architecture and Alternating Architecture.
-For that purpose, this example is built with 2 build configs ``_std_arch`` and ``_alt_arch``.
+Building one or the other config is controlled via the ``ALT_ARCH_MODE`` define.
+The build system will automatically create both configs called ``app_pipeline_std_arch`` and ``app_pipeline_alt_arch``.
+
+To create the pipeline, the application must first initialise all the individual components:
+
+.. literalinclude:: ../examples/app_pipeline/src/pipeline.c
+    :language: c
+    :start-at: // Initialise AEC, DE, ADEC stages
+    :end-at: stage1_init(&state->stage_1_state, &aec_de_mode_conf, &aec_non_de_mode_conf, &adec_conf);
+
+.. literalinclude:: ../examples/app_pipeline/src/pipeline.c
+    :language: c
+    :start-at: // Initialise IC, VNR
+    :end-at: agc_init(&state->agc_state, &agc_conf_asr);
+
+After the pipeline has been initialised, the data can be run through it.
+All the modules in the example can run on separate threads.
+To exchange information between the pipeline stages
+the metadata struct will need to be created to be populated and consumed by the different modules.
+
+.. literalinclude:: ../examples/app_pipeline/src/pipeline.c
+    :language: c
+    :start-at: /** Stage1 - AEC, DE, ADEC*/
+    :end-at: &md.aec_corr_factor, &md.ref_active_flag, input_y_data, input_x_data);
+
+.. literalinclude:: ../examples/app_pipeline/src/pipeline.c
+    :language: c
+    :start-at: // Bypass IC if the reference is high in the alt arch mode
+    :end-at: agc_process_frame(&state->agc_state, output_data, ns_output, &agc_md);
+
+Upon execution, the example will print "frame done" when the AEC has processed a frame.
 
 Standard Architecture
 ---------------------
@@ -175,41 +216,64 @@ Common
 If enabled, the IC only processes a two channel input. It will use the second channel as the reference to the first to output one channel of interference cancelled output.
 In this manner, it tries to cancel the room noise. However, to avoid cancelling the wanted signal, it only adapts in the absence of voice.
 Hence the VNR is called to calculate the voice to noise ratio estimation. The output of the VNR will allow IC to modulate the rate
-at which it adapts its coefficients. The output of the IC is copied to the second channel as well.
+at which it adapts its coefficients.
 
-The NS is a single channel API, so two instances of NS should be initialised for 2 channel processing. The NS is configured the same way
-for both the channels. It will try to predict the background noise and cancel it from the frame before passing it to AGC.
+The NS will try to predict the background noise and cancel it from the frame before passing it to AGC.
 
-The AGC is configured for ASR engine suitable gain control on both the channels. The
-output of the AGC stage is the pipeline output. The AGC also takes the output
-of the VNR to adapt its coefficients. This avoids noise being amplified during the absence of voice.
+The AGC is configured for ASR engine suitable gain control.
+The output of the AGC stage is the pipeline output.
+The AGC also takes the output of the VNR to adapt its coefficients.
+This avoids noise being amplified during the absence of voice.
 
-Building
---------
+Building the example
+====================
 
-To build the example, run the following from the root of the repository:
+This section assumes that the `XMOS XTC Tools <https://www.xmos.com/software-tools/>`_ have been
+downloaded and installed. The required version is specified in the accompanying ``README``.
 
-.. code-block:: console
+Installation instructions can be found `here <https://xmos.com/xtc-install-guide>`_.
 
-   git submodule update --init --recursive
-   pip install -r requirements.txt
-   cmake -G "Unix Makefiles" -B build --toolchain xmos_cmake_toolchain/xs3a.cmake
-   xmake -C build fwk_voice_example_pipeline_std_arch
-   xmake -C build fwk_voice_example_pipeline_alt_arch
+Special attention should be paid to the section on
+`Installation of Required Third-Party Tools <https://www.xmos.com/documentation/XM-014363-PC/html/installation/install-configure/install-tools/install_prerequisites.html>`_.
 
+The application is built using the `xcommon-cmake <https://www.xmos.com/file/xcommon-cmake-documentation/?version=latest>`_
+build system, which is provided with the XTC tools and is based on `CMake <https://cmake.org/>`_.
 
-Running
--------
+The ``lib_voice`` software ZIP package should be downloaded and extracted to a chosen working
+directory.
 
-To run the example, run the following from the root of the repository:
+To configure the build, the following commands should be run from an XTC command prompt:
 
-.. code-block:: console
+.. code-block:: bash
 
-   xrun --io build/examples/pipeline/bin/fwk_voice_example_pipeline_std_arch.xe
-   xrun --io build/examples/pipeline/bin/fwk_voice_example_pipeline_alt_arch.xe
+    cd lib_voice
+    pip install -r requirements.txt
+    cd examples/app_aec
+    cmake -G "Unix Makefiles" -B build
 
-Output
-------
+If any dependencies are missing they will be retrieved automatically during this step.
 
-Upon execution, the example will print "frame done" when the pipeline has processed a frame.
+The application binaries should then be built using ``xmake``:
+
+.. code-block:: bash
+
+    xmake -j -C build
+
+Binary artifacts (.xe files) will be generated under the appropriate subdirectories of the
+``app_aec/bin`` directory — one for each supported build configuration.
+
+For subsequent builds, the ``cmake`` step may be omitted.
+If ``CMakeLists.txt`` or other build files are modified, ``cmake`` will be re-run automatically
+by ``xmake`` as needed.
+
+Running the example
+===================
+
+From an XTC command prompt, the following command should be run from the ``examples/app_aec``
+directory:
+
+.. code-block:: bash
+
+    xrun --io ./bin/2th/app_aec_2th.xe
+
 

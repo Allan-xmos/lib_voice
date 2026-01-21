@@ -1,15 +1,12 @@
 #ifndef AP_STAGE_A_STATE_H
 #define AP_STAGE_A_STATE_H
 
+#include "voice.h"
 #include "pipeline_config.h"
-#include "stage1.h"
-#include "ic_state.h"
-#include "ns_state.h"
-#include "agc.h"
 
 typedef struct {
     float_s32_t max_ref_energy;
-    float_s32_t aec_corr_factor[AP_MAX_Y_CHANNELS];
+    float_s32_t aec_corr_factor;
     int32_t ref_active_flag;
     float_s32_t vnr_pred_flag;
 }pipeline_metadata_t;
@@ -22,11 +19,11 @@ typedef struct {
 typedef struct {
     // IC, VNR
     ic_state_t DWORD_ALIGNED ic_state;
-    float_s32_t input_vnr_pred, output_vnr_pred;
+    float_s32_t input_vnr_pred;
     // NS
-    ns_state_t DWORD_ALIGNED ns_state[AP_MAX_Y_CHANNELS];
+    ns_state_t DWORD_ALIGNED ns_state;
     // AGC
-    agc_state_t agc_state[AP_MAX_Y_CHANNELS];
+    agc_state_t agc_state;
 } pipeline_state_tile1_t;
 
 #endif

@@ -38,7 +38,6 @@ if(PROJECT_IS_TOP_LEVEL)
     endif()
 
     add_compile_options( ${COMPILE_FLAGS} )
-    add_subdirectory( examples )
 
     set( CONFIG_XSCOPE_PATH ${CMAKE_SOURCE_DIR}/test/shared/file_utils)
     add_subdirectory( test )

@@ -3,19 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "aec.h"
-#include "ic.h"
-#include "ns.h"
-#include "pipeline_config.h"
 #include "pipeline_state.h"
-
-#define VNR_AGC_THRESHOLD (0.5)
-#define PRINT_VNR_PREDICTION (0)
 
 void pipeline_tile0_init(pipeline_state_tile0_t *state) {
     memset(state, 0, sizeof(pipeline_state_tile0_t));
 
-    // Initialise AEC, DE, ADEC stage
+    // Initialise AEC, DE, ADEC stages
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
 #if ALT_ARCH_MODE
     aec_non_de_mode_conf.num_y_channels = 1;
@@ -40,9 +33,13 @@ void pipeline_tile0_init(pipeline_state_tile0_t *state) {
     adec_config_t adec_conf;
     adec_conf.bypass = 1; // Bypass automatic DE correction
 #if DISABLE_INITIAL_DELAY_EST
-    adec_conf.force_de_cycle_trigger = 0; // Do not force a DE correction cycle ob startup
+    // Do not force a DE correction cycle on startup
+    adec_conf.force_de_cycle_trigger = 0;
 #else
-    adec_conf.force_de_cycle_trigger = 1; // Force a delay correction cycle, so that delay correction happens once after initialisation. Make sure this is set back to 0 after adec has requested a transition into DE mode once, to stop any further delay correction (automatic or forced) by ADEC
+    // Force a delay correction cycle, so that delay correction happens once after initialisation.
+    // Make sure this is set back to 0 after adec has requested a transition into DE mode once,
+    // to stop any further delay correction (automatic or forced) by ADEC
+    adec_conf.force_de_cycle_trigger = 1;
 #endif
     stage1_init(&state->stage_1_state, &aec_de_mode_conf, &aec_non_de_mode_conf, &adec_conf);
 }
@@ -54,19 +51,11 @@ void pipeline_tile1_init(pipeline_state_tile1_t *state) {
     ic_init(&state->ic_state);
 
     // Initialise NS
-    for(int ch = 0; ch < AP_MAX_Y_CHANNELS; ch++){
-        ns_init(&state->ns_state[ch]);
-    }
+    ns_init(&state->ns_state);
 
     // Initialise AGC
     agc_config_t agc_conf_asr = AGC_PROFILE_ASR;
-#if DISABLE_AGC_ADAPT_GAIN
-    agc_conf_asr.adapt = 0;
-#endif
-
-    agc_init(&state->agc_state[0], &agc_conf_asr);
-    agc_init(&state->agc_state[1], &agc_conf_asr);
-
+    agc_init(&state->agc_state, &agc_conf_asr);
 }
 
 void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
@@ -79,29 +68,25 @@ void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
     memset(&md, 0, sizeof(pipeline_metadata_t));
 
     /** Stage1 - AEC, DE, ADEC*/
-    int32_t stage_1_out[AEC_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];// stage1 will not process the frame in-place since Mic input is needed to overwrite the output in certain cases
+    // stage1 will not process the frame in-place,
+    // since mic input is needed to overwrite the output in certain cases
+    int32_t stage_1_out[AEC_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
 
-    stage1_process_frame(&state->stage_1_state, &stage_1_out[0], &md.max_ref_energy, &md.aec_corr_factor[0], &md.ref_active_flag, input_y_data, input_x_data);
+    stage1_process_frame(&state->stage_1_state, &stage_1_out[0], &md.max_ref_energy,
+            &md.aec_corr_factor, &md.ref_active_flag, input_y_data, input_x_data);
 
-    if(state->stage_1_state.aec_state.main_state.shared_state->num_y_channels < AP_MAX_Y_CHANNELS) {
-        for(int ch=state->stage_1_state.aec_state.main_state.shared_state->num_y_channels; ch<AP_MAX_Y_CHANNELS; ch++) {
-            md.aec_corr_factor[ch] = md.aec_corr_factor[0];
-        }
-    }
     memcpy(&output_data[0][0], &stage_1_out[0][0], AEC_MAX_Y_CHANNELS*AP_FRAME_ADVANCE*sizeof(int32_t));
     memcpy(md_output, &md, sizeof(pipeline_metadata_t));
 }
 
 void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metadata_t *md_input,
         int32_t (*input_data)[AP_FRAME_ADVANCE],
-        int32_t (*output_data)[AP_FRAME_ADVANCE])
+        int32_t output_data[AP_FRAME_ADVANCE])
 {
     pipeline_metadata_t md;
     memcpy(&md, md_input, sizeof(pipeline_metadata_t));
 
-    /** IC and VNR*/
-    int32_t ic_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
-
+    // Bypass IC if the reference is high in the alt arch mode
 #if ALT_ARCH_MODE
     if(md.ref_active_flag) {
         state->ic_state.config_params.bypass = 1;
@@ -110,32 +95,25 @@ void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metada
         state->ic_state.config_params.bypass = 0;
     }
 #endif
-    // IC and VNR
-    // The ASR channel will be produced by IC filtering
+    /** IC and VNR*/
+    int32_t ic_output[AP_FRAME_ADVANCE];
     float_s32_t input_vnr_pred;
-    ic_process_frame(&state->ic_state, input_data[0], input_data[1], ic_output[0], &input_vnr_pred);
+
+    ic_process_frame(&state->ic_state, input_data[0], input_data[1], ic_output, &input_vnr_pred);
     md.vnr_pred_flag = input_vnr_pred;
 
-    // Copy IC output to the other channel
-    for(int v = 0; v < AP_FRAME_ADVANCE; v++){
-        ic_output[1][v] = ic_output[0][v];
-    }
-
     /** NS*/
-    int32_t ns_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
-    for(int ch = 0; ch < AP_MAX_Y_CHANNELS; ch++){
-        ns_process_frame(&state->ns_state[ch], ns_output[ch], ic_output[ch]);
-    }
+    int32_t ns_output[AP_FRAME_ADVANCE];
+
+    ns_process_frame(&state->ns_state, ns_output, ic_output);
 
     /** AGC*/
     agc_meta_data_t agc_md;
     agc_md.aec_ref_power = md.max_ref_energy;
     agc_md.vnr_flag = md.vnr_pred_flag;
     agc_md.ref_active_flag = md.ref_active_flag;
+    agc_md.aec_corr_factor = md.aec_corr_factor;
 
-    for(int ch=0; ch<AP_MAX_Y_CHANNELS; ch++) {
-        agc_md.aec_corr_factor = md.aec_corr_factor[ch];
-        agc_process_frame(&state->agc_state[ch], output_data[ch], ns_output[ch], &agc_md);
-    }
+    agc_process_frame(&state->agc_state, output_data, ns_output, &agc_md);
 }
 

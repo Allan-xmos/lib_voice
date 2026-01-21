@@ -23,13 +23,20 @@ static inline void producer(int32_t arr[VNR_FRAME_ADVANCE])
   }
 }
 
+static inline void consumer(float res)
+{
+  printf("%f, ", res);
+}
+
 int main()
 {
-  // Initialise VNR object, input and and output memory
+  // Allocate input and output memory
+  int32_t input[VNR_FRAME_ADVANCE] = {0};
+  float_s32_t vnr_out;
+
+  // Initialise VNR
   vnr_state_t vnr;
   vnr_state_init(&vnr);
-  float_s32_t vnr_out;
-  int32_t input[VNR_FRAME_ADVANCE] = {0};
 
   for (unsigned i = 0; i < 100; i++)
   {
@@ -37,7 +44,7 @@ int main()
     producer(input);
     vnr_process_frame(&vnr, &vnr_out, input);
     float res = float_s32_to_float(vnr_out);
-    printf("%f, ", res);
+    consumer(res);
   }
   printf("\n");
   return 0;

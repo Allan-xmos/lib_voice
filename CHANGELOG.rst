@@ -1,6 +1,13 @@
 XMOS Voice Framework Change Log
 ===============================
 
+UNRELEASED
+----------
+
+  * ADDED: Top-level header file - `voice.h`
+  * CHANGED: Examples renamed to the form of: `app_<example_name>` 
+  * CHANGED: Examples changed to use `xcommon_cmake`
+
 0.9.0
 -----
 

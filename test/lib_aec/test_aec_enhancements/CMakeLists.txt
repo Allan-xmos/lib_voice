@@ -1,27 +1,52 @@
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(test_aec_enhancements)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(APP_HW_TARGET XK-EVK-XU316)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+set(CONFIG_XSCOPE_PATH ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils)
+include(${XMOS_SANDBOX_DIR}/lib_voice/test/etc/build_options.cmake)
 
-#######################
-add_executable(fwk_voice_test_aec_enhancements)
+file(GLOB CONFIG_XSCOPE_REL_PATH
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${CONFIG_XSCOPE_PATH}/config.xscope)
 
-generate_schedule(fwk_voice_test_aec_enhancements ${TEST_AEC_ENHANCEMENTS_BUILD_CONFIG})
+file(GLOB APP_C_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils/src/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/profile/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/lib_adec/test_wav_adec/src/*.c)
 
-target_link_libraries(fwk_voice_test_aec_enhancements
-    PUBLIC
-        fwk_voice::test::shared_test_wav_adec)
-
-target_compile_definitions(fwk_voice_test_aec_enhancements
-    PRIVATE
-        BYPASS_ADEC=1)
+file(GLOB APP_XC_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/lib_adec/test_wav_adec/src/*.xc)
 
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    target_compile_options(fwk_voice_test_aec_enhancements
-        PRIVATE "-target=${XCORE_TARGET}")
+set(APP_INCLUDES
+    ${CMAKE_CURRENT_LIST_DIR}/../../lib_adec/test_wav_adec/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/profile)
 
-    target_link_options(fwk_voice_test_aec_enhancements
-        PRIVATE
-            "-target=${XCORE_TARGET}"
-            "-report"
-            "${CONFIG_XSCOPE_PATH}/config.xscope")
+
+set(AEC_SCHEDULE_CONFIG ${TEST_AEC_ENHANCEMENTS_BUILD_CONFIG})
+
+if (NOT BUILD_NATIVE)
+    set(APP_DEPENDENT_MODULES "lib_voice"
+                                "xscope_fileio")
+    set(APP_COMPILER_FLAGS
+            -report
+            -Os
+            -DTEST_WAV_XSCOPE=1
+            -DBYPASS_ADEC=1)
+
+    set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
+else()
+    set(APP_DEPENDENT_MODULES "lib_voice")
+
+    set(APP_COMPILER_FLAGS
+            -DX86_BUILD=1)
 endif()
+XMOS_REGISTER_APP()

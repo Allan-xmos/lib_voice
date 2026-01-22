@@ -23,7 +23,7 @@ hydra_audio_base_dir = os.path.expanduser("~/hydra_audio/")
 
 delay_calc_output_file_name = "measured_delay_samples.bin"
 
-xe_path = os.path.abspath(glob.glob('../../../build/test/lib_adec/test_delay_estimator/bin/*.xe')[0])
+xe_path = os.path.abspath(glob.glob('../../../test/lib_adec/test_delay_estimator/bin/*.xe')[0])
 
 sample_rate = 16000
 proc_frame_length = 2**9 # = 512

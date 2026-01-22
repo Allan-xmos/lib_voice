@@ -33,9 +33,4 @@ typedef struct {
     int32_t de_output_measured_delay_samples; //for logging in test_wav
 } pipeline_state_t;
 
-#if !PROFILE_PROCESSING
-    #define prof(n, str)
-    #define print_prof(start, end, framenum)
-#endif
-
 #endif

@@ -1,14 +1,50 @@
-## executable output directory
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
-#######
-add_executable(fwk_voice_characterise_c_py )
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(test_ic_characterise_c_py)
 
-target_link_libraries(fwk_voice_characterise_c_py 
-    PUBLIC
-        fwk_voice::example::test_wav_ic
-        )
+set(APP_HW_TARGET XK-EVK-XU316)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+set(CONFIG_XSCOPE_PATH ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils)
 
-target_compile_definitions(fwk_voice_characterise_c_py 
-    PRIVATE
-        DISABLE_ADAPTION_CONTROLLER=1)
+file(GLOB CONFIG_XSCOPE_REL_PATH
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${CONFIG_XSCOPE_PATH}/config.xscope)
+
+file(GLOB APP_C_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils/src/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/profile/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/lib_ic/test_ic_profile/src/*.c)
+
+file(GLOB APP_XC_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/lib_ic/test_ic_profile/src/*.xc)
+
+set(APP_INCLUDES
+    ${CMAKE_CURRENT_LIST_DIR}/../test_ic_profile/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/profile)
+
+if (NOT BUILD_NATIVE)
+    set(APP_DEPENDENT_MODULES "lib_voice"
+                                "xscope_fileio")
+    set(APP_COMPILER_FLAGS
+            -Os
+            -report
+            -DTEST_WAV_XSCOPE=1
+            -DDISABLE_ADAPTION_CONTROLLER=1)
+
+    set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
+else()
+    set(APP_DEPENDENT_MODULES "lib_voice")
+
+    set(APP_COMPILER_FLAGS
+            -DX86_BUILD=1
+            -DDISABLE_ADAPTION_CONTROLLER=1)
+endif()
+
+XMOS_REGISTER_APP()

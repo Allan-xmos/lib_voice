@@ -7,10 +7,8 @@
 #include "adec.h"
 
 #include "pipeline_state.h"
-
-#if PROFILE_PROCESSING
 #include "profile.h"
-#endif
+
 
 static void aec_switch_configuration(pipeline_state_t *state, aec_conf_t *conf)
 {

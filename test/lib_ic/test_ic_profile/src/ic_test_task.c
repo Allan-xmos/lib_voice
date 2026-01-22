@@ -24,9 +24,7 @@
 #error "Number of INPUT_CHANNELS has to be 2"
 #endif
 
-#if PROFILE_PROCESSING
 #include "profile.h"
-#endif
 
 void ic_task(const char *input_file_name, const char *output_file_name) {
     //open files

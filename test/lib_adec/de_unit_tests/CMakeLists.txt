@@ -4,9 +4,14 @@ project(de_unit_tests)
 
 set(APP_HW_TARGET XCORE-AI-EXPLORER)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+include(${XMOS_SANDBOX_DIR}/lib_voice/test/etc/build_options.cmake)
+
 set(APP_DEPENDENT_MODULES lib_unity lib_voice)
 
-set(APP_INCLUDES ${CMAKE_CURRENT_LIST_DIR}/src ${CMAKE_CURRENT_LIST_DIR}/../../shared/pseudo_rand ${CMAKE_CURRENT_LIST_DIR}/../../shared/testing)
+set(APP_INCLUDES
+    ${CMAKE_CURRENT_LIST_DIR}/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/pseudo_rand
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/testing)
 
 file(GLOB SHARED_SRC
     RELATIVE ${CMAKE_CURRENT_LIST_DIR}
@@ -20,7 +25,7 @@ set(APP_C_SRCS ${TEST_C_SRCS} ${SHARED_SRC})
 
 file(GLOB_RECURSE tests RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS src/test*.c)
 
-set(AEC_SCHEDULE_CONFIG ${AEC_UNIT_TESTS_BUILD_CONFIG})
+set(AEC_SCHEDULE_CONFIG ${DE_UNIT_TESTS_BUILD_CONFIG})
 
 foreach(test_file ${tests})
     get_filename_component(test_name ${test_file} NAME_WE)

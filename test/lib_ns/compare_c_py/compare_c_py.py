@@ -11,7 +11,7 @@ import shutil
 from run_dut import run_dut
 import py_vs_c_utils as pvc
 
-c_ns_xe_path = Path(__file__).parents[3] / "build" / "test" / "lib_ns" / "test_ns_profile" / "bin" / "fwk_voice_test_ns_profile"
+c_ns_xe_path = Path(__file__).parents[3] / "test" / "lib_ns" / "test_ns_profile" / "bin" / "test_ns_profile"
 ns_conf_path = Path(__file__).parents[4] / "py_voice" / "py_voice" / "config" / "components" / "ns_only.json"
 
 SAMPLE_RATE = 16000
@@ -31,7 +31,7 @@ def process_xe(input_data, ns_xe, run_native = False):
 
     output_data, _ = run_dut(input_data, local_exe)
 
-    return pvc.int32_to_float(output_data) 
+    return pvc.int32_to_float(output_data)
 
 def process_py(input_data):
     ns_obj = ns(ns_conf_path)

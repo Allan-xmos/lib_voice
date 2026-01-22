@@ -12,7 +12,7 @@
 
 /**
  * @page page_ic_defines_h ic_defines.h
- * 
+ *
  * This header contains lib_ic public defines that are used to configure
  * the interference canceller when ic_init() is called.
  *
@@ -21,9 +21,9 @@
 
 /**
  * @defgroup ic_defines   IC #define constants
- */ 
+ */
 
-/** Initial MU value applied on startup. MU controls the adaption rate of the IC and 
+/** Initial MU value applied on startup. MU controls the adaption rate of the IC and
  * is normally adjusted by the adaption rate controller during operation.
  * @ingroup ic_defines */
 #define IC_INIT_MU                                  1.0 // From two_mic_stereo.json
@@ -37,7 +37,7 @@
 
 /** The number of filter phases supported by the IC. Each filter phase represents 15ms of
  * filter length. Hence a 10 phase filter will allow cancellation of noise sources with
- * up to 150ms of echo tail length. There is a tradeoff between adaption speed and 
+ * up to 150ms of echo tail length. There is a tradeoff between adaption speed and
  * maximum cancellation of the filter; increasing the number of phases will increase
  * the maximum cancellation at the cost of increased xCORE resource usage and slower
  * adaption times.
@@ -98,7 +98,7 @@
 ///////Parameters below are fixed and are not designed to be configurable - DO NOT EDIT///////
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Number of Y channels input. This is fixed at 1 for the IC. The Y channel is delayed and used to 
+/** Number of Y channels input. This is fixed at 1 for the IC. The Y channel is delayed and used to
  * generate the estimated noise signal to subtract from X. In practical terms it does not matter
  * which microphone is X and which is Y. NOT USER MODIFIABLE.
  *
@@ -115,12 +115,12 @@
  #define IC_X_CHANNELS 1
 
 
-/** Time domain samples block length used internally in the IC's block LMS algorithm. 
+/** Time domain samples block length used internally in the IC's block LMS algorithm.
  * NOT USER MODIFIABLE.
  *
  * @ingroup ic_defines
  */
-#define IC_FRAME_LENGTH 512 
+#define IC_FRAME_LENGTH 512
 
 /** @brief IC new samples frame size
  * This is the number of samples of new data that the IC works on every frame. 240 samples at 16kHz is 15msec. Every
@@ -137,26 +137,20 @@
  * IC_FD_FRAME_LENGTH spectrum values represent the bins from DC to Nyquist. NOT USER MODIFIABLE.
  *
  * @ingroup ic_defines
- */   
+ */
 #define IC_FD_FRAME_LENGTH ((IC_FRAME_LENGTH / 2) + 1) // Frequency domain frame length
 
 /** Extra 2 samples you need to allocate in time domain so that the full spectrum (DC to nyquist) can be stored
  * after the in-place FFT. NOT USER MODIFIABLE.
  *
  * @ingroup ic_defines
- */  
+ */
 #define FFT_PADDING 2
 
 // For unit tests
-#ifdef __XC__ 
+#ifdef __XC__
 #undef DWORD_ALIGNED
 #define DWORD_ALIGNED
-#endif
-
-// For the IC example
-#if !PROFILE_PROCESSING
-    #define prof(n, str)
-    #define print_prof(start, end, framenum)
 #endif
 
 #endif

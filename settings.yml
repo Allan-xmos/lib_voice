@@ -4,12 +4,12 @@ title: '{{lib_name}}: Voice processing library'
 version: 0.9.0
 
 documentation:
-  root_doc: doc/index.rst
+  root_doc: doc/rst/lib_voice.rst
   exclude_patterns_path: doc/exclude_patterns.inc
   doxygen_projects:
     fwk_voice:
       doxyfile_path: doc/Doxyfile.inc
   pdfs:
-    doc/index.rst:
+    doc/rst/lib_voice.rst:
       pdf_title: "{{title}}"
       pdf_filename: "{{lib_name}}_v{{version}}"

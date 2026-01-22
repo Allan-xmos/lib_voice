@@ -89,7 +89,7 @@ The AEC example demonstrates the use of API to run a frame of data through the A
 It also shows how to configure AEC to run on one or two threads.
 ``AEC_THREADS`` define toggles the AEC to use 1-threaded or 2-threaded scheduling structs:
 
-.. literalinclude:: ../examples/app_aec/src/main.c
+.. literalinclude:: ../../examples/app_aec/src/main.c
     :language: c
     :start-at: #if AEC_THREADS == 1
     :end-before: // Allocate signal data
@@ -99,7 +99,7 @@ The build system will automatically create both configs called ``app_aec_1th`` a
 After the application has decided which thread distribution scheme to run,
 it allocates memory for the AEC and initialises it:
 
-.. literalinclude:: ../examples/app_aec/src/main.c
+.. literalinclude:: ../../examples/app_aec/src/main.c
     :language: c
     :start-at: // Allocate signal data
     :end-at: AEC_MAIN_FILTER_PHASES, AEC_SHADOW_FILTER_PHASES, &tdist);
@@ -107,7 +107,7 @@ it allocates memory for the AEC and initialises it:
 After the AEC has been initialised, it is ready to process data.
 In this example, ``frame_y`` and ``frame_x`` memory is reused for AEC output:
 
-.. literalinclude:: ../examples/app_aec/src/main.c
+.. literalinclude:: ../../examples/app_aec/src/main.c
     :language: c
     :start-at: producer(frame_y, frame_x);
     :end-at: consumer(frame_y);
@@ -122,7 +122,7 @@ and get the estimation of how much voice is present in it.
 
 To run the VNR, the application should first allocate memory for its data and initialise it:
 
-.. literalinclude:: ../examples/app_vnr/src/main.c
+.. literalinclude:: ../../examples/app_vnr/src/main.c
     :language: c
     :start-at: // Allocate input and output memory
     :end-at: vnr_state_init(&vnr);
@@ -130,7 +130,7 @@ To run the VNR, the application should first allocate memory for its data and in
 After the VNR has been initialised, it is ready to process data.
 The VNR output is in ``float_s32_t`` format, so there's an extra step if the user wants it in ``float``.
 
-.. literalinclude:: ../examples/app_vnr/src/main.c
+.. literalinclude:: ../../examples/app_vnr/src/main.c
     :language: c
     :start-at: producer(input);
     :end-at: consumer(res);
@@ -157,12 +157,12 @@ The build system will automatically create both configs called ``app_pipeline_st
 
 To create the pipeline, the application must first initialise all the individual components:
 
-.. literalinclude:: ../examples/app_pipeline/src/pipeline.c
+.. literalinclude:: ../../examples/app_pipeline/src/pipeline.c
     :language: c
     :start-at: // Initialise AEC, DE, ADEC stages
     :end-at: stage1_init(&state->stage_1_state, &aec_de_mode_conf, &aec_non_de_mode_conf, &adec_conf);
 
-.. literalinclude:: ../examples/app_pipeline/src/pipeline.c
+.. literalinclude:: ../../examples/app_pipeline/src/pipeline.c
     :language: c
     :start-at: // Initialise IC, VNR
     :end-at: agc_init(&state->agc_state, &agc_conf_asr);
@@ -172,12 +172,12 @@ All the modules in the example can run on separate threads.
 To exchange information between the pipeline stages
 the metadata struct will need to be created to be populated and consumed by the different modules.
 
-.. literalinclude:: ../examples/app_pipeline/src/pipeline.c
+.. literalinclude:: ../../examples/app_pipeline/src/pipeline.c
     :language: c
     :start-at: /** Stage1 - AEC, DE, ADEC*/
     :end-at: &md.aec_corr_factor, &md.ref_active_flag, input_y_data, input_x_data);
 
-.. literalinclude:: ../examples/app_pipeline/src/pipeline.c
+.. literalinclude:: ../../examples/app_pipeline/src/pipeline.c
     :language: c
     :start-at: // Bypass IC if the reference is high in the alt arch mode
     :end-at: agc_process_frame(&state->agc_state, output_data, ns_output, &agc_md);

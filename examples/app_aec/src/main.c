@@ -33,7 +33,7 @@ int main() {
     #else
     #error "Unsupported number of AEC threads"
     #endif
-
+    // Allocate signal data
     int32_t DWORD_ALIGNED frame_y[AEC_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
     int32_t DWORD_ALIGNED frame_x[AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
 

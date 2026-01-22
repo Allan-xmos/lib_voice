@@ -5,26 +5,24 @@ set( UNITY_PATH ${TEST_ONLY_DEPS_ROOT}/Unity )
 
 include(etc/build_options.cmake)
 
-if ( ${FWK_VOICE_BUILD_TESTS} )
-    add_subdirectory( shared )
+add_subdirectory( shared )
 
-    add_subdirectory( lib_ns )
+add_subdirectory( lib_ns )
 
-    add_subdirectory( lib_aec )
+add_subdirectory( lib_aec )
 
-    add_subdirectory( lib_adec )
+add_subdirectory( lib_adec )
 
-    add_subdirectory( lib_ic )
+add_subdirectory( lib_ic )
 
-    add_subdirectory( lib_agc )
+add_subdirectory( lib_agc )
 
-    add_subdirectory( lib_vnr )
+add_subdirectory( lib_vnr )
 
-    if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-        add_subdirectory( pipeline )
-    endif()
-
+if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
+    add_subdirectory( pipeline )
 endif()
+
 else()
 cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)

@@ -1,8 +1,10 @@
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(lib_voice_examples)
 
-add_subdirectory( aec )
+add_subdirectory(app_aec)
+add_subdirectory(app_vnr)
 
-add_subdirectory( vnr )
-
-if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    add_subdirectory( pipeline )
+if(NOT BUILD_NATIVE)
+    add_subdirectory(app_pipeline)
 endif()

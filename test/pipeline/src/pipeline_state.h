@@ -1,3 +1,5 @@
+// Copyright 2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #ifndef AP_STAGE_A_STATE_H
 #define AP_STAGE_A_STATE_H
 

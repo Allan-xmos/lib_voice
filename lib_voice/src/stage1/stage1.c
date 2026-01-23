@@ -1,3 +1,5 @@
+// Copyright 2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include "stage1.h"
 
 static void aec_switch_configuration(stage1_t *state, aec_conf_t *conf)

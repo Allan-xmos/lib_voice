@@ -1,6 +1,6 @@
-
-// Copyright 2022 XMOS LIMITED.
+// Copyright 2022-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+
 #include "vnr_features_api.h"
 #include "vnr_inference_api.h"
 #if PROFILE_PROCESSING

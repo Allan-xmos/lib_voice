@@ -1,7 +1,7 @@
 # This file provides overrides to the Doxyfile configuration
 
-PROJECT_NAME = Avona
-PROJECT_BRIEF = "Avona Reference Design"
+PROJECT_NAME = lib_voice
+PROJECT_BRIEF = "Voice processing library"
 
 # AEC module
 INPUT += ../lib_voice/api/aec

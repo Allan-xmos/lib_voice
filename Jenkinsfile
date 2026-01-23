@@ -1,4 +1,6 @@
-@Library('xmos_jenkins_shared_library@v0.43.0') _
+// This file relates to internal XMOS infrastructure and should be ignored by external users
+
+@Library('xmos_jenkins_shared_library@v0.43.3') _
 
 def runningOn(machine) {
   println "Stage running on:"
@@ -18,8 +20,13 @@ pipeline {
     )
     string(
       name: 'XMOSDOC_VERSION',
-      defaultValue: 'v8.0.0',
+      defaultValue: 'v8.0.1',
       description: 'The xmosdoc version'
+    )
+    string(
+      name: 'INFR_APPS_VERSION',
+      defaultValue: 'v3.2.1',
+      description: 'The infr_apps version'
     )
     booleanParam(name: 'FULL_TEST_OVERRIDE',
                  defaultValue: false,
@@ -67,8 +74,25 @@ pipeline {
 
             stage("Repo checks") {
               steps {
+                // Hack to get the changelog checker to install ai_tools before doing cmake
+                script {
+                  dir("${WORKSPACE}/.infr") {
+                    // Check out the infr_apps repo and dependencies
+                    if (!fileExists("infr_apps")) {
+                      sh "git clone --branch '${params.INFR_APPS_VERSION}' git@github.com:xmos/infr_apps"
+                    }
+                    dir("infr_apps") {
+                      if (!fileExists(".venv")) {
+                        createVenv(reqFile: "requirements.txt")
+                      }
+                      withVenv {
+                        sh "pip install -r ${WORKSPACE}/${REPO}/requirements.txt"
+                      }
+                    }
+                  }
+                }
                 warnError("Repo checks failed") {
-                  // repo checks will go here
+                  runRepoChecks("${WORKSPACE}/${REPO}")
                 }
               }
             } // Repo checks
@@ -79,6 +103,7 @@ pipeline {
                   warnError("Docs build failed") {
                     buildDocs()
                   }
+                  archiveSandbox(REPO)
                 }
               }
             } // Docs build

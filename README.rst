@@ -1,25 +1,69 @@
-================================
-XMOS Voice Framework DSP Library
-================================
+:orphan:
 
-This is the XMOS Voice Framework DSP library which contains high-performance audio processing algorithms, optimized for xcore.ai.
+###################################
+lib_voice: Voice processing library
+###################################
 
-******************
-Supported Hardware
-******************
+:vendor: XMOS
+:version: 0.9.0
+:scope: General Use
+:description: Voice processing library
+:category: Voice
+:keywords: DSP
+:devices: xcore.ai
 
-This library is designed to be used with all xcore.ai hardware.
+*******
+Summary
+*******
 
-*****
-Setup
-*****
+``lib_voice`` is a collection of DSP components used to build a front-end voice processing pipeline.
 
-Using this library requires CMake, version 3.21 or greater.
+********
+Features
+********
 
-In your top level CMakeLists.txt, include this repository in your preferred manner, and add_subdirectory(fwk_voice).  Then invoke CMake with the desired toolchain.
+* Acoustic Echo Canceller
+* Delay Estimator
+* Interference Canceller
+* Voice to Noise Ratio Estimator
+* Noise Suppressior
+* Automatic Gain Controller
 
-The fwk_voice CMake will define various targets that can be linked to your application.  In your CMake build folder, you can use the following command to display available targets:
+************
+Known issues
+************
 
-.. code-block:: console
+* None
 
-    $ make help
+****************
+Development repo
+****************
+
+* `lib_voice <https://www.github.com/xmos/lib_voice>`_ (https://www.github.com/xmos/lib_voice)
+
+**************
+Required tools
+**************
+
+* XMOS XTC Tools: 15.3.1
+* Python: 3.11
+
+*********************************
+Required libraries (dependencies)
+*********************************
+
+* `lib_xcore_math <https://www.xmos.com/libraries/lib_xcore_math>`_ (https://www.xmos.com/libraries/lib_xcore_math)
+* `xmos-ai-tools <https://pypi.org/project/xmos-ai-tools/>`_ (https://pypi.org/project/xmos-ai-tools/)
+
+*************************
+Related application notes
+*************************
+
+* None
+
+*******
+Support
+*******
+
+This package is supported by XMOS Ltd. Issues can be raised against the software at
+`www.xmos.com/support <https://www.xmos.com/support>`_ or using GitHub `issues <https://github.com/xmos/lib_voice/issues>`_.

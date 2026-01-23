@@ -69,19 +69,6 @@ Examples
 Various example applications are provided alongside the ``lib_voice`` that demonstrate basic usage.
 These are located in the ``examples`` directory.
 
-Requirements
-============
-
-To build or run any examples the user is expected to have the following:
-
-* XTC Tools 15.3.1
-* CMake 3.20 or higher
-* Python 3.11
-
-The python is required since library depends on the `xmos-ai-tools <https://pypi.org/project/xmos-ai-tools/>`_
-This is required for the ``cmake`` to configure the project,
-so the user must create a python environment and install ``xmos-ai-tools``, before running ``cmake``.
-
 AEC example
 ===========
 
@@ -228,8 +215,9 @@ This avoids noise being amplified during the absence of voice.
 Building the example
 ====================
 
-This section assumes that the `XMOS XTC Tools <https://www.xmos.com/software-tools/>`_ have been
-downloaded and installed. The required version is specified in the accompanying ``README``.
+This section assumes that the `XMOS XTC Tools <https://www.xmos.com/software-tools/>`_ have been downloaded and installed.
+It also assumes that the Python is installed and available.
+The required versions are specified in the accompanying ``README``.
 
 Installation instructions can be found `here <https://xmos.com/xtc-install-guide>`_.
 
@@ -250,6 +238,11 @@ To configure the build, the following commands should be run from an XTC command
     pip install -r requirements.txt
     cd examples/app_aec
     cmake -G "Unix Makefiles" -B build
+
+.. note::
+
+    The ``pip install -r requirements.txt`` stage has to happen before the ``cmake`` configuration
+    as it will fetch the `xmos-ai-tools <https://pypi.org/project/xmos-ai-tools/>`_.
 
 If any dependencies are missing they will be retrieved automatically during this step.
 

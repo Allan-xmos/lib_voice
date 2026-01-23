@@ -13,3 +13,7 @@ documentation:
     doc/rst/lib_voice.rst:
       pdf_title: "{{title}}"
       pdf_filename: "{{lib_name}}_v{{version}}"
+    README.rst:
+      pdf_title: '{{title}} (README)'
+      pdf_filename: '{{lib_name}}_v{{version}}_readme'
+      pdf_short: yes

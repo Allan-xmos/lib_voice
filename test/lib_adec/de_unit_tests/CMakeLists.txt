@@ -1,89 +1,43 @@
-# Auto-generate task distribution scheme and top level config files
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(de_unit_tests)
 
-if( NOT ${Python3_FOUND} )
-  message(FATAL_ERROR "Python3 not found for running . ")
-endif()
+set(APP_HW_TARGET XCORE-AI-EXPLORER)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+set(APP_DEPENDENT_MODULES lib_unity lib_voice)
 
-#copy conftest.py in the build directory since pytest_collect_file only collects tests from the directory tree where conftest.py is present
-configure_file( conftest.py conftest.py COPYONLY )
+set(APP_INCLUDES ${CMAKE_CURRENT_LIST_DIR}/src ${CMAKE_CURRENT_LIST_DIR}/../../shared/pseudo_rand ${CMAKE_CURRENT_LIST_DIR}/../../shared/testing)
 
-message( STATUS "Unit tests speedup factor ${TEST_SPEEDUP_FACTOR}" )
+file(GLOB SHARED_SRC
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/pseudo_rand/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/testing/*.c
+)
 
-## executable output directory
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+file(GLOB_RECURSE TEST_C_SRCS CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_LIST_DIR} src/*.c)
+set(APP_C_SRCS ${TEST_C_SRCS} ${SHARED_SRC})
 
-# Set unity runner generate script
-set( GEN_RUNNER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/generate_unity_runner.py )
+file(GLOB_RECURSE tests RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS src/test*.c)
 
-# Create directory for runner files
-set( RUNNERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/src.runners )
-file( MAKE_DIRECTORY ${RUNNERS_DIR} )
+set(AEC_SCHEDULE_CONFIG ${AEC_UNIT_TESTS_BUILD_CONFIG})
 
-## Sources
-# Unity
-file(GLOB UNITY_SOURCES ${UNITY_PATH}/src/*.c)
-
-file( GLOB TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c )
-
-# For every source file in aec_unit_tests/src
-foreach( testfile ${TEST_SOURCES} )
-    # Get test name
-    #cmake_path( GET testfile STEM TESTNAME )
-    get_filename_component(TESTNAME ${testfile} NAME_WLE)
-
-    # Create runner file directory
-    file( MAKE_DIRECTORY ${RUNNERS_DIR}/${TESTNAME} )
-
-    #########
-    ## Create runner file
-    set( RUNNER_FILE ${RUNNERS_DIR}/${TESTNAME}/${TESTNAME}_Runner.c )
-    set( GEN_RUNNER_SCRIPT_BYPRODUCTS ${RUNNER_FILE} )
-
-    unset(GEN_RUNNER_SCRIPT_ARGS)
-    list(APPEND GEN_RUNNER_SCRIPT_ARGS --project-root ${UNITY_PATH}/.. )
-    list(APPEND GEN_RUNNER_SCRIPT_ARGS --source-file ${testfile} )
-    list(APPEND GEN_RUNNER_SCRIPT_ARGS --runner-file ${RUNNER_FILE})
-
-    ## Add command to generate runner file
-    add_custom_command(
-        OUTPUT ${RUNNER_FILE}
-        COMMAND ${Python3_EXECUTABLE} ${GEN_RUNNER_SCRIPT} ${GEN_RUNNER_SCRIPT_ARGS}
-        COMMENT "Generating test runner" )
-
-    #########
-    ## Add a build target
-    add_executable(fwk_voice_${TESTNAME})
-
-    generate_schedule(fwk_voice_${TESTNAME} ${AEC_UNIT_TESTS_BUILD_CONFIG})
-
-    target_sources(fwk_voice_${TESTNAME}
-        PRIVATE
-            ${testfile}
-            ${RUNNER_FILE})
-
-
-    target_include_directories(fwk_voice_${TESTNAME}
-        PRIVATE
-            src
+foreach(test_file ${tests})
+    get_filename_component(test_name ${test_file} NAME_WE)
+    set(SOURCE_FILES_${test_name} ${test_file})
+    set(APP_COMPILER_FLAGS_${test_name}
+        -Os
+        -g
+        -report
+        -Wall
+        -fxscope
+        -DDEBUG_PRINT_ENABLE=1
+        -DUNITY_SUPPORT_64
+        -DSPEEDUP_FACTOR=${TEST_SPEEDUP_FACTOR}
         )
-
-    target_link_libraries(fwk_voice_${TESTNAME}
-        PUBLIC
-            fwk_voice::adec
-            fwk_voice::test::shared::test_utils
-            fwk_voice::test::shared::unity)
-
-    if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-        target_compile_options(fwk_voice_${TESTNAME}
-            PRIVATE
-                "-DUNITY_SUPPORT_64"
-                "-Wno-xcore-fptrgroup"
-                "-report"
-                "-DSPEEDUP_FACTOR=${TEST_SPEEDUP_FACTOR}")
-
-        target_link_options(fwk_voice_${TESTNAME}
-            PRIVATE
-                "-target=${XCORE_TARGET}")
-    endif()
 endforeach()
 
+set(LIB_UNITY_AUTO_TEST_RUNNER ON)
+set(LIB_UNITY_USE_FIXTURE OFF)
+set(LIB_UNITY_USE_MEMORY OFF)
+XMOS_REGISTER_APP()

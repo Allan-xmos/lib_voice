@@ -27,6 +27,9 @@ else()
 cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
 project(fwk_voice_tests)
+
+include(etc/build_options.cmake)
+
 add_subdirectory(lib_agc)
 add_subdirectory(lib_ns)
 add_subdirectory(lib_ic)

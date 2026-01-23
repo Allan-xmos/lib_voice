@@ -103,8 +103,6 @@ pipeline {
               steps {
                 runningOn(env.NODE_NAME)
 
-                sh "git clone --depth 1 --branch v2.5.2 git@github.com:ThrowTheSwitch/Unity.git"
-
                 dir("${REPO}") {
                   checkout scm
                   sh "git submodule update --init --recursive --jobs 4"
@@ -121,7 +119,8 @@ pipeline {
                   checkout scm
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
-                        xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false)
+                        xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4")
+                        stash name: 'xcommon_cmake_build_xcore', includes: '**/bin/**/*.xe'
                       }
                     }
                 }
@@ -147,7 +146,7 @@ pipeline {
                 }
                 dir("${REPO}") {
                   // Stash all executables and xscope_fileio
-                  stash name: 'cmake_build_xcore', includes: 'build/**/*.xe, build/**/conftest.py, build/**/xscope_fileio/**'
+                  stash name: 'cmake_build_xcore', includes: 'build/**/*.xe, build/**/xscope_fileio/**'
                 }
               }
             }
@@ -172,7 +171,6 @@ pipeline {
           steps {
             runningOn(env.NODE_NAME)
 
-            sh "git clone --depth 1 --branch v2.5.2 git@github.com:ThrowTheSwitch/Unity.git"
             sh "git clone --depth 1 --branch v3.0.0 git@github0.xmos.com:xmos-int/xtagctl.git"
             sh "git clone --depth 1 --branch v4.6.0 git@github.com:xmos/audio_test_tools.git"
             sh "git clone --depth 1 --branch v1.1.0 git@github.com:xmos/py_voice.git"
@@ -196,7 +194,7 @@ pipeline {
             dir("${REPO}") {
               withTools(params.TOOLS_VERSION) {
                 withVenv {
-                  xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false) // To fetch lib_xcore_math
+                  sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
                   // Build x86 versions locally as we had problems with moving bins and libs over from previous build due to brew
                   dir("build") {
                     sh "cmake --version"
@@ -218,6 +216,7 @@ pipeline {
                     sh "python build_c_code.py"
                   }
                   unstash 'cmake_build_xcore'
+                  unstash 'xcommon_cmake_build_xcore'
                 }
               }
             }
@@ -504,8 +503,6 @@ pipeline {
       }// stages
       post {
         always {
-          // Examples artifacts
-          archiveArtifacts artifacts: "${REPO}/build/**/fwk_voice_example_*", fingerprint: true
           // AEC aretfacts
           archiveArtifacts artifacts: "${REPO}/test/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
           // IC artefacts

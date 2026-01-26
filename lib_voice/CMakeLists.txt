@@ -3,6 +3,7 @@ add_library(fwk_voice_compile_options INTERFACE)
 
 if(PROJECT_IS_TOP_LEVEL AND NOT CMAKE_SYSTEM_NAME STREQUAL XCORE_XS3A)
     target_compile_options(fwk_voice_compile_options INTERFACE -fPIC)
+    target_compile_features(fwk_voice_compile_options INTERFACE cxx_std_11)
 endif()
 
 ## aec

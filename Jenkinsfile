@@ -232,7 +232,7 @@ pipeline {
                   // Build x86 versions locally as we had problems with moving bins and libs over from previous build due to brew
                   dir("build") {
                     sh "cmake --version"
-                    sh 'cmake -S.. -DTEST_WAV_ADEC_BUILD_CONFIG="1 2 2 10 5" -DUSE_CUSTOM_CMAKE=ON'
+                    sh 'cmake -S.. -DUSE_CUSTOM_CMAKE=ON'
                     sh 'make -j$(nproc)'
 
                     // We need to put this here because it is not fetched until we build

@@ -17,7 +17,7 @@ import soundfile as sf
 from profile_xcore import parse_profile_log
 
 cwd = Path(__file__).parent
-exe = cwd / "../../../build/test/lib_vnr/test_vnr_profile/bin/fwk_voice_vnr_test_profile"
+exe = Path(__file__).parent / "bin" / "test_vnr_profile"
 
 
 def parse_arguments():

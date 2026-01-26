@@ -9,12 +9,12 @@ from profile_xcore import parse_profile_log
 from audio_generation import get_band_limited_noise
 
 SAMPLE_RATE = 16000
-ns_xe = Path(__file__).parents[3] / "build" / "test" / "lib_ns" / "test_ns_profile" / "bin" / "fwk_voice_test_ns_profile"
+ns_xe = Path(__file__).parent / "bin" / "test_ns_profile"
 ns_src_folder = Path(__file__).parent / "src"
 ns_src_folder = str(ns_src_folder)
 
 def run_ns_xe(ns_xe, audio_in, audio_out, run_native, profile=False):
-    
+
     input_data, _ = sf.read(audio_in, dtype=np.int32)
 
     assert len(input_data.shape) == 1, "Input data can be single channel only"

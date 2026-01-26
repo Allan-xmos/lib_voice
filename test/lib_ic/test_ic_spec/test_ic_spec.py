@@ -17,7 +17,7 @@ output_folder = Path(__file__).parent / "output_wavs"
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_no_adapt_control.json"
 ap_conf = config.get_config_dict(ap_config_file)
 
-xe_path = Path(__file__).parents[3] / "build" / "test" / "lib_ic" / "test_ic_spec" / "bin" / "fwk_voice_test_ic_spec"
+xe_path = Path(__file__).parent / "bin" / "test_ic_spec"
 
 sample_rate = ap_conf["general"]["fs"]
 proc_frame_length = ap_conf["general"]["proc_frame_length"]
@@ -80,7 +80,7 @@ test_vectors = [
              invert_check=['convergence'], dont_check=['stability']),
     TestCase('Impulse at 40 samples', filters.Identity(), filters.OneImpulse(40)),
     TestCase('Impulse at minus 20 samples', filters.OneImpulse(20), filters.Identity()),
-#    TestCase('Diffuse noise', filters.Diffuse(0), filters.Diffuse(1), 
+#    TestCase('Diffuse noise', filters.Diffuse(0), filters.Diffuse(1),
 #             invert_check=['convergence']),
     TestCase('Short Echo', filters.Identity(), filters.ShortEcho()),
 #    TestCase('Zero at 5', filters.Identity(), filters.ZeroAt(5)),
@@ -105,7 +105,7 @@ def process_c(input_data, xe_name):
     assert input_data.shape[0] == 2
 
     input_data = pvc.interleave_channel_frames(input_data, frame_advance)
-    
+
     output_data, _ = run_dut(input_data, xe_name, "xs3a")
 
     return pvc.int32_to_float(output_data)
@@ -141,7 +141,7 @@ def process_audio(model, input_audio, test_name):
         output_data = process_c(input_audio, xe_path)
     else:
         assert 0, f"model {model} not supported"
-    
+
     sf.write(output_file, output_data, sample_rate)
     return output_data
 

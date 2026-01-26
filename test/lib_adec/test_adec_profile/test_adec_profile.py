@@ -30,7 +30,7 @@ def run_pipeline_xe(pipeline_xe, run_config, threads):
             fargs.write(f"y_channels {run_config.num_y_channels}\n".encode('utf-8'))
             fargs.write(f"x_channels {run_config.num_x_channels}\n".encode('utf-8'))
 
-        xcore_stdo = run_with_xscope_fileio(pipeline_xe, tmp_folder)        
+        xcore_stdo = run_with_xscope_fileio(pipeline_xe, tmp_folder)
 
         config_name = f"{threads}_{run_config.num_y_channels}_{run_config.num_x_channels}_{run_config.num_main_filt_phases}_{run_config.num_shadow_filt_phases}"
         shutil.copy2(tmp_folder / "output.wav", Path(__file__).parent / f"output_{config_name}.wav")
@@ -58,7 +58,7 @@ class aec_config:
         return f"{self.num_y_channels}ych_{self.num_x_channels}xch_{self.num_main_filt_phases}mainph_{self.num_shadow_filt_phases}shadph"
 
 
-xe_files = (Path(__file__).parents[3] / "build" / "test" / "lib_adec" / "test_adec_profile" / "bin").glob('*.xe')
+xe_files = (Path(__file__).parent / "bin").rglob('*.xe')
 
 @pytest.fixture(scope="session", params=xe_files)
 def setup(request):
@@ -69,7 +69,7 @@ def setup(request):
     config = (f"{name}".split('_'))[-5:] #Split by _ and pick up the last 5 values to get the config
     threads = config[0]
     rest_of_config = ' '.join(config[1:]) #remaining build config in "<ych> <xch> <mainph> <shadowph>" form
-    return xe, aec_config(rest_of_config), threads 
+    return xe, aec_config(rest_of_config), threads
 
 #For every build_config, test with all specified run time configs
 @pytest.mark.parametrize("run_config", ['', '1 2 15 5'])
@@ -87,4 +87,3 @@ def test_profile(setup, run_config):
         run_config = aec_config(run_config)
         run_pipeline_xe(pipeline_xe, run_config, threads)
         print('test run_config')
-

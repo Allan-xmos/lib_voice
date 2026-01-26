@@ -4,6 +4,8 @@ project(aec_unit_tests)
 
 set(APP_HW_TARGET XCORE-AI-EXPLORER)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+include(${XMOS_SANDBOX_DIR}/lib_voice/test/etc/build_options.cmake)
+
 set(APP_DEPENDENT_MODULES lib_unity lib_voice)
 
 set(APP_INCLUDES ${CMAKE_CURRENT_LIST_DIR}/src ${CMAKE_CURRENT_LIST_DIR}/../../shared/pseudo_rand ${CMAKE_CURRENT_LIST_DIR}/../../shared/testing)

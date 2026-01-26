@@ -1,43 +1,57 @@
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(test_adec_profile)
 
-if( NOT ${Python3_FOUND} )
-  message(FATAL_ERROR "Python3 not found for running . ")
-endif()
+set(APP_HW_TARGET XK-EVK-XU316)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+set(CONFIG_XSCOPE_PATH ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils)
+include(${XMOS_SANDBOX_DIR}/lib_voice/test/etc/build_options.cmake)
 
-set( GEN_SCHEDULE_SCRIPT ${TEST_SHARED_SRC_PATH}/python/generate_task_distribution_scheme.py )
+file(GLOB CONFIG_XSCOPE_REL_PATH
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${CONFIG_XSCOPE_PATH}/config.xscope)
 
-## Build each config
+file(GLOB APP_C_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils/src/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/profile/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/lib_adec/test_wav_adec/src/*.c)
+
+file(GLOB APP_XC_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/lib_adec/test_wav_adec/src/*.xc)
+
+
+set(APP_INCLUDES
+    ${CMAKE_CURRENT_LIST_DIR}/../test_wav_adec/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/profile)
+
 foreach( BUILD_CONFIG ${TEST_ADEC_PROFILE_BUILD_CONFIG} )
-    # Convert to config str of the form <threads>_<ychannels>_<xchannels>_<mainphases>_<shadowphases>
-    string( REPLACE " " "_" CONFIG_STR ${BUILD_CONFIG} )
-    message( STATUS "test_adec_profile ${CONFIG_STR}" )
+    set(AEC_SCHEDULE_CONFIG ${BUILD_CONFIG})
+    string(REPLACE " " "_" AEC_SCHEDULE_CONFIG_ID ${AEC_SCHEDULE_CONFIG})
+    set(AEC_SCHEDULE_AUTOGEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/src_${AEC_SCHEDULE_CONFIG_ID}.autogen")
 
-    file( GLOB_RECURSE SOURCES_APP  ${CMAKE_CURRENT_SOURCE_DIR}/../test_wav_adec/src/*.c )
-    file( GLOB SOURCES_AEC_PROCESS_FRAME  ${TEST_SHARED_SRC_PATH}/aec/*.c )
+    if (NOT BUILD_NATIVE)
+        set(APP_DEPENDENT_MODULES "lib_voice"
+                                    "xscope_fileio")
 
-#######
-    add_executable(fwk_voice_test_adec_profile_${CONFIG_STR})
+        set(APP_COMPILER_FLAGS_${AEC_SCHEDULE_CONFIG_ID}
+                -report
+                -Os
+                -DTEST_WAV_XSCOPE=1
+                -DENABLE_PROFILING=1)
 
-    generate_schedule(fwk_voice_test_adec_profile_${CONFIG_STR} ${BUILD_CONFIG})
+        set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
+    else()
+        set(APP_DEPENDENT_MODULES "lib_voice")
 
-    target_link_libraries(fwk_voice_test_adec_profile_${CONFIG_STR}
-        PUBLIC
-            fwk_voice::test::shared_test_wav_adec
-            fwk_voice::test::shared::profile_xcore
-            )
-
-    target_compile_definitions(fwk_voice_test_adec_profile_${CONFIG_STR}
-        PRIVATE
-            PROFILE_PROCESSING=1)
-
-    if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-        target_compile_options(fwk_voice_test_adec_profile_${CONFIG_STR}
-            PRIVATE "-target=${XCORE_TARGET}")
-
-        target_link_options(fwk_voice_test_adec_profile_${CONFIG_STR}
-            PRIVATE
-                "-target=${XCORE_TARGET}"
-                "-report"
-                "${CONFIG_XSCOPE_PATH}/config.xscope")
+        set(APP_COMPILER_FLAGS_${AEC_SCHEDULE_CONFIG_ID}
+                -DX86_BUILD=1)
     endif()
+    XMOS_REGISTER_APP()
+    unset(APP_COMPILER_FLAGS_${AEC_SCHEDULE_CONFIG_ID})
 endforeach()

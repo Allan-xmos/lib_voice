@@ -1,59 +1,56 @@
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(test_vnr_profile)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(APP_HW_TARGET XK-EVK-XU316)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+set(CONFIG_XSCOPE_PATH ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils)
 
-add_executable(fwk_voice_vnr_test_profile)
+file(GLOB CONFIG_XSCOPE_REL_PATH
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${CONFIG_XSCOPE_PATH}/config.xscope
+)
 
-target_sources(fwk_voice_vnr_test_profile PRIVATE src/vnr_task.c)
+file(GLOB SHARED_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils/src/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/profile/*.c
+)
 
-target_link_libraries(fwk_voice_vnr_test_profile
-    PUBLIC
-        fwk_voice::vnr
-        fwk_voice::test::fileutils
-        )
+file(GLOB TEST_C_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    src/*.c)
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    target_sources(fwk_voice_vnr_test_profile PRIVATE src/main.xc)
-    target_link_libraries(fwk_voice_vnr_test_profile
-        PUBLIC
-            fwk_voice::test::shared::profile_xcore
-            )
+set(APP_C_SRCS ${TEST_C_SRCS} ${SHARED_SRCS})
+
+set(APP_INCLUDES ${CMAKE_CURRENT_LIST_DIR}/src ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src ${CMAKE_CURRENT_LIST_DIR}/../../shared/profile)
+
+if (NOT BUILD_NATIVE)
+    set(APP_DEPENDENT_MODULES "lib_voice"
+                          "xscope_fileio")
     set(APP_COMPILER_FLAGS
-        -Os
-        -g
-        -report
-        -fxscope
-        -mcmodel=large
-        -Wno-xcore-fptrgroup
-        -target=${XCORE_TARGET}
-    )
-    target_compile_options(fwk_voice_vnr_test_profile
-        PRIVATE ${APP_COMPILER_FLAGS} ${CONFIG_XSCOPE_PATH}/config.xscope)
+            -report
+            -Os
+            -g
+            -fxscope
+            -mcmodel=large
+            -Wno-xcore-fptrgroup
+            -DTEST_WAV_XSCOPE=1
+            -DENABLE_PROFILING=1)
 
-    target_compile_definitions(fwk_voice_vnr_test_profile
-        PRIVATE PROFILE_PROCESSING=1)
-
-    target_link_options(fwk_voice_vnr_test_profile
-        PRIVATE
-            -w
-            "-target=${XCORE_TARGET}"
-            "-report"
-            "${CONFIG_XSCOPE_PATH}/config.xscope")
+    set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
 else()
-    set(CMAKE_CXX_FLAGS "-std=c++11" CACHE STRING "C++ Compiler Base Flags" FORCE)
+    set(APP_DEPENDENT_MODULES "lib_voice")
 
-    set(BUILD_FLAGS
-      "-Os"
-      "-D__xtflm_conf_h_exists__"
-      "-DNN_USE_REF"
-    )
-    target_compile_options(fwk_voice_vnr_test_profile
-        PRIVATE ${BUILD_FLAGS})
-
-    target_link_options(fwk_voice_vnr_test_profile
-        PRIVATE
-            ${BUILD_FLAGS})
-
-    target_link_libraries(fwk_voice_vnr_test_profile PRIVATE "-lpthread")
-
+    set(APP_COMPILER_FLAGS
+            -Os
+            -D__xtflm_conf_h_exists__
+            -DNN_USE_REF
+            -DX86_BUILD=1)
 endif()
+
+XMOS_REGISTER_APP()
 

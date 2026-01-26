@@ -36,7 +36,7 @@ MIC_1_X = MIC_X_POINT + MIC_SPACING / 2
 
 NOISE_DISTANCE = 1.5
 
-IC_XE = Path(__file__).parents[3] / "build/test/lib_ic/characterise_c_py/bin/fwk_voice_characterise_c_py"
+IC_XE = Path(__file__).parent / "bin" / "test_ic_characterise_c_py"
 audio_dir = Path(__file__).parent / "pytest_audio"
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_big_delta.json"
 ap_conf = config.get_config_dict(ap_config_file)
@@ -90,7 +90,7 @@ def process_c(input_data):
     input_data = pvc.interleave_channel_frames(input_data, FRAME_ADVANCE)
 
     output_data, _ = run_dut(input_data, IC_XE, "xs3a")
-    
+
     return pvc.int32_to_float(output_data)
 
 def get_attenuation(in_data, out_data):

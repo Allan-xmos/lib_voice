@@ -8,7 +8,7 @@ from shutil import copyfile, rmtree
 
 from prepare_aec_input_file import prepare_input_file
 from delay_analyser import delay_analyser
-from delay_analyser import FRAME_ADVANCE 
+from delay_analyser import FRAME_ADVANCE
 import tempfile
 
 import xscope_fileio
@@ -35,10 +35,10 @@ def generate_random_delay_changes(number, spacing, min_s, max_s):
 
 def run_test(pipeline_config, info, path_to_regression_files, input_audio_files, far_end_delay_changes, test_length_s=70, run_target="xcore", volume_changes=None, run_x86=False):
   if run_target == "xcore":
-    xe_files = (Path(__file__).parents[3] / "build" / "test" / "lib_adec" / "test_adec" / "bin").glob('*.xe')
+    xe_files = (Path(__file__).parent / "bin").glob('*.xe')
     test_exe = str(next(xe_files).resolve())
   elif run_target == "x86":
-    test_exe = str((Path(__file__).parents[3] / "build" / "test" / "lib_adec" / "test_adec" / "bin" / "test_adec").resolve())
+    test_exe = str((Path(__file__).parent / "bin" / "test_adec").resolve())
   else:
     assert(False)
   tmp_dir = tempfile.mkdtemp(prefix='tmp_', dir='.')
@@ -69,7 +69,7 @@ def run_test(pipeline_config, info, path_to_regression_files, input_audio_files,
 
     gt_changes = 0
     test_name = info + ", " + input_audio_files.split('/')[-1]
-    
+
   print ("run_target = ", run_target, ", tmp_dir = ", tmp_dir)
   copyfile("stage_a_input_16k.wav", "input.wav") #Axe sim has fixed file name input
   # Run xcore/axe version of simulator
@@ -85,8 +85,8 @@ def run_test(pipeline_config, info, path_to_regression_files, input_audio_files,
   with open(delay_output_file_name, 'r') as f:
     estimated_delay_samples = np.array([int(l) for l in f.readlines()], dtype=float)
   estimates = estimated_delay_samples / float(voice_sample_rate)
-    
-    
+
+
   #Scale estimates file to seconds
   xc_sim_de_file = "xc_sim_delays_s.txt"
   print("estimates = ",estimates)

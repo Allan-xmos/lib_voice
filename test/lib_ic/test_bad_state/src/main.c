@@ -25,7 +25,7 @@ void test_bad_state(const char *conf_file_name, const char *input_file_name, con
     // Open output wav file that will contain the IC output
     ret = file_open(&output_file, output_file_name, "wb");
     assert((!ret) && "Failed to open file");
-    
+
     // Read the data to initialise filter
     int num_words_H_py, adapt_mode;
     // Num words to accomodate H_hat data
@@ -34,7 +34,7 @@ void test_bad_state(const char *conf_file_name, const char *input_file_name, con
     assert((num_words_H_py == num_words_H_c) && "num_words_h does not match with python");
     file_read(&conf_file, &adapt_mode, sizeof(int32_t));
     printf("num_words_H=%d, adapt_mode=%d\n", num_words_H_py, adapt_mode);
-    
+
     int32_t H_hat_data[num_words_H_py];
     file_read(&conf_file, &H_hat_data[0], num_words_H_py * sizeof(int32_t));
     test_init(adapt_mode, H_hat_data);
@@ -99,7 +99,7 @@ void test_bad_state(const char *conf_file_name, const char *input_file_name, con
 
 #if X86_BUILD
 int main(int argc, char **argv) {
-    test_vnr_unit("input.bin", "output.bin");
+    test_bad_state("conf.bin", "input.wav", "output.wav");
     return 0;
 }
 #endif

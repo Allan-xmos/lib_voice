@@ -47,8 +47,6 @@ else()
 
     set(APP_COMPILER_FLAGS
             -Os
-            -D__xtflm_conf_h_exists__
-            -DNN_USE_REF
             -DX86_BUILD=1)
 endif()
 

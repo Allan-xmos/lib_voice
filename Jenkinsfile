@@ -138,7 +138,7 @@ pipeline {
                 }
               }
             }
-            stage('xcommon-cmake build') {
+            stage('xcommon-cmake xcore build') {
               steps {
                 dir("${REPO}") {
                   checkout scm
@@ -146,6 +146,18 @@ pipeline {
                       withVenv {
                         xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4")
                         stash name: 'xcommon_cmake_build_xcore', includes: '**/bin/**/*.xe'
+                      }
+                    }
+                }
+              }
+            }
+            stage('xcommon-cmake native build') {
+              steps {
+                dir("${REPO}") {
+                    withTools(params.TOOLS_VERSION) {
+                      withVenv {
+                        xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
+                        stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe '
                       }
                     }
                 }
@@ -168,10 +180,6 @@ pipeline {
                       sh 'make -j$(nproc)'
                     }
                   }
-                }
-                dir("${REPO}") {
-                  // Stash all executables and xscope_fileio
-                  stash name: 'cmake_build_xcore', includes: 'build/**/*.xe, build/**/xscope_fileio/**'
                 }
               }
             }
@@ -220,6 +228,7 @@ pipeline {
               withTools(params.TOOLS_VERSION) {
                 withVenv {
                   sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
+
                   // Build x86 versions locally as we had problems with moving bins and libs over from previous build due to brew
                   dir("build") {
                     sh "cmake --version"
@@ -227,7 +236,7 @@ pipeline {
                     sh 'make -j$(nproc)'
 
                     // We need to put this here because it is not fetched until we build
-                    sh "pip install -e fwk_voice_deps/xscope_fileio"
+                    sh "pip install xscope_fileio"
                   }
                   // We do this again on the NUCs for verification later, but this just checks we have no build error
                   dir("test/lib_ic/py_c_frame_compare") {
@@ -240,8 +249,8 @@ pipeline {
                   dir("test/stage_b") {
                     sh "python build_c_code.py"
                   }
-                  unstash 'cmake_build_xcore'
                   unstash 'xcommon_cmake_build_xcore'
+                  unstash 'xcommon_cmake_build_native'
                 }
               }
             }

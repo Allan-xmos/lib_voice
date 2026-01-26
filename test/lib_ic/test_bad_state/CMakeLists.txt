@@ -1,66 +1,48 @@
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(test_ic_bad_state)
+
+set(APP_HW_TARGET XK-EVK-XU316)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+set(CONFIG_XSCOPE_PATH ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils)
+
+file(GLOB CONFIG_XSCOPE_REL_PATH
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${CONFIG_XSCOPE_PATH}/config.xscope)
+
+file(GLOB APP_C_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils/src/*.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
+
+set(APP_INCLUDES
+    ${CMAKE_CURRENT_LIST_DIR}/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src)
 
 
-set(COMMON_SOURCES_C src/main.c)
-set(COMMON_SOURCES_XC src/main.xc)
+if (NOT BUILD_NATIVE)
+    set(APP_DEPENDENT_MODULES "lib_voice"
+                                "xscope_fileio")
+    set(APP_COMPILER_FLAGS
+            -report
+            -Os
+            -g
+            -mcmodel=large
+            -Wno-xcore-fptrgroup
+            -DTEST_WAV_XSCOPE=1)
 
-set(APP_COMPILER_FLAGS
-    -Os
-    -g
-    -report
-    -fxscope
-    -mcmodel=large
-    -Wno-xcore-fptrgroup
-    ${CONFIG_XSCOPE_PATH}/config.xscope
-    -target=${XCORE_TARGET}
-)
+    set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
+else()
+    set(APP_DEPENDENT_MODULES "lib_voice")
 
-file(GLOB TEST_SOURCES src/test_*.c)
-#message(STATUS "${TEST_SOURCES}")
-foreach(testfile ${TEST_SOURCES})
-    get_filename_component(TESTNAME ${testfile} NAME_WLE)
-    #########
-    ## Add a build target
-    set(APP_NAME fwk_voice_${TESTNAME})
-    add_executable(${APP_NAME})
-
-    target_sources(${APP_NAME} PRIVATE ${COMMON_SOURCES_C} ${testfile})
-
-    target_link_libraries(${APP_NAME}
-        PUBLIC
-            fwk_voice::ic
-            fwk_voice::test::fileutils)
+    set(APP_COMPILER_FLAGS
+            -Os
+            -DX86_BUILD=1)
+endif()
 
 
-    if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-        target_sources(${APP_NAME} PRIVATE ${COMMON_SOURCES_XC})
-
-        target_compile_options(${APP_NAME}
-            PRIVATE ${APP_COMPILER_FLAGS})
-
-        target_link_options(${APP_NAME}
-            PRIVATE
-                -lquadspi
-                -w
-                "-target=${XCORE_TARGET}"
-                "-report"
-                "${CONFIG_XSCOPE_PATH}/config.xscope")
-    else()
-        set(CMAKE_CXX_FLAGS "-std=c++11" CACHE STRING "C++ Compiler Base Flags" FORCE)
-
-        set(BUILD_FLAGS
-          "-Os"
-          "-D__xtflm_conf_h_exists__"
-          "-DNN_USE_REF"
-        )
-        target_compile_options(${APP_NAME}
-            PRIVATE ${BUILD_FLAGS})
-
-        target_link_options(${APP_NAME}
-            PRIVATE
-                ${BUILD_FLAGS})
-
-        target_link_libraries(${APP_NAME} PRIVATE "-lpthread")
-    endif()
-endforeach()
+XMOS_REGISTER_APP()

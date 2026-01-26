@@ -19,12 +19,6 @@ file(GLOB APP_C_SRCS
     ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/profile/*.c
     ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
 
-file(GLOB APP_XC_SRCS
-    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
-    CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_LIST_DIR}/src/*.xc)
-
-
 set(APP_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/src
     ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src

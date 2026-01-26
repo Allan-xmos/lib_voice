@@ -2,7 +2,18 @@ set(LIB_NAME lib_voice)
 set(LIB_VERSION 0.9.0)
 set(LIB_DEPENDENT_MODULES "lib_xcore_math(develop)")
 
-set(LIB_COMPILER_FLAGS -g -Os -DHEADROOM_CHECK=0)
+set(LIB_COMPILER_FLAGS
+            -g
+            -Os
+            -DHEADROOM_CHECK=0)
+
+if(BUILD_NATIVE)
+    list(APPEND LIB_COMPILER_FLAGS
+        -D__xtflm_conf_h_exists__
+        -DNN_USE_REF
+    )
+endif()
+
 set(LIB_CXX_SRCS "")
 include(${CMAKE_CURRENT_LIST_DIR}/vnr_model.cmake)
 file(RELATIVE_PATH MODEL_OUT_DIR_REL ${CMAKE_CURRENT_LIST_DIR} ${MODEL_OUT_DIR})

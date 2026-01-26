@@ -17,7 +17,7 @@ output_folder = Path(__file__).parent / "output_wavs"
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_no_adapt_control.json"
 ap_conf = config.get_config_dict(ap_config_file)
 
-xe_path = Path(__file__).parents[3] / "test" / "lib_ic" / "test_ic_spec" / "bin" / "test_ic_spec"
+xe_path = Path(__file__).parent / "bin" / "test_ic_spec"
 
 sample_rate = ap_conf["general"]["fs"]
 proc_frame_length = ap_conf["general"]["proc_frame_length"]

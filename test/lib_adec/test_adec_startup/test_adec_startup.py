@@ -10,12 +10,12 @@ import tempfile
 import xscope_fileio
 import xtagctl
 import re
+from pathlib import Path
 
 maximum_adec_delay_ms = 1000
 maximum_adec_estimation_time_ms = 3500
 
-this_file_path = os.path.dirname(os.path.realpath(__file__))
-xcore_binary = os.path.join(this_file_path, "../../../test/lib_adec/test_adec_startup/bin/test_adec_startup.xe")
+xcore_binary = Path(__file__).parent / "bin" / "test_adec_startup.xe"
 
 @pytest.fixture
 def input_vectors():

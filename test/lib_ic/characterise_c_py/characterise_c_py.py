@@ -36,7 +36,7 @@ MIC_1_X = MIC_X_POINT + MIC_SPACING / 2
 
 NOISE_DISTANCE = 1.5
 
-IC_XE = Path(__file__).parents[3] / "test/lib_ic/characterise_c_py/bin/test_ic_characterise_c_py"
+IC_XE = Path(__file__).parent / "bin" / "test_ic_characterise_c_py"
 audio_dir = Path(__file__).parent / "pytest_audio"
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_big_delta.json"
 ap_conf = config.get_config_dict(ap_config_file)

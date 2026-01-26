@@ -9,7 +9,7 @@ from profile_xcore import parse_profile_log
 from audio_generation import get_band_limited_noise
 
 SAMPLE_RATE = 16000
-ns_xe = Path(__file__).parents[3] / "test" / "lib_ns" / "test_ns_profile" / "bin" / "test_ns_profile"
+ns_xe = Path(__file__).parent / "bin" / "test_ns_profile"
 ns_src_folder = Path(__file__).parent / "src"
 ns_src_folder = str(ns_src_folder)
 

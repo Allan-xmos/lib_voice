@@ -10,7 +10,7 @@ from profile_xcore import parse_profile_log
 
 ic_src_folder = Path(__file__).parent / "src"
 ic_src_folder = str(ic_src_folder)
-ic_xe = Path(__file__).parents[3] / "test" / "lib_ic" / "test_ic_profile" / "bin" / "test_ic_profile"
+ic_xe = Path(__file__).parent / "bin" / "test_ic_profile"
 SAMPLE_RATE = 16000
 FRAME_ADVANCE = 240
 

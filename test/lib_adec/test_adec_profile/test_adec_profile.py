@@ -58,7 +58,7 @@ class aec_config:
         return f"{self.num_y_channels}ych_{self.num_x_channels}xch_{self.num_main_filt_phases}mainph_{self.num_shadow_filt_phases}shadph"
 
 
-xe_files = (Path(__file__).parents[3] / "test" / "lib_adec" / "test_adec_profile" / "bin").rglob('*.xe')
+xe_files = (Path(__file__).parent / "bin").rglob('*.xe')
 
 @pytest.fixture(scope="session", params=xe_files)
 def setup(request):

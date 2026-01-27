@@ -1,7 +1,5 @@
-.. _adec_overview:
-
-ADEC Overview
-*************
+Automatic Delay Estimation and Correction
+=========================================
 
 The ADEC module provides functions to estimate and automatically correct for delay offsets between the reference and the
 loudspeakers.

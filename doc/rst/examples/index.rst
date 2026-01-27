@@ -1,5 +1,6 @@
-
 |newpage|
+
+.. _examples_section:
 
 ********
 Examples

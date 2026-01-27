@@ -1,7 +1,5 @@
-.. _agc_overview:
-
-AGC Overview
-------------
+Automatic Gain Control
+======================
 
 The ``lib_agc`` library provides an API to implement Automatic Gain Control within
 an application. The AGC algorithm can dynamically adapt the audio gain,
@@ -68,7 +66,7 @@ clipping.
 
 .. _agc_logic:
 
-.. figure:: ./images/agc_logic.drawio.svg
+.. figure:: ../images/agc_logic.drawio.svg
     :align: center
 
     AGC Logic Flow Chart
@@ -81,7 +79,7 @@ loss control feature is enabled in the AGC configuration.
 
 .. _loss_control_logic:
 
-.. figure:: ./images/loss_control_logic.drawio.svg
+.. figure:: ../images/loss_control_logic.drawio.svg
     :align: center
 
     Loss Control Logic Flow Chart

@@ -44,16 +44,18 @@ All ``lib_voice`` functions can be accessed via the ``voice.h`` header file, for
 
     #include "voice.h"
 
+.. rubric:: Documentation structure
+
+This document will cover the following topics:
+
+#. :ref:`audio_processing_section` : A walkthrough of the DSP modules supported by ``lib_voice``.
+#. :ref:`examples_section` : Simple demonstrations of how to put APIs together and get them running.
+#. :ref:`api_reference_section` : References to all DSP components' APIs.
+
 .. toctree::
    :maxdepth: 1
    :hidden:
 
-   audio_processing/aec/index
-   audio_processing/ns/index
-   audio_processing/agc/index
-   audio_processing/adec/index
-   audio_processing/stage1/index
-   audio_processing/ic/index
-   audio_processing/vnr/index
+   audio_processing/index
    examples/index
    api_reference/index

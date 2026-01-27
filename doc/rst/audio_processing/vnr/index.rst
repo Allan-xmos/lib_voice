@@ -9,7 +9,6 @@ Voice To Noise Ratio estimator
    :caption: Contents
 
    src/overview
-   src/reference
 
 On GitHub
 ---------

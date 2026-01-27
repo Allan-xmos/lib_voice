@@ -11,7 +11,6 @@ make use of functionality provided in ``lib_aec`` for the core normalised LMS bl
    :caption: Contents:
 
    src/overview
-   src/reference
 
 On GitHub
 ---------

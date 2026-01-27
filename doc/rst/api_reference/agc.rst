@@ -1,14 +1,14 @@
 
-API Reference
--------------
+AGC
+===
 
 AGC API Functions
-^^^^^^^^^^^^^^^^^
+-----------------
 
 .. doxygengroup:: agc_func
 
-AGC Pre-Defined Profiles and Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AGC Defines
+-----------
 
 Three pre-defined profiles are provided in `agc_profiles.h` to configure the AGC for different applications:
 
@@ -19,8 +19,8 @@ These profiles can be used to configure the AGC instance by passing them to the
 
 .. _agc_profiles:
 
-AGC API Structure Definitions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AGC Data Structures and Enums
+-----------------------------
 
 .. doxygengroup:: agc_defs
     :members:

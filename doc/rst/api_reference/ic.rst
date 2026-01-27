@@ -1,22 +1,22 @@
 
-API Reference
--------------
+IC
+==
 
 IC API Functions
-^^^^^^^^^^^^^^^^
+----------------
 
 .. doxygengroup:: ic_func
 
 .. _ic_defines:
 
-IC API Definitions
-^^^^^^^^^^^^^^^^^^
+IC Defines
+----------
 
 .. doxygengroup:: ic_defines
     :members:
 
-IC API State Structure
-^^^^^^^^^^^^^^^^^^^^^^
+IC Data Structures and Enums
+----------------------------
 
 .. doxygengroup:: ic_state
     :members:

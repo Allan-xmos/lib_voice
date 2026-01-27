@@ -11,7 +11,6 @@ make use of functionality provided in ``lib_xcore_math`` to perform DSP operatio
    :caption: Contents:
 
    src/overview
-   src/reference
 
 
 On GitHub

@@ -10,7 +10,6 @@ provided in ``lib_xcore_math`` to perform DSP operations. For more details, refe
    :caption: Contents:
 
    src/overview
-   src/reference
 
 On GitHub
 ---------

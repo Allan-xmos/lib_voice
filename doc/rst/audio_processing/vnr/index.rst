@@ -8,9 +8,7 @@ Voice To Noise Ratio estimator
    :maxdepth: 1
    :caption: Contents
 
-   src/getting_started
    src/overview
-   src/reference
 
 On GitHub
 ---------

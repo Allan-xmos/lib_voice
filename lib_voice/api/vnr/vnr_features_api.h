@@ -6,14 +6,6 @@
 #include "vnr_state.h"
 
 /**
- * @page page_vnr_features_api_h vnr_features_api.h
- * 
- * This header contains lib_vnr features extraction API functions.
- *
- * @ingroup vnr_header_file
- */
-
-/**
  * @defgroup vnr_features_api   VNR feature extraction API functions
  */ 
 

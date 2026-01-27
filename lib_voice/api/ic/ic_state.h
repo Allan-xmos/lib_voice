@@ -4,15 +4,6 @@
 #define IC_STATE_H
 
 #include "ic_defines.h"
-/**
- * @page page_ic_state_h ic_state.h
- * 
- * This header contains definitions for data structures used in lib_ic.
- * It also contains the configuration sub-structures which control the operation
- * of the interference canceller during run-time.
- *
- * @ingroup ic_header_file
- */
 
 /**
  * @defgroup ic_state   IC Data Structures

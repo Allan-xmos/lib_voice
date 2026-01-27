@@ -7,13 +7,6 @@
 #include "ns_state.h"
 
 /**
- * @page page_ns_h ns.h
- *
- * This header should be included in application source code to gain access to the
- * lib_ns public functions API.
- */
-
-/**
  * @defgroup ns_func NS API functions
  */
 

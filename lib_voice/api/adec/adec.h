@@ -3,14 +3,6 @@
 #include "adec_state.h"
 
 /**
- * @page page_adec_h adec.h
- *
- * lib_adec public functions API.
- *
- * @ingroup adec_header_file
- */
-
-/**
  * @defgroup adec_func     ADEC API Functions
  */
 

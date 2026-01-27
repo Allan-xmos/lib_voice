@@ -7,14 +7,6 @@
 #include "adec_defines.h"
 
 /**
- * @page page_adec_state_h adec_state.h
- *
- * This header contains definitions for data structures and enums used in lib_adec.
- *
- * @ingroup adec_header_file
- */
-
-/**
  * @defgroup adec_types   ADEC Data Structure and Enum Definitions
  */
 

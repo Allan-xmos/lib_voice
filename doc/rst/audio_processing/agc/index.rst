@@ -11,8 +11,6 @@ For more details, refer to :ref:`agc_overview`.
    :caption: Contents:
 
    src/overview
-   src/getting_started
-   src/reference
 
 
 On GitHub

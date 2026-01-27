@@ -40,8 +40,7 @@ noise_pos = 2
 speech_name = "007_podcast"
 speech_pos = 3
 
-exe_dir = Path(__file__).parent.parent.parent.parent / 'build' / 'test' / 'lib_ic' / 'test_bad_state' / 'bin'
-xe = os.path.join(exe_dir, 'fwk_voice_test_bad_state.xe')
+xe = Path(__file__).parent / "bin" / "test_ic_bad_state.xe"
 
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_no_adapt_control.json"
 ap_conf = config.get_config_dict(ap_config_file)
@@ -49,7 +48,7 @@ ap_conf = config.get_config_dict(ap_config_file)
 def run_xcore(conf_data, out_name, cwd='.'):
     conf_file = Path(cwd, 'conf.bin')
     output_file = Path(cwd, 'output.wav')
-    
+
     conf_data.astype(np.int32).tofile(conf_file)
 
     run_with_xscope_fileio(xe, cwd)
@@ -79,13 +78,13 @@ def test_bad_state(room, speech_level, noise_name):
     fs = ap_conf["general"]["fs"]
     proc_frame_length = ap_conf["general"]["proc_frame_length"]
     frame_advance = ap_conf["general"]["frame_advance"]
-    
+
     delay = ap_conf["ic"]["y_channel_delay"]
     phases = ap_conf["ic"]["phases"]
     f_bin_count = (proc_frame_length // 2) + 1
 
     # make room pipeline spec
-    noise_spec, speech_spec, playback_spec, length_samps = rap.make_rap_spec(fs, room, 
+    noise_spec, speech_spec, playback_spec, length_samps = rap.make_rap_spec(fs, room,
                                                                 noise_name=noise_name,
                                                                 noise_level=noise_level,
                                                                 noise_pos=noise_pos,
@@ -100,10 +99,10 @@ def test_bad_state(room, speech_level, noise_name):
     ideal_noise_cancellation_H = ith.calc_ideal_fd_filter(noise_ir, delay, phases, f_bin_count, proc_frame_length, frame_advance)[0, 0, :, :]
 
     # run room pipeline
-    mic_sig, out_array, in_array = rap.room_sim(utterance=speech_spec, 
+    mic_sig, out_array, in_array = rap.room_sim(utterance=speech_spec,
                                                 point_noise=noise_spec,
-                                                signal_len=length_samps, 
-                                                return_unsquashed=True, 
+                                                signal_len=length_samps,
+                                                return_unsquashed=True,
                                                 return_signals=True)
 
     # The xcore pipeline is fixed-point; fail fast if the float sim would clip when
@@ -136,7 +135,7 @@ def test_bad_state(room, speech_level, noise_name):
 
     t, adapt_bad = leq_smooth(out_data_adapt_bad, fs, 0.05)
     t, fixed_good = leq_smooth(out_data_fixed_good, fs, 0.05)
-   
+
     # check after 3 seconds we have converged to be better than the fixed good filter (because it should leak)
     average_fixed_good = np.mean(fixed_good[(t>3)*(t<5)])
     average_adapt_bad  = np.mean(adapt_bad[(t>3)*(t<5)])
@@ -158,7 +157,7 @@ def test_bad_state(room, speech_level, noise_name):
         plt.legend()
         plt.grid()
         plt.show()
-    
+
 
 if __name__ =="__main__":
     test_bad_state("lab", 0, "006_Pink")

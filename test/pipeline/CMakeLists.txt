@@ -1,78 +1,49 @@
 
-### Add interface library
-add_library(pipeline_multi_thread_interface INTERFACE)
-file( GLOB_RECURSE SOURCES_APP  src/*.c )
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(test_pipeline)
 
-target_sources(pipeline_multi_thread_interface
-    INTERFACE
-        ${SOURCES_APP})
+set(APP_HW_TARGET XK-EVK-XU316)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../)
+set(CONFIG_XSCOPE_PATH ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils)
+file(GLOB CONFIG_XSCOPE_REL_PATH
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${CONFIG_XSCOPE_PATH}/config.xscope)
 
-target_include_directories(pipeline_multi_thread_interface
-    INTERFACE
-        src)
+set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
 
-target_link_libraries(pipeline_multi_thread_interface
-    INTERFACE
-        fwk_voice::aec
-        fwk_voice::adec
-        fwk_voice::ns
-        fwk_voice::agc
-        fwk_voice::ic
-        fwk_voice::stage1
-        fwk_voice::test::fileutils
-        )
+file(GLOB APP_C_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils/src/*.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
 
-target_compile_definitions(pipeline_multi_thread_interface
-    INTERFACE
-        NUM_AEC_THREADS=2
-    )
+set(APP_INCLUDES
+    ${CMAKE_CURRENT_LIST_DIR}/src
+    ${CMAKE_CURRENT_LIST_DIR}/../shared/file_utils/src)
 
-target_sources(pipeline_multi_thread_interface
-    INTERFACE src/main.xc)
+set(APP_DEPENDENT_MODULES "lib_voice"
+                            "xscope_fileio")
 
-target_compile_options(pipeline_multi_thread_interface
-    INTERFACE "-target=${XCORE_TARGET}")
+set(APP_COMMON_FLAGS -report
+                        -Os
+                        -DTEST_WAV_XSCOPE=1
+                        -DNUM_AEC_THREADS=2)
 
-target_link_options(pipeline_multi_thread_interface
-    INTERFACE
-        "-target=${XCORE_TARGET}"
-        "-report"
-        "${CONFIG_XSCOPE_PATH}/config.xscope")
-
-### Add executable
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-add_executable(pipeline_std_arch)
-
-target_link_libraries(pipeline_std_arch
-    PUBLIC
-        pipeline_multi_thread_interface
-        )
+set(APP_COMPILER_FLAGS_std_arch
+            ${APP_COMMON_FLAGS})
 
 
 ## Build AEC+IC+NS_AGC pipeline for testing against python.
 ## Everything other than initial delay estimation is run,
 ## which is currently not supported on the python pipeline
-add_executable(pipeline_aec_ic_ns_agc)
+set(APP_COMPILER_FLAGS_aec_ic_ns_agc
+            ${APP_COMMON_FLAGS}
+            -DDISABLE_INITIAL_DELAY_EST=1)
 
-target_link_libraries(pipeline_aec_ic_ns_agc
-    PUBLIC
-        pipeline_multi_thread_interface
-    )
+set(APP_COMPILER_FLAGS_alt_arch
+            ${APP_COMMON_FLAGS}
+            -DALT_ARCH_MODE=1)
 
-target_compile_definitions(pipeline_aec_ic_ns_agc
-    PRIVATE
-        DISABLE_INITIAL_DELAY_EST=1
-    )
-
-## Build Alt arch pipeline
-add_executable(pipeline_alt_arch)
-
-target_link_libraries(pipeline_alt_arch
-    PUBLIC
-        pipeline_multi_thread_interface
-    )
-
-target_compile_definitions(pipeline_alt_arch
-    PRIVATE
-        ALT_ARCH_MODE=1
-    )
+XMOS_REGISTER_APP()

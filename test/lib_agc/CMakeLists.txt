@@ -1,7 +1,6 @@
-if(NOT USE_CUSTOM_CMAKE)
-    cmake_minimum_required(VERSION 3.21)
-    include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
-    project(fwk_voice_tests_agc)
-    add_subdirectory(test_agc_xccm)
-    add_subdirectory(test_process_frame)
-endif()
+
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(fwk_voice_tests_agc)
+add_subdirectory(test_process_frame)
+

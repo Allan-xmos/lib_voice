@@ -9,13 +9,13 @@ hydra_audio_base_dir  = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio')
 pipeline_input_dir = Path(__file__).parent / "pipeline_input"
 pipeline_output_base_dir = "pipeline_output"
 keyword_input_base_dir = "keyword_input"
-bin_dir = Path(__file__).parents[2] / "build" / "test" / "pipeline" / "bin"
+bin_dir = Path(__file__).parent / "bin"
 results_log_file = Path(__file__).parent / "results.csv"
 
 pipeline_bins = {
-                "prev_arch" :    {"xcore" : bin_dir / "pipeline_std_arch.xe"},
-                "alt_arch"  :    {"xcore" : bin_dir / "pipeline_alt_arch.xe"},
-                "aec_ic_ns_agc_prev_arch" : {"xcore" : bin_dir / "pipeline_aec_ic_ns_agc.xe"}
+                "prev_arch" :    {"xcore" : bin_dir / "std_arch" / "test_pipeline_std_arch.xe"},
+                "alt_arch"  :    {"xcore" : bin_dir / "alt_arch" / "test_pipeline_alt_arch.xe"},
+                "aec_ic_ns_agc_prev_arch" : {"xcore" : bin_dir / "aec_ic_ns_agc" / "test_pipeline_aec_ic_ns_agc.xe"}
                 }
 xtag_aquire_timeout_s = int(8.5 * 60 * 1.2 * 2) # Add a generous timeout for xtag acquisition here. Max input wav is 8m21s so double & add 20%
                                                 # The time to run the multithreaded example on xcore is approximately the wav length
@@ -83,9 +83,9 @@ def pytest_sessionstart(session):
         test_suite_dir = "xvf3510_no_processing_xmos_test_suite"
     else:
         test_suite_dir = "xvf3510_no_processing_xmos_test_suite_subset_avona"
-    
-    hydra_audio_path = hydra_audio_base_dir  / test_suite_dir 
-    
+
+    hydra_audio_path = hydra_audio_base_dir  / test_suite_dir
+
     # prev-arch: Standard config, full pipeline
     # alt-arch: Alt-arch config, full pipeline
     # aec_ic_ns_agc_prev_arch: Standard config, no ADEC pipeline
@@ -107,12 +107,12 @@ def pytest_sessionstart(session):
                 test_wav_file = pipeline_input_dir / input_wav_file.name
                 convert_input_wav(str(input_wav_file), str(test_wav_file))
                 all_tests_list.append([input_wav_file, arch, target])
-       
+
     for target in targets:
         for arch in architectures:
             (Path(__file__).parent / f"{pipeline_output_base_dir}_{arch}_{target}").mkdir(exist_ok=True)
             (Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}").mkdir(exist_ok=True)
-    
+
     for test in all_tests_list:
         wav_file = test[0]
         input_file = pipeline_input_dir / wav_file.name
@@ -133,7 +133,7 @@ def pytest_sessionfinish(session):
                     fields = line.split(",")
                     if target == fields[2] and arch == fields[1]:
                         target_stripped_line = line.replace(target+",", "").replace(arch+",", "")
-                        target_log.append(target_stripped_line) 
+                        target_log.append(target_stripped_line)
                 target_log = sorted(target_log)
                 target_specific_log_file = Path(__file__).parent / f"{results_log_file.stem}_Avona_{arch}_{target}.csv"
                 with open(target_specific_log_file, "w") as tlf:

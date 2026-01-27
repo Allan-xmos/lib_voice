@@ -11,37 +11,13 @@ endif()
 
 project(fwk_voice)
 
-enable_language(CXX C ASM)
-
-find_package( Python3 COMPONENTS Interpreter )
-
 ## Add libs and apps
 add_subdirectory( lib_voice )
 
 if(PROJECT_IS_TOP_LEVEL)
-
-    ## Compile flags for C/C++ for all apps (for all platforms)
-    list(APPEND   COMPILE_FLAGS        -Os -MMD -g)
-    list(APPEND   COMPILE_FLAGS        -Wno-format -Wall )
-
-    message( STATUS "System name ${CMAKE_SYSTEM_NAME}" )
-
-    ## Fetch lib_xcore_math
-    set(XCORE_MATH_PATH ${CMAKE_SOURCE_DIR}/..)
-    add_subdirectory(${XCORE_MATH_PATH}/lib_xcore_math/lib_xcore_math ${CMAKE_BINARY_DIR}/lib_xcore_math)
-
-    ## Platform-specific C/C++ compile flags
-    if(CMAKE_SYSTEM_NAME STREQUAL XCORE_XS3A)
-        set(XCORE_TARGET "XCORE-AI-EXPLORER")
-    else()
-        list(APPEND   COMPILE_FLAGS  -DX86_BUILD=1)
-    endif()
-
-    add_compile_options( ${COMPILE_FLAGS} )
-
-    set( CONFIG_XSCOPE_PATH ${CMAKE_SOURCE_DIR}/test/shared/file_utils)
     add_subdirectory( test )
 endif()
+
 else()
 cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)

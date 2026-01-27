@@ -1,39 +1,20 @@
-if(USE_CUSTOM_CMAKE)
-set( TEST_ONLY_DEPS_ROOT ${CMAKE_SOURCE_DIR}/.. ) #test only dependencies present in the sandbox as part of fwk_voice viewfile
-set( TEST_SHARED_SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/shared )
-set( UNITY_PATH ${TEST_ONLY_DEPS_ROOT}/Unity )
+if(NOT USE_CUSTOM_CMAKE)
+    cmake_minimum_required(VERSION 3.21)
+    include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+    project(fwk_voice_tests)
 
-include(etc/build_options.cmake)
-
-add_subdirectory( shared )
-
-add_subdirectory( lib_ns )
-
-add_subdirectory( lib_aec )
-
-add_subdirectory( lib_adec )
-
-add_subdirectory( lib_ic )
-
-add_subdirectory( lib_agc )
-
-add_subdirectory( lib_vnr )
-
-if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    add_subdirectory( pipeline )
-endif()
-
+    add_subdirectory(lib_agc)
+    add_subdirectory(lib_ns)
+    add_subdirectory(lib_ic)
+    add_subdirectory(lib_vnr)
+    add_subdirectory(lib_aec)
+    add_subdirectory(lib_adec)
+    if(NOT BUILD_NATIVE)
+        add_subdirectory( pipeline )
+    endif()
 else()
-cmake_minimum_required(VERSION 3.21)
-include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
-project(fwk_voice_tests)
-
-include(etc/build_options.cmake)
-
-add_subdirectory(lib_agc)
-add_subdirectory(lib_ns)
-add_subdirectory(lib_ic)
-add_subdirectory(lib_vnr)
-add_subdirectory(lib_aec)
-add_subdirectory(lib_adec)
+    enable_language(CXX C ASM)
+    set(XCORE_MATH_PATH ${CMAKE_SOURCE_DIR}/..) # Expected to have been fetched in the sandbox as part of xcommon cmake build
+    add_subdirectory(${XCORE_MATH_PATH}/lib_xcore_math/lib_xcore_math ${CMAKE_BINARY_DIR}/lib_xcore_math)
+    add_subdirectory(custom_cmake_build)
 endif()

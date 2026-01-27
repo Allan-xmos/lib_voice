@@ -13,5 +13,8 @@ if(NOT USE_CUSTOM_CMAKE)
         add_subdirectory( pipeline )
     endif()
 else()
+    enable_language(CXX C ASM)
+    set(XCORE_MATH_PATH ${CMAKE_SOURCE_DIR}/..) # Expected to have been fetched in the sandbox as part of xcommon cmake build
+    add_subdirectory(${XCORE_MATH_PATH}/lib_xcore_math/lib_xcore_math ${CMAKE_BINARY_DIR}/lib_xcore_math)
     add_subdirectory(custom_cmake_build)
 endif()

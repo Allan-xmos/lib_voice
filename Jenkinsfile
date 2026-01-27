@@ -144,7 +144,15 @@ pipeline {
                   checkout scm
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
-                        xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4")
+                        script {
+                          if (env.FULL_TEST == "1") {
+                            xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false)
+                          }
+                          else {
+                            xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4")
+                          }
+                        }
+
                         stash name: 'xcommon_cmake_build_xcore', includes: '**/bin/**/*.xe'
                       }
                     }
@@ -169,14 +177,7 @@ pipeline {
                 dir("${REPO}/build") {
                   withTools(params.TOOLS_VERSION) {
                     withVenv {
-                      script {
-                          if (env.FULL_TEST == "1") {
-                            sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DUSE_CUSTOM_CMAKE=ON'
-                          }
-                          else {
-                            sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DTEST_SPEEDUP_FACTOR=4 -DUSE_CUSTOM_CMAKE=ON'
-                          }
-                      }
+                      sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DUSE_CUSTOM_CMAKE=ON'
                       sh 'make -j$(nproc)'
                     }
                   }

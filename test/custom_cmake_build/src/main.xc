@@ -18,7 +18,7 @@ int main(){
     chan c_tile0_to_tile1;
 
     par {
-        on tile[0]: 
+        on tile[0]:
         {
           pipeline_wrapper_tile0(c_tile0_to_tile1);
           _Exit(0);

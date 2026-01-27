@@ -5,8 +5,9 @@
 
 #include "pipeline_state.h"
 
-void pipeline_tile0_init(pipeline_state_tile0_t *state) {
-    memset(state, 0, sizeof(pipeline_state_tile0_t));
+extern aec_task_distribution_t tdist;
+void pipeline_init(pipeline_state_t *state) {
+    memset(state, 0, sizeof(pipeline_state_t));
 
     // Initialise AEC, DE, ADEC stages
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
@@ -15,13 +16,13 @@ void pipeline_tile0_init(pipeline_state_tile0_t *state) {
     aec_non_de_mode_conf.num_x_channels = AP_MAX_X_CHANNELS;
     aec_non_de_mode_conf.num_main_filt_phases = AEC_MAIN_FILTER_PHASES;
     aec_non_de_mode_conf.num_shadow_filt_phases = AEC_SHADOW_FILTER_PHASES;
-    aec_non_de_mode_conf.tdist = &aec_tdist_chans2_threads1;
+    aec_non_de_mode_conf.tdist = &tdist;
 
     aec_de_mode_conf.num_y_channels = 1;
     aec_de_mode_conf.num_x_channels = 1;
     aec_de_mode_conf.num_main_filt_phases = 30;
     aec_de_mode_conf.num_shadow_filt_phases = 0;
-    aec_de_mode_conf.tdist = &aec_tdist_chans2_threads1;
+    aec_de_mode_conf.tdist = &tdist;
 
     // Disable ADEC's automatic mode. We only want to estimate and correct for the delay at startup
     adec_config_t adec_conf;
@@ -33,10 +34,6 @@ void pipeline_tile0_init(pipeline_state_tile0_t *state) {
     adec_conf.force_de_cycle_trigger = 1;
 
     stage1_init(&state->stage_1_state, &aec_de_mode_conf, &aec_non_de_mode_conf, &adec_conf);
-}
-
-void pipeline_tile1_init(pipeline_state_tile1_t *state) {
-    memset(state, 0, sizeof(pipeline_state_tile1_t));
 
     // Initialise IC, VNR
     ic_init(&state->ic_state);
@@ -49,11 +46,10 @@ void pipeline_tile1_init(pipeline_state_tile1_t *state) {
     agc_init(&state->agc_state, &agc_conf_asr);
 }
 
-void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
+void pipeline_process_frame(pipeline_state_t *state,
         int32_t (*input_y_data)[AP_FRAME_ADVANCE],
         int32_t (*input_x_data)[AP_FRAME_ADVANCE],
-        int32_t (*output_data)[AP_FRAME_ADVANCE],
-        pipeline_metadata_t *md_output)
+        int32_t output_data[AP_FRAME_ADVANCE])
 {
     pipeline_metadata_t md;
     memset(&md, 0, sizeof(pipeline_metadata_t));
@@ -66,22 +62,10 @@ void pipeline_process_frame_tile0(pipeline_state_tile0_t *state,
     stage1_process_frame(&state->stage_1_state, &stage_1_out[0], &md.max_ref_energy,
             &md.aec_corr_factor, &md.ref_active_flag, input_y_data, input_x_data);
 
-    memcpy(&output_data[0][0], &stage_1_out[0][0], AEC_MAX_Y_CHANNELS*AP_FRAME_ADVANCE*sizeof(int32_t));
-    memcpy(md_output, &md, sizeof(pipeline_metadata_t));
-}
-
-void pipeline_process_frame_tile1(pipeline_state_tile1_t *state, pipeline_metadata_t *md_input,
-        int32_t (*input_data)[AP_FRAME_ADVANCE],
-        int32_t output_data[AP_FRAME_ADVANCE])
-{
-    pipeline_metadata_t md;
-    memcpy(&md, md_input, sizeof(pipeline_metadata_t));
-
-    /** IC and VNR*/
     int32_t ic_output[AP_FRAME_ADVANCE];
     float_s32_t input_vnr_pred;
 
-    ic_process_frame(&state->ic_state, input_data[0], input_data[1], ic_output, &input_vnr_pred);
+    ic_process_frame(&state->ic_state, stage_1_out[0], stage_1_out[1], ic_output, &input_vnr_pred);
     md.vnr_pred_flag = input_vnr_pred;
 
     /** NS*/

@@ -12,6 +12,8 @@ target_include_directories(pipeline_custom_cmake
     PUBLIC
         src)
 
+generate_schedule(pipeline_custom_cmake "1 2 2 10 5")
+
 target_link_libraries(pipeline_custom_cmake
     PUBLIC
         fwk_voice::aec
@@ -29,9 +31,6 @@ set(COMMON_OPTIONS
                     -Wall)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    target_sources(pipeline_custom_cmake
-        PUBLIC src/main.xc)
-
     target_compile_options(pipeline_custom_cmake
         PRIVATE
             -target=XK-EVK-XU316
@@ -42,10 +41,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
             -target=XK-EVK-XU316
             -report)
 else()
-    target_compile_definitions(pipeline_custom_cmake
-        PRIVATE
-            X86_BUILD=1)
-
     target_compile_options(pipeline_custom_cmake
         PRIVATE
             ${COMMON_OPTIONS})

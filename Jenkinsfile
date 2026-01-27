@@ -165,7 +165,7 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
-                        stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe '
+                        stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe'
                       }
                     }
                 }

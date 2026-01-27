@@ -2,26 +2,26 @@
 ## Common compile options
 add_library(fwk_voice_compile_options INTERFACE)
 
-if(PROJECT_IS_TOP_LEVEL AND NOT CMAKE_SYSTEM_NAME STREQUAL XCORE_XS3A)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL XCORE_XS3A)
     target_compile_options(fwk_voice_compile_options INTERFACE -fPIC)
     target_compile_features(fwk_voice_compile_options INTERFACE cxx_std_11)
 endif()
 
 ## aec
 add_library(fwk_voice_module_aec INTERFACE)
-include(aec_schedule_custom_cmake.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/aec_schedule_custom_cmake.cmake)
 target_sources(fwk_voice_module_aec
     INTERFACE
-        src/aec/aec_impl.c
-        src/aec/aec_l2_impl.c
-        src/aec/aec_priv_impl.c
-        src/aec/aec_process_frame.c
-        src/aec/aec_schedule_defaults.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/aec/aec_impl.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/aec/aec_l2_impl.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/aec/aec_priv_impl.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/aec/aec_process_frame.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/aec/aec_schedule_defaults.c
 )
 target_include_directories(fwk_voice_module_aec
     INTERFACE
-        api/aec
-        src/aec ## this is needed for the IC
+        ${CMAKE_CURRENT_LIST_DIR}/api/aec
+        ${CMAKE_CURRENT_LIST_DIR}/src/aec ## this is needed for the IC
 )
 target_compile_options(fwk_voice_module_aec
     INTERFACE
@@ -48,7 +48,12 @@ target_sources(fwk_voice_module_lib_vnr
         ${VNR_CXX_SOURCES}
         ${VNR_C_SOURCES}
 )
-target_include_directories(fwk_voice_module_lib_vnr PUBLIC api/vnr src/vnr ${MODEL_OUT_DIR})
+target_include_directories(fwk_voice_module_lib_vnr
+    PUBLIC
+        ${CMAKE_CURRENT_LIST_DIR}/api/vnr
+        ${CMAKE_CURRENT_LIST_DIR}/src/vnr
+        ${MODEL_OUT_DIR})
+
 target_link_libraries(fwk_voice_module_lib_vnr
     PUBLIC
         lib_xcore_math
@@ -74,13 +79,13 @@ add_library(fwk_voice_module_lib_ns STATIC)
 
 target_sources(fwk_voice_module_lib_ns
     PRIVATE
-        src/ns/ns_impl.c
-        src/ns/ns_low_level.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/ns/ns_impl.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/ns/ns_low_level.c
 )
 target_include_directories(fwk_voice_module_lib_ns
     PUBLIC
-        api/ns
-        src/ns
+        ${CMAKE_CURRENT_LIST_DIR}/api/ns
+        ${CMAKE_CURRENT_LIST_DIR}/src/ns
 )
 target_compile_options(fwk_voice_module_lib_ns
     PRIVATE
@@ -103,11 +108,11 @@ add_library(fwk_voice_module_lib_agc STATIC)
 
 target_sources(fwk_voice_module_lib_agc
     PRIVATE
-        src/agc/agc_impl.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/agc/agc_impl.c
 )
 target_include_directories(fwk_voice_module_lib_agc
     PUBLIC
-        api/agc
+        ${CMAKE_CURRENT_LIST_DIR}/api/agc
 )
 target_compile_options(fwk_voice_module_lib_agc
     PRIVATE
@@ -126,7 +131,7 @@ target_link_libraries(fwk_voice_module_lib_agc
 add_library(fwk_voice::agc ALIAS fwk_voice_module_lib_agc)
 
 ## ic
-file( GLOB_RECURSE    LIB_IC_SOURCES       src/ic/*.c )
+file( GLOB_RECURSE    LIB_IC_SOURCES       ${CMAKE_CURRENT_LIST_DIR}/src/ic/*.c )
 ## Create library target
 add_library(fwk_voice_module_lib_ic STATIC)
 target_sources(fwk_voice_module_lib_ic
@@ -135,8 +140,8 @@ target_sources(fwk_voice_module_lib_ic
 )
 target_include_directories(fwk_voice_module_lib_ic
     PUBLIC
-        api/ic
-        src/ic
+        ${CMAKE_CURRENT_LIST_DIR}/api/ic
+        ${CMAKE_CURRENT_LIST_DIR}/src/ic
 )
 target_compile_options(fwk_voice_module_lib_ic
     PRIVATE
@@ -157,7 +162,7 @@ target_link_libraries(fwk_voice_module_lib_ic
 add_library(fwk_voice::ic ALIAS fwk_voice_module_lib_ic)
 
 ## adec
-file( GLOB_RECURSE    LIB_ADEC_SOURCES       src/adec/*.c )
+file( GLOB_RECURSE    LIB_ADEC_SOURCES       ${CMAKE_CURRENT_LIST_DIR}/src/adec/*.c )
 ## Create library target
 add_library(fwk_voice_module_lib_adec INTERFACE)
 target_sources(fwk_voice_module_lib_adec
@@ -166,7 +171,7 @@ target_sources(fwk_voice_module_lib_adec
 )
 target_include_directories(fwk_voice_module_lib_adec
     INTERFACE
-        api/adec
+        ${CMAKE_CURRENT_LIST_DIR}/api/adec
 )
 target_compile_options(fwk_voice_module_lib_adec
     INTERFACE
@@ -185,14 +190,14 @@ add_library(fwk_voice_module_lib_stage1 INTERFACE)
 
 target_sources(fwk_voice_module_lib_stage1
     INTERFACE
-        src/stage1/delay_buffer.c
-        src/stage1/stage1.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/stage1/delay_buffer.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/stage1/stage1.c
 )
 
 target_include_directories(fwk_voice_module_lib_stage1
     INTERFACE
-        api/stage1
-        src/stage1
+        ${CMAKE_CURRENT_LIST_DIR}/api/stage1
+        ${CMAKE_CURRENT_LIST_DIR}/src/stage1
 )
 
 target_compile_options(fwk_voice_module_lib_stage1

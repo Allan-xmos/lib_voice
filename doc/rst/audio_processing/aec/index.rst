@@ -10,7 +10,6 @@ make use of functionality provided in ``lib_xcore_math`` to perform DSP operatio
    :maxdepth: 1
    :caption: Contents:
 
-   src/getting_started
    src/overview
    src/reference
 

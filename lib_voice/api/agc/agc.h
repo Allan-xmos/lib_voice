@@ -7,13 +7,6 @@
 #include <agc_profiles.h>
 
 /**
- * @page page_agc_h agc.h
- *
- * This header should be included in application source code to gain access to the
- * lib_agc public functions API.
- */
-
-/**
  * @defgroup agc_func   AGC API functions
  * @defgroup agc_defs   AGC API structure definitions
  */

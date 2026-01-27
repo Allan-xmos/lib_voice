@@ -16,13 +16,6 @@
 #endif
 
 /**
- * @page page_aec_defines_h aec_defines.h
- *
- * This header contains lib_aec public defines
- *
- * @ingroup aec_header_file
- */
-/**
  * @defgroup aec_defines   AEC #define constants
  */
 

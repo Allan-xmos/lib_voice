@@ -12,14 +12,6 @@
 #include "aec_memory_pool.h"
 
 /**
- * @page page_aec_h aec.h
- *
- * lib_aec public functions API.
- *
- * @ingroup aec_header_file
- */
-
-/**
  * @defgroup aec_func     AEC API Functions
  */
 

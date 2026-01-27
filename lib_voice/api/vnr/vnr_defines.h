@@ -4,14 +4,6 @@
 #define __VNR_DEFINES_H__
 
 /**
- * @page page_vnr_defines_h vnr_defines.h
- * 
- * This header contains the lib_vnr public #defines that are common to both feature extraction and inference.
- *
- * @ingroup vnr_header_file
- */
-
-/**
  * @defgroup vnr_defines   VNR #define constants common to both feature extraction and inference
  */ 
 

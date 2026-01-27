@@ -4,14 +4,6 @@
 #define __VNR_INFERENCE_API_H__
 
 /**
- * @page page_vnr_inference_api_h vnr_inference_api.h
- * 
- * This header contains lib_vnr inference engine API functions.
- *
- * @ingroup vnr_header_file
- */
-
-/**
  * @defgroup vnr_inference_api   VNR inference API functions
  */ 
 

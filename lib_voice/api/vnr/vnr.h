@@ -7,14 +7,6 @@
 #include "vnr_inference_api.h"
 
 /**
- * @page page_vnr_h vnr.h
- *
- * This header contains lib_vnr API functions.
- *
- * @ingroup vnr_header_file
- */
-
-/**
  * @defgroup vnr_api   VNR API functions
  */
 

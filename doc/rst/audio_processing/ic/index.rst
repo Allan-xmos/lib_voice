@@ -10,7 +10,6 @@ make use of functionality provided in ``lib_aec`` for the core normalised LMS bl
    :maxdepth: 1
    :caption: Contents:
 
-   src/getting_started
    src/overview
    src/reference
 

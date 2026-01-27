@@ -4,13 +4,6 @@
 #define ADEC_DEFINES_H
 
 /**
- * @page page_adec_defines_h adec_defines.h
- * 
- * This header contains lib_adec public defines 
- *
- * @ingroup adec_header_file
- */
-/**
  * @defgroup adec_defines   ADEC #define constants 
  */ 
 

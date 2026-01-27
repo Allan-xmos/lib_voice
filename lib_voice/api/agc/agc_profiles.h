@@ -6,16 +6,6 @@
 #include "xmath/xmath.h"
 
 /**
- * @page page_agc_profiles_h agc_profiles.h
- *
- * This header contains pre-defined profiles for AGC configurations.
- * These profiles can be used to initialise the `agc_config_t` data
- * for use with `agc_init()`.
- *
- * This header is automatically included by `agc.h`.
- */
-
-/**
  * @defgroup agc_profiles   Pre-defined AGC configuration profiles
  */
 

@@ -11,15 +11,6 @@
 #include "vnr_inference_api.h"
 
 /**
- * @page page_ic_defines_h ic_defines.h
- *
- * This header contains lib_ic public defines that are used to configure
- * the interference canceller when ic_init() is called.
- *
- * @ingroup ic_header_file
- */
-
-/**
  * @defgroup ic_defines   IC #define constants
  */
 

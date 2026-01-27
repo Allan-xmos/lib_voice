@@ -6,16 +6,7 @@
 #include "ic_state.h"
 
 /**
- * @page page_ic_h ic.h
- *
- * lib_ic public functions API.
- *
- * @ingroup ic_header_file
- */
-
-/**
  * @defgroup ic_func     High Level API Functions
- * @defgroup ic_low_level_func   Low Level API Functions
  */
 
 /**

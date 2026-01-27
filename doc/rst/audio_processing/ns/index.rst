@@ -9,7 +9,6 @@ provided in ``lib_xcore_math`` to perform DSP operations. For more details, refe
    :maxdepth: 1
    :caption: Contents:
 
-   src/getting_started
    src/overview
    src/reference
 

@@ -7,14 +7,6 @@
 #include "xmath/xmath.h"
 
 /**
- * @page page_vnr_state_h vnr_state.h
- * 
- * This header contains lib_vnr public data structure definitions 
- *
- * @ingroup vnr_header_file
- */
-
-/**
  * @defgroup vnr_state   VNR data structure definitions
  */ 
 

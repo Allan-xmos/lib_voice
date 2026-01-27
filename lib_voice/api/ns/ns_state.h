@@ -6,14 +6,6 @@
 #include "xmath/xmath.h"
 
 /**
- * @page page_ns_state_h ns_state.h
- *
- * This header contains definitions for data structure and defines.
- *
- * This header is automatically included by `ns.h`
- */
-
-/**
  * @defgroup ns_defs   NS API structure definitions
  */
 

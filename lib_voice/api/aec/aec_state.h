@@ -12,14 +12,6 @@
 
 
 /**
- * @page page_aec_state_h aec_state.h
- *
- * This header contains definitions for data structures and enums used in lib_aec.
- *
- * @ingroup aec_header_file
- */
-
-/**
  * @defgroup aec_types   AEC Data Structure and Enum Definitions
  */
 

@@ -9,6 +9,8 @@ documentation:
   root_doc: doc/rst/lib_voice.rst
   exclude_patterns_path: doc/exclude_patterns.inc
   cognidox_part_number: XM-010445-UG
+  latex_toc_depth: 2
+  latex_secnum_depth: 2
   doxygen_projects:
     lib_voice:
       doxyfile_path: doc/Doxyfile.inc

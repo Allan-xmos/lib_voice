@@ -414,7 +414,7 @@ void aec_priv_calc_coherence_mu(
             coh_mu_state[ch].mu_coh_timer -= 1;
         }
     }
-    //# If the shadow filter has be en used within the last 15 frames, keep the count != 0
+    //# If the shadow filter has been used within the last 15 frames, keep the count != 0
     for(unsigned ch=0; ch<num_y_channels; ch++)
     {
         if(shadow_flag[ch] == COPY) {
@@ -471,7 +471,7 @@ void aec_priv_calc_coherence_mu(
             if(coh_mu_state[ch].mu_shad_count >= 1)
             {
                 for(unsigned x_ch=0; x_ch<num_x_channels; x_ch++) {
-                    coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ONE; //TODO profile f64_to_float_s32
+                    coh_mu_state[ch].coh_mu[x_ch] = FLOAT_S32_ONE;
                 }
             }
             else if(coh_mu_state[ch].mu_coh_timer > 0)

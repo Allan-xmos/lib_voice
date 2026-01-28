@@ -326,7 +326,7 @@ void aec_process_frame(
     aec_filter_state_t *shadow_state = &aec_state->shadow_state;
     const aec_task_distribution_t *tdist = aec_state->shared_state.tdist;
 
-    main_state->shared_state->ref_active_flag = aec_detect_input_activity(x_data, REF_ACTIVE_THRESHOLD, main_state->shared_state->num_x_channels);;
+    main_state->shared_state->ref_active_flag = aec_detect_input_activity(x_data, REF_ACTIVE_THRESHOLD, main_state->shared_state->num_x_channels);
 
     // Read number of mic and reference channels. These are specified as part of the configuration when aec_init() is called.
     int num_y_channels = main_state->shared_state->num_y_channels; //Number of mic channels

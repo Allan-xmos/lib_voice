@@ -7,6 +7,7 @@ UNRELEASED
   * ADDED: Top-level header file - `voice.h`
   * CHANGED: Examples renamed to the form of: `app_<example_name>` 
   * CHANGED: Examples changed to use `xcommon_cmake`
+  * CHANGED: Improved AEC deconvergence during near end speech
 
 0.9.0
 -----

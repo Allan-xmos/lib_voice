@@ -1,7 +1,5 @@
-.. _vnr_overview:
-
-VNR Overview
-------------
+Voice to Noise Ratio estimator
+==============================
 
 The VNR (Voice to Noise Ratio) estimator predicts the signal to noise ratio of a speech signal in noise, using a pre-trained neural network.
 The VNR neural network model outputs a value between 0 and 1, with 1 indicating the strongest speech, and 0,

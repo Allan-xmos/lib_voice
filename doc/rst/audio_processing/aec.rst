@@ -1,7 +1,5 @@
-.. _aec_overview:
-
-AEC Overview
-------------
+Acoustic Echo Canceller
+=======================
 
 The lib_aec library provides functions that can be put together to
 perform Automatic Echo Cancellation on input microphone data by using

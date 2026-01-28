@@ -1,4 +1,4 @@
-# Copyright 2022 XMOS LIMITED.
+# Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import sys
 import os
@@ -10,12 +10,12 @@ import tempfile
 import xscope_fileio
 import xtagctl
 import re
+from pathlib import Path
 
 maximum_adec_delay_ms = 1000
 maximum_adec_estimation_time_ms = 3500
 
-this_file_path = os.path.dirname(os.path.realpath(__file__))
-xcore_binary = os.path.join(this_file_path, "../../../build/test/lib_adec/test_adec_startup/bin/fwk_voice_test_adec_startup.xe")
+xcore_binary = Path(__file__).parent / "bin" / "test_adec_startup.xe"
 
 @pytest.fixture
 def input_vectors():
@@ -76,7 +76,7 @@ def test_adec_startup(input_vectors):
         m = re.search(r'^\s*\[DEVICE\]', line)
         if m is not None:
             xcore_stdo.append(re.sub(r'\[DEVICE\]\s*', '', line))
-    
+
     transitions = []
     for line in xcore_stdo:
         match = re.search(r'!!ADEC STATE CHANGE!!\s*Frame:\s*([0-9]+)\s*old:\s([A-Z]+)\s*new:\s([A-Z]+)', line)
@@ -86,13 +86,13 @@ def test_adec_startup(input_vectors):
     frame_duration_ms = 15.0
     for tr in transitions:
         if tr['old_state'] == 'AEC' and tr['new_state'] == 'DE':
-            transition_to_de_ms = (tr['frame'] + 1) * frame_duration_ms 
+            transition_to_de_ms = (tr['frame'] + 1) * frame_duration_ms
             break
     for tr in transitions:
         if tr['old_state'] == 'DE' and tr['new_state'] == 'AEC':
-            transition_out_of_de_ms = (tr['frame'] + 1) * frame_duration_ms 
+            transition_out_of_de_ms = (tr['frame'] + 1) * frame_duration_ms
             break
-    adec_estimation_time_ms = transition_out_of_de_ms - transition_to_de_ms 
+    adec_estimation_time_ms = transition_out_of_de_ms - transition_to_de_ms
     print(f"first transition to DE: {transition_to_de_ms}ms, ADEC estimation time: {adec_estimation_time_ms}ms", file=sys.stderr)
 
     #Now calc 1s RMS of various bits to see AEC convergence

@@ -1,3 +1,5 @@
+# Copyright 2021-2026 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import numpy as np
 
 def disco_check(h, phases, frame_advance):

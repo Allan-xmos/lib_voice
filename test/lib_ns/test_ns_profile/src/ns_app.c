@@ -1,4 +1,4 @@
-// Copyright 2022 XMOS LIMITED.
+// Copyright 2022-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,13 +9,8 @@
 #include <ns.h>
 
 #include <fileio.h>
-
-#if PROFILE_PROCESSING
 #include "profile.h"
-#else
-static void prof(int n, const char* str) {}
-static void print_prof(int a, int b, int framenum){}
-#endif
+
 
 extern void ns_process_frame(ns_state_t * state,
                         int32_t output [NS_FRAME_ADVANCE],

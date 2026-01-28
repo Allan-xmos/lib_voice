@@ -1,3 +1,5 @@
+# Copyright 2022-2026 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import pytest
 from pathlib import Path
 import numpy as np
@@ -5,9 +7,9 @@ import py_voice.modules.vnr as vnr
 import test_utils
 from run_dut import run_dut
 
-tflite_model = Path(__file__).parents[3] / "modules" / "lib_vnr" / "python" / "model" / "trained_model.tflite"
+tflite_model = Path(__file__).parents[3] / "lib_voice" / "src" / "vnr" / "model" / "trained_model.tflite"
 vnr_conf = Path(__file__).parents[4] / "py_voice" / "py_voice" / "config" / "components" / "vnr_only.json"
-bin_dir_path = Path(__file__).parents[3] / "build" / "test" / "lib_vnr" / "vnr_unit_tests" / "bin"
+bin_dir_path = Path(__file__).parent / "bin"
 
 @pytest.fixture(scope="session")
 def model_details():
@@ -25,7 +27,7 @@ def dequantise(model_details):
     def _dequantise(output_data):
         return test_utils.dequantise_output(output_data, model_details[1])
 
-    return _dequantise 
+    return _dequantise
 
 @pytest.fixture
 def vnr_obj():
@@ -33,7 +35,7 @@ def vnr_obj():
 
 @pytest.fixture
 def dut_runner(request, target):
-    exe_path = bin_dir_path / request.node.originalname
+    exe_path = bin_dir_path / request.node.originalname / f"vnr_unit_tests_{request.node.originalname}"
 
     def _run_dut(input_bin):
         op, _ = run_dut(input_bin, exe_path, target)

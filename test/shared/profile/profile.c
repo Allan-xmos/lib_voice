@@ -1,8 +1,10 @@
-// Copyright 2022 XMOS LIMITED.
+// Copyright 2022-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#include <platform.h>
 #include <stdio.h>
 #include <string.h>
+
+#if ENABLE_PROFILING
+#include <platform.h>
 #include <xscope.h>
 #include <xcore/assert.h>
 #include <xcore/hwtimer.h>
@@ -25,7 +27,11 @@ void print_prof(unsigned start, unsigned end, unsigned frame) {
             printf("Profile %d, %llu\n", i, profile_checkpoint[i]);
         }
     }
-    
+
     memset(profile_checkpoint, 0, sizeof(profile_checkpoint));
     memset(profile_checkpoint_count, 0, sizeof(profile_checkpoint_count));
 }
+#else
+void prof(unsigned n, char *str) {}
+void print_prof(unsigned start, unsigned end, unsigned frame){}
+#endif

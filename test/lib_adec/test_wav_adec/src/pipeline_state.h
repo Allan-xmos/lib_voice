@@ -1,3 +1,5 @@
+// Copyright 2022-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #ifndef AP_STAGE_A_STATE_H
 #define AP_STAGE_A_STATE_H
 
@@ -30,10 +32,5 @@ typedef struct {
     int32_t adec_output_delay_estimator_enabled_flag; // to keep persistant across frames
     int32_t de_output_measured_delay_samples; //for logging in test_wav
 } pipeline_state_t;
-
-#if !PROFILE_PROCESSING
-    #define prof(n, str)
-    #define print_prof(start, end, framenum)
-#endif
 
 #endif

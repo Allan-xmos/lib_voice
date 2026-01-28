@@ -1,70 +1,54 @@
-#copy conftest.py in the build directory since pytest_collect_file only collects tests from the directory tree where conftest.py is present
-configure_file( conftest.py conftest.py COPYONLY )
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(test_agc_process_frame)
 
-## executable output directory
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(APP_HW_TARGET XK-EVK-XU316)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+include(${XMOS_SANDBOX_DIR}/lib_voice/test/etc/build_options.cmake)
 
-# Set unity runner generate script
-set(GEN_RUNNER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/generate_unity_runner.py)
+set(APP_DEPENDENT_MODULES lib_unity lib_voice)
 
-# Create directory for runner files
-set(RUNNERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/src.runners)
-file(MAKE_DIRECTORY ${RUNNERS_DIR})
+set(APP_INCLUDES ${CMAKE_CURRENT_LIST_DIR}/src ${CMAKE_CURRENT_LIST_DIR}/../../shared/pseudo_rand ${CMAKE_CURRENT_LIST_DIR}/../../shared/testing)
 
-file(GLOB TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+file(GLOB SHARED_SRC
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/pseudo_rand/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/testing/*.c
+)
 
-# For every source file in aec_unit_tests/src
-foreach(testfile ${TEST_SOURCES})
-    get_filename_component(TESTNAME ${testfile} NAME_WLE)
+file(GLOB_RECURSE TEST_C_SRCS CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_LIST_DIR} src/*.c)
+set(APP_C_SRCS ${TEST_C_SRCS} ${SHARED_SRC})
 
-    # Create runner file directory
-    file(MAKE_DIRECTORY ${RUNNERS_DIR}/${TESTNAME})
+file(GLOB_RECURSE tests RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS src/test*.c)
 
-    #########
-    ## Create runner file
-    set(RUNNER_FILE ${RUNNERS_DIR}/${TESTNAME}/${TESTNAME}_Runner.c)
-    set(GEN_RUNNER_SCRIPT_BYPRODUCTS ${RUNNER_FILE})
-
-    unset(GEN_RUNNER_SCRIPT_ARGS)
-    list(APPEND GEN_RUNNER_SCRIPT_ARGS --project-root ${UNITY_PATH}/..)
-    list(APPEND GEN_RUNNER_SCRIPT_ARGS --source-file ${testfile} )
-    list(APPEND GEN_RUNNER_SCRIPT_ARGS --runner-file ${RUNNER_FILE})
-
-    ## Add command to generate runner file
-    add_custom_command(
-        OUTPUT ${RUNNER_FILE}
-        COMMAND ${Python3_EXECUTABLE} ${GEN_RUNNER_SCRIPT} ${GEN_RUNNER_SCRIPT_ARGS}
-        COMMENT "Generating AGC runner")
-
-    #########
-    ## Add a build target
-    add_executable(fwk_voice_agc_${TESTNAME})
-
-    target_sources(fwk_voice_agc_${TESTNAME}
-        PRIVATE
-            ${testfile}
-            ${RUNNER_FILE})
-
-
-    target_include_directories(fwk_voice_agc_${TESTNAME}
-        PRIVATE src)
-
-    target_link_libraries(fwk_voice_agc_${TESTNAME}
-        PUBLIC
-            fwk_voice::agc
-            fwk_voice::test::shared::test_utils
-            fwk_voice::test::shared::unity)
-
-    if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-        target_compile_options(fwk_voice_agc_${TESTNAME}
-            PRIVATE
-                "-DUNITY_SUPPORT_64"
-                "-Wno-xcore-fptrgroup"
-                "-report"
-                "-DSPEEDUP_FACTOR=${TEST_SPEEDUP_FACTOR}")
-
-        target_link_options(fwk_voice_agc_${TESTNAME}
-            PRIVATE
-                "-target=${XCORE_TARGET}")
+foreach(test_file ${tests})
+    get_filename_component(test_name ${test_file} NAME_WE)
+    set(SOURCE_FILES_${test_name} ${test_file})
+    if(NOT BUILD_NATIVE)
+        set(APP_COMPILER_FLAGS_${test_name}
+            -Os
+            -g
+            -report
+            -Wall
+            -fxscope
+            -DDEBUG_PRINT_ENABLE=1
+            -DUNITY_SUPPORT_64
+            -DSPEEDUP_FACTOR=${TEST_SPEEDUP_FACTOR}
+            )
+    else()
+        set(APP_COMPILER_FLAGS_${test_name}
+            -Os
+            -g
+            -Wall
+            -DDEBUG_PRINT_ENABLE=1
+            -DUNITY_SUPPORT_64
+            -DSPEEDUP_FACTOR=${TEST_SPEEDUP_FACTOR}
+            )
     endif()
-endforeach(testfile ${TEST_SOURCES})
+endforeach()
+
+set(LIB_UNITY_AUTO_TEST_RUNNER ON)
+set(LIB_UNITY_USE_FIXTURE OFF)
+set(LIB_UNITY_USE_MEMORY OFF)
+XMOS_REGISTER_APP()

@@ -1,45 +1,47 @@
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+cmake_minimum_required(VERSION 3.21)
+include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+project(test_wav_adec)
 
-######################
-file(GLOB SOURCES_TEST_WAV src/*.c)
-add_library(fwk_voice_test_shared_test_wav_adec INTERFACE)
-target_sources(fwk_voice_test_shared_test_wav_adec
-    INTERFACE
-        ${SOURCES_TEST_WAV})
-target_include_directories(fwk_voice_test_shared_test_wav_adec
-    INTERFACE
-        src)
-target_link_libraries(fwk_voice_test_shared_test_wav_adec
-    INTERFACE
-        fwk_voice::adec
-        fwk_voice::stage1
-        fwk_voice::test::fileutils)
+set(APP_HW_TARGET XK-EVK-XU316)
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
+set(CONFIG_XSCOPE_PATH ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils)
+include(${XMOS_SANDBOX_DIR}/lib_voice/test/etc/build_options.cmake)
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    target_sources(fwk_voice_test_shared_test_wav_adec
-        INTERFACE
-            src/main.xc)
+file(GLOB CONFIG_XSCOPE_REL_PATH
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${CONFIG_XSCOPE_PATH}/config.xscope)
+
+file(GLOB APP_C_SRCS
+    RELATIVE ${CMAKE_CURRENT_LIST_DIR}
+    CONFIGURE_DEPENDS
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/file_utils/src/*.c
+    ${XMOS_SANDBOX_DIR}/lib_voice/test/shared/profile/*.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
+
+set(APP_INCLUDES
+    ${CMAKE_CURRENT_LIST_DIR}/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/profile)
+
+
+set(AEC_SCHEDULE_CONFIG ${TEST_WAV_ADEC_BUILD_CONFIG})
+
+if (NOT BUILD_NATIVE)
+    set(APP_DEPENDENT_MODULES "lib_voice"
+                                "xscope_fileio")
+    set(APP_COMPILER_FLAGS
+            -report
+            -Os
+            -DTEST_WAV_XSCOPE=1)
+
+    set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
+else()
+    set(APP_DEPENDENT_MODULES "lib_voice")
+
+    set(APP_COMPILER_FLAGS
+            -DX86_BUILD=1)
 endif()
-
-add_library(fwk_voice::test::shared_test_wav_adec ALIAS fwk_voice_test_shared_test_wav_adec)
-
-####################
-add_executable(fwk_voice_test_wav_adec)
-
-generate_schedule(fwk_voice_test_wav_adec ${TEST_WAV_ADEC_BUILD_CONFIG})
-
-target_link_libraries(fwk_voice_test_wav_adec
-    PUBLIC
-        fwk_voice::test::shared_test_wav_adec)
+XMOS_REGISTER_APP()
 
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
-    target_compile_options(fwk_voice_test_wav_adec
-        PRIVATE "-target=${XCORE_TARGET}")
-
-    target_link_options(fwk_voice_test_wav_adec
-        PRIVATE
-            "-target=${XCORE_TARGET}"
-            "-report"
-            "${CONFIG_XSCOPE_PATH}/config.xscope")
-endif()

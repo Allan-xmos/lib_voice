@@ -1,4 +1,4 @@
-// Copyright 2022 XMOS LIMITED.
+// Copyright 2022-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <string.h>
 #include <stdlib.h>
@@ -7,10 +7,8 @@
 #include "adec.h"
 
 #include "pipeline_state.h"
-
-#if PROFILE_PROCESSING
 #include "profile.h"
-#endif
+
 
 static void aec_switch_configuration(pipeline_state_t *state, aec_conf_t *conf)
 {

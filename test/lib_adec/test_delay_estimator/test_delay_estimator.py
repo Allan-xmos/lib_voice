@@ -1,4 +1,4 @@
-# Copyright 2022 XMOS LIMITED.
+# Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 from builtins import range
 from builtins import object
@@ -16,14 +16,14 @@ import filters
 import xscope_fileio
 import xtagctl
 import glob
+from pathlib import Path
 
 input_folder = os.path.abspath("input_wavs")
 output_folder = os.path.abspath("output_files")
 hydra_audio_base_dir = os.path.expanduser("~/hydra_audio/")
 
 delay_calc_output_file_name = "measured_delay_samples.bin"
-
-xe_path = os.path.abspath(glob.glob('../../../build/test/lib_adec/test_delay_estimator/bin/*.xe')[0])
+xe_path = Path(__file__).parent / "bin" / "test_delay_estimator.xe"
 
 sample_rate = 16000
 proc_frame_length = 2**9 # = 512

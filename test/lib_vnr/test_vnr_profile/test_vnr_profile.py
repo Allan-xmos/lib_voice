@@ -1,4 +1,4 @@
-# Copyright 2022 XMOS LIMITED.
+# Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 ###### help
@@ -17,7 +17,7 @@ import soundfile as sf
 from profile_xcore import parse_profile_log
 
 cwd = Path(__file__).parent
-exe = cwd / "../../../build/test/lib_vnr/test_vnr_profile/bin/fwk_voice_vnr_test_profile"
+exe = Path(__file__).parent / "bin" / "test_vnr_profile"
 
 
 def parse_arguments():

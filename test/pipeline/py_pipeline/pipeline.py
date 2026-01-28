@@ -1,3 +1,5 @@
+# Copyright 2022-2026 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import numpy as np
 from py_voice.modules import aec, agc, ic, ns
 

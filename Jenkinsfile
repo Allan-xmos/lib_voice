@@ -1,4 +1,6 @@
-@Library('xmos_jenkins_shared_library@v0.43.0') _
+// This file relates to internal XMOS infrastructure and should be ignored by external users
+
+@Library('xmos_jenkins_shared_library@v0.43.3') _
 
 def runningOn(machine) {
   println "Stage running on:"
@@ -18,8 +20,13 @@ pipeline {
     )
     string(
       name: 'XMOSDOC_VERSION',
-      defaultValue: 'v8.0.0',
+      defaultValue: 'v8.0.1',
       description: 'The xmosdoc version'
+    )
+    string(
+      name: 'INFR_APPS_VERSION',
+      defaultValue: 'v3.2.1',
+      description: 'The infr_apps version'
     )
     booleanParam(name: 'FULL_TEST_OVERRIDE',
                  defaultValue: false,
@@ -29,7 +36,7 @@ pipeline {
                  description: 'Enables pipelines characterisation test which takes 5.0hrs by itself. Normally run nightly')
   }
   environment {
-    REPO = 'fwk_voice'
+    REPO = 'lib_voice'
     FULL_TEST = """${(params.FULL_TEST_OVERRIDE
                     || env.BRANCH_NAME == 'develop'
                     || env.BRANCH_NAME == 'main'
@@ -44,16 +51,65 @@ pipeline {
   stages {
     stage('Build and Docs') {
       parallel {
-        stage('Build Docs') {
+        stage('Examples, docs, repo checks') {
           agent {
-            label "documentation"
+            label "documentation&&x86_64&&linux"
           }
-          steps {
-            checkout scm
-            warnError("Docs") {
-              buildDocs()
-            }
-          }
+          stages {
+            stage("Examples build") {
+              steps {
+                runningOn(env.NODE_NAME)
+
+                dir("${REPO}") {
+                  checkoutScmShallow()
+                  createVenv(reqFile: "requirements.txt")
+                }
+                dir("${REPO}/examples") {
+                  withVenv {
+                    xcoreBuild()
+                  }
+                }
+              }
+            } // Examples build
+
+            stage("Repo checks") {
+              steps {
+                // Hack to get the changelog checker to install ai_tools before doing cmake
+                script {
+                  dir("${WORKSPACE}/.infr") {
+                    // Check out the infr_apps repo and dependencies
+                    if (!fileExists("infr_apps")) {
+                      sh "git clone --branch '${params.INFR_APPS_VERSION}' git@github.com:xmos/infr_apps"
+                    }
+                    dir("infr_apps") {
+                      if (!fileExists(".venv")) {
+                        createVenv(reqFile: "requirements.txt")
+                      }
+                      withVenv {
+                        sh "pip install -r ${WORKSPACE}/${REPO}/requirements.txt"
+                      }
+                    }
+                  }
+                }
+                warnError("Repo checks failed") {
+                  runRepoChecks("${WORKSPACE}/${REPO}")
+                }
+              }
+            } // Repo checks
+
+            stage("Docs build") {
+              steps {
+                dir("${REPO}") {
+                  warnError("Docs build failed") {
+                    buildDocs()
+                  }
+                  archiveSandbox(REPO)
+                }
+              }
+            } // Docs build
+
+          } // stages
+
           post {
             cleanup {
               xcoreCleanSandbox()
@@ -72,8 +128,6 @@ pipeline {
               steps {
                 runningOn(env.NODE_NAME)
 
-                sh "git clone --depth 1 --branch v2.5.2 git@github.com:ThrowTheSwitch/Unity.git"
-
                 dir("${REPO}") {
                   checkout scm
                   sh "git submodule update --init --recursive --jobs 4"
@@ -84,27 +138,49 @@ pipeline {
                 }
               }
             }
-            stage('CMake') {
+            stage('xcommon-cmake xcore build') {
               steps {
-                // Do xcore files
+                dir("${REPO}") {
+                  checkout scm
+                    withTools(params.TOOLS_VERSION) {
+                      withVenv {
+                        script {
+                          if (env.FULL_TEST == "1") {
+                            xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false)
+                          }
+                          else {
+                            xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4")
+                          }
+                        }
+
+                        stash name: 'xcommon_cmake_build_xcore', includes: '**/bin/**/*.xe'
+                      }
+                    }
+                }
+              }
+            }
+            stage('xcommon-cmake native build') {
+              steps {
+                dir("${REPO}") {
+                    withTools(params.TOOLS_VERSION) {
+                      withVenv {
+                        xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
+                        stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe'
+                      }
+                    }
+                }
+              }
+            }
+            stage('Custom CMake build') {
+              steps {
+                // Do custom cmake, xcore build
                 dir("${REPO}/build") {
                   withTools(params.TOOLS_VERSION) {
                     withVenv {
-                      script {
-                          if (env.FULL_TEST == "1") {
-                            sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DFWK_VOICE_BUILD_TESTS=ON'
-                          }
-                          else {
-                            sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DTEST_SPEEDUP_FACTOR=4 -DFWK_VOICE_BUILD_TESTS=ON'
-                          }
-                      }
+                      sh 'cmake -S.. --toolchain=../xmos_cmake_toolchain/xs3a.cmake -DUSE_CUSTOM_CMAKE=ON'
                       sh 'make -j$(nproc)'
                     }
                   }
-                }
-                dir("${REPO}") {
-                  // Stash all executables and xscope_fileio
-                  stash name: 'cmake_build_xcore', includes: 'build/**/*.xe, build/**/conftest.py, build/**/xscope_fileio/**'
                 }
               }
             }
@@ -129,10 +205,9 @@ pipeline {
           steps {
             runningOn(env.NODE_NAME)
 
-            sh "git clone --depth 1 --branch v2.5.2 git@github.com:ThrowTheSwitch/Unity.git"
             sh "git clone --depth 1 --branch v3.0.0 git@github0.xmos.com:xmos-int/xtagctl.git"
-            sh "git clone --depth 1 --branch develop git@github.com:xmos/audio_test_tools.git"
-            sh "git clone --depth 1 --branch develop git@github.com:xmos/py_voice.git"
+            sh "git clone --depth 1 --branch v4.6.0 git@github.com:xmos/audio_test_tools.git"
+            sh "git clone --depth 1 --branch v1.1.0 git@github.com:xmos/py_voice.git"
             sh "git clone --depth 1 --branch main git@github.com:xmos/amazon_wwe.git"
             sh "git clone --depth 1 --branch master git@github.com:xmos/sensory_sdk.git"
 
@@ -153,14 +228,16 @@ pipeline {
             dir("${REPO}") {
               withTools(params.TOOLS_VERSION) {
                 withVenv {
+                  sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
+
                   // Build x86 versions locally as we had problems with moving bins and libs over from previous build due to brew
                   dir("build") {
                     sh "cmake --version"
-                    sh 'cmake -S.. -DTEST_WAV_ADEC_BUILD_CONFIG="1 2 2 10 5" -DFWK_VOICE_BUILD_TESTS=ON'
+                    sh 'cmake -S.. -DUSE_CUSTOM_CMAKE=ON'
                     sh 'make -j$(nproc)'
 
                     // We need to put this here because it is not fetched until we build
-                    sh "pip install -e fwk_voice_deps/xscope_fileio"
+                    sh "pip install xscope_fileio"
                   }
                   // We do this again on the NUCs for verification later, but this just checks we have no build error
                   dir("test/lib_ic/py_c_frame_compare") {
@@ -173,28 +250,8 @@ pipeline {
                   dir("test/stage_b") {
                     sh "python build_c_code.py"
                   }
-                  // test VNR xcommon_cmake build
-                  dir("test/lib_vnr/test_vnr_xccm") {
-                    xcoreBuild(archiveBins: false)
-                  }
-                  // test NS xcommon_cmake build
-                  dir("test/lib_ns/test_ns_xccm") {
-                    xcoreBuild(archiveBins: false)
-                  }
-                  // test AGC xcommon_cmake build
-                  dir("test/lib_agc/test_agc_xccm") {
-                    xcoreBuild(archiveBins: false)
-                  }
-                  dir("test/lib_aec/test_aec_xccm") {
-                    xcoreBuild(archiveBins: false)
-                  }
-                  dir("test/lib_ic/test_ic_xccm") {
-                    xcoreBuild(archiveBins: false)
-                  }
-                  dir("test/lib_adec/test_stage1_xccm") {
-                    xcoreBuild(archiveBins: false)
-                  }
-                  unstash 'cmake_build_xcore'
+                  unstash 'xcommon_cmake_build_xcore'
+                  unstash 'xcommon_cmake_build_native'
                 }
               }
             }
@@ -311,7 +368,7 @@ pipeline {
                       }
                       dir("test_calc_vnr_pred"){
                         // This is a unit test for ic_calc_vnr_pred function.
-                        sh "pytest -n1 --junitxml=pytest_result.xml"
+                        sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
                       dir("test_bad_state"){
@@ -481,8 +538,6 @@ pipeline {
       }// stages
       post {
         always {
-          // Examples artifacts
-          archiveArtifacts artifacts: "${REPO}/build/**/fwk_voice_example_*", fingerprint: true
           // AEC aretfacts
           archiveArtifacts artifacts: "${REPO}/test/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
           // IC artefacts

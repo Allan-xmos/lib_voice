@@ -1,20 +1,16 @@
-
-// Copyright 2022 XMOS LIMITED.
+// Copyright 2022-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+
 #include "vnr_features_api.h"
 #include "vnr_inference_api.h"
-#if PROFILE_PROCESSING
+
 #include "profile.h"
-#else
-static void prof(int n, const char* str) {}
-static void print_prof(int a, int b, int framenum){}
-#endif
 #include "fileio.h"
 
 void vnr_task(const char* input_filename, const char *output_filename){
     vnr_input_state_t vnr_input_state;
     vnr_feature_state_t vnr_feature_state;
-    
+
     prof(0, "start_vnr_init");
     vnr_input_state_init(&vnr_input_state);
     vnr_feature_state_init(&vnr_feature_state);
@@ -64,7 +60,7 @@ void vnr_task(const char* input_filename, const char *output_filename){
         file_write(&output_file, (uint8_t*)&inference_output, sizeof(float_s32_t));
 
         framenum++;
-        print_prof(0, 8, framenum);        
+        print_prof(0, 8, framenum);
     }
     file_close(&input_file);
     file_close(&output_file);

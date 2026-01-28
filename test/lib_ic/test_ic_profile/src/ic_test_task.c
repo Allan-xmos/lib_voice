@@ -1,4 +1,4 @@
-// Copyright 2022 XMOS LIMITED.
+// Copyright 2022-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if !X86_BUILD
 #ifdef __XC__
@@ -24,9 +24,7 @@
 #error "Number of INPUT_CHANNELS has to be 2"
 #endif
 
-#if PROFILE_PROCESSING
 #include "profile.h"
-#endif
 
 void ic_task(const char *input_file_name, const char *output_file_name) {
     //open files

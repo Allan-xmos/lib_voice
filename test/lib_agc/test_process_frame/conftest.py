@@ -1,26 +1,17 @@
-# Copyright 2022 XMOS LIMITED.
+# Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import pytest
 import subprocess
 import xtagctl
 
 
-def pytest_collect_file(parent, path):
-    if(path.ext == ".xe"):
-        print('path = ', path)
-        return UnityTestSource.from_parent(parent, fspath=path)
+def pytest_collect_file(parent, file_path):
+    if(file_path.suffix == ".xe"):
+        print('path = ', file_path)
+        return UnityTestSource.from_parent(parent, path=file_path)
 
 class UnityTestSource(pytest.File):
     def collect(self):
-        # Find the binary built from the runner for this test file
-        #
-        # Assume the following directory layout:
-        # unit_tests/       <- Test root directory
-        # |-- bin/          <- Compiled binaries of the test runners
-        # |-- conftest.py   <- This file
-        # |-- runners/      <- Auto-generated buildable source of test binaries
-        # |-- src/          <- Unity test functions
-        print("self.name ", self.fspath)
         yield UnityTestExecutable.from_parent(self, fspath=self.fspath, name=self.name)
 
 

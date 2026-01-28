@@ -1,4 +1,4 @@
-# Copyright 2022 XMOS LIMITED.
+# Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,8 +24,8 @@ class delay_analyser:
   def __init__(self, frame_advance, ground_truth_file, delay_estimate_file):
     self.frame_advance = frame_advance
 
-    self.ground_truth = np.fromfile(ground_truth_file, dtype=np.float, sep="\n")
-    self.delay_estimate = np.fromfile(delay_estimate_file, dtype=np.float, sep="\n")
+    self.ground_truth = np.fromfile(ground_truth_file, dtype=np.float64, sep="\n")
+    self.delay_estimate = np.fromfile(delay_estimate_file, dtype=np.float64, sep="\n")
 
     self.good_estimates = []
     self.no_action_required = []

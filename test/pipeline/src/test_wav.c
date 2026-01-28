@@ -1,3 +1,5 @@
+// Copyright 2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <xcore/channel.h>
 #include <xcore/chanend.h>
 #include <xcore/channel_transaction.h>

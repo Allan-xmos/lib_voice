@@ -1,3 +1,5 @@
+// Copyright 2022-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <stdio.h>
 #include "ic.h"
 #include "ic_low_level.h"
@@ -26,8 +28,8 @@ void test_adapt(float_s32_t vnr){
 
 float_s32_t test_vnr(){
 
-    float_s32_t input_vnr_pred, output_vnr_pred;
-    ic_calc_vnr_pred(&ic_state, &input_vnr_pred, &output_vnr_pred);
+    float_s32_t input_vnr_pred;
+    ic_calc_vnr_pred(&ic_state, &input_vnr_pred);
 
     return ic_state.vnr_pred_state.input_vnr_pred;
 }

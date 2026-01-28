@@ -1,4 +1,4 @@
-# Copyright 2022 XMOS LIMITED.
+# Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import numpy as np
 import scipy.signal as spsig
@@ -10,25 +10,25 @@ from profile_xcore import parse_profile_log
 
 ic_src_folder = Path(__file__).parent / "src"
 ic_src_folder = str(ic_src_folder)
-ic_xe = Path(__file__).parents[3] / "build" / "test" / "lib_ic" / "test_ic_profile" / "bin" / "fwk_voice_test_ic_profile"
+ic_xe = Path(__file__).parent / "bin" / "test_ic_profile"
 SAMPLE_RATE = 16000
 FRAME_ADVANCE = 240
 
 def run_ic_xe(ic_xe, audio_in, audio_out, target, profile):
-    
+
     input_data, _ = sf.read(audio_in, dtype=np.int32)
-    
+
     assert input_data.ndim == 2
     assert input_data.shape[1] == 2
-    
+
     input_data = input_data.T
-    
+
     input_data = pvc.interleave_channel_frames(input_data, FRAME_ADVANCE)
-    
+
     output_data, xcore_stdo = run_dut(input_data, ic_xe, target)
-    
+
     sf.write(audio_out, output_data, SAMPLE_RATE)
-    
+
     if target != "native" and profile:
         parse_profile_log(
             xcore_stdo,
@@ -59,7 +59,7 @@ def make_impulse(RT, t=None, fs=None):
 
 def create_wav_input():
     N = SAMPLE_RATE * 10
-    np.random.seed(500)    
+    np.random.seed(500)
 
     phases = 10
     fN = phases * 240
@@ -81,13 +81,13 @@ def create_wav_input():
     sig_level = 0.01  #20dB attenuation
     d = d * sig_level
     u = u * sig_level
-    
+
     in_data = np.stack((d, u[hN-1:N]), axis=0)
     # crop to have full frames
     inx = in_data.shape[1] // FRAME_ADVANCE * FRAME_ADVANCE
     in_data = in_data[:, :inx]
     sf.write("input.wav", in_data.T, SAMPLE_RATE)
-    
+
 def test_ic_profile():
     create_wav_input()
     run_ic_xe(ic_xe, "input.wav", "output.wav", "xs3a", True)

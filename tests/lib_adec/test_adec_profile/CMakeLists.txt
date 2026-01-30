@@ -31,15 +31,15 @@ set(APP_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/../../shared/profile)
 
 foreach( BUILD_CONFIG ${TEST_ADEC_PROFILE_BUILD_CONFIG} )
-    set(AEC_SCHEDULE_CONFIG ${BUILD_CONFIG})
-    string(REPLACE " " "_" AEC_SCHEDULE_CONFIG_ID ${AEC_SCHEDULE_CONFIG})
-    set(AEC_SCHEDULE_AUTOGEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/src_${AEC_SCHEDULE_CONFIG_ID}.autogen")
+    string(REPLACE " " "_" AEC_SCHEDULE_ID ${BUILD_CONFIG})
+
+    set(AEC_SCHEDULE_CONFIG_${AEC_SCHEDULE_ID} ${BUILD_CONFIG})
 
     if (NOT BUILD_NATIVE)
         set(APP_DEPENDENT_MODULES "lib_voice"
                                     "xscope_fileio")
 
-        set(APP_COMPILER_FLAGS_${AEC_SCHEDULE_CONFIG_ID}
+        set(APP_COMPILER_FLAGS_${AEC_SCHEDULE_ID}
                 -report
                 -Os
                 -DTEST_WAV_XSCOPE=1
@@ -49,9 +49,9 @@ foreach( BUILD_CONFIG ${TEST_ADEC_PROFILE_BUILD_CONFIG} )
     else()
         set(APP_DEPENDENT_MODULES "lib_voice")
 
-        set(APP_COMPILER_FLAGS_${AEC_SCHEDULE_CONFIG_ID}
+        set(APP_COMPILER_FLAGS_${AEC_SCHEDULE_ID}
                 -DX86_BUILD=1)
     endif()
-    XMOS_REGISTER_APP()
-    unset(APP_COMPILER_FLAGS_${AEC_SCHEDULE_CONFIG_ID})
 endforeach()
+
+XMOS_REGISTER_APP()

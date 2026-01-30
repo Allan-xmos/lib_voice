@@ -9,7 +9,7 @@ endif()
 
 ## aec
 add_library(fwk_voice_module_aec INTERFACE)
-include(${CMAKE_CURRENT_LIST_DIR}/aec_schedule_custom_cmake.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/aec_schedule.cmake)
 target_sources(fwk_voice_module_aec
     INTERFACE
         ${CMAKE_CURRENT_LIST_DIR}/src/aec/aec_impl.c

@@ -3,13 +3,13 @@
 Automatic Gain Control
 ======================
 
-The AGC provides an API to implement Automatic Gain Control within
+The Automatic Gain Control (AGC) component provides an API to implement Automatic Gain Control within
 an application. The AGC algorithm can dynamically adapt the audio gain,
 or apply a fixed gain such that voice content maintains a desired output
 level. The AGC uses a :ref:`vnr_module` to normalise
 voice content and avoid amplifying noise sources and applies a soft
 limiter to avoid clipping on the output. The design is based on standard
-modern AGC techniques as detailed in 
+modern AGC techniques as detailed in
 `Acoustic Echo and Noise Control <https://ieeexplore.ieee.org/book/5224645>`_ by Hansler and Schmidt.
 
 The gain control can adapt to maintain the amplitude of the peak of the frame

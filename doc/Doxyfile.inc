@@ -21,6 +21,9 @@ INPUT += ../lib_voice/api/ic
 # VNR module
 INPUT += ../lib_voice/api/vnr
 
+# Stage1
+INPUT += ../lib_voice/api/stage1
+
 PREDEFINED             = C_API= EXTERN_C= DWORD_ALIGNED=
 
 USE_MATHJAX            = YES

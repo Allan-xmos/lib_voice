@@ -4,4 +4,4 @@ tests
 CHANGELOG.rst
 LICENSE.rst
 build*/**
-xmos_cmake_toolchain/**
+.venv*

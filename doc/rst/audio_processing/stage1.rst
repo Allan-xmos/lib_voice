@@ -3,7 +3,9 @@
 Pipeline Stage 1
 ================
 
-Stage 1 stage 1
+Stage1 is typically the first stage in an audio pipeline. It orchestrates
+delay alignment, Acoustic Echo Cancellation (AEC), and Adaptive Delay
+Estimation/Canceller (ADEC), and propagates per–frame metadata downstream.
 
 Standard Architecture
 ---------------------
@@ -30,4 +32,16 @@ filter, when ADEC goes in delay estimation mode. This allows it to measure the r
 output is ignored and the mic input is directly sent to output. Once the new delay has been measured and the delay correction is
 applied, the AEC gets configured back to its original configuration and starts adapting and cancellation.
 In the absence of activity on the reference channels, when the AEC is disabled, the mic input is copied directly to the output of the AEC.
+
+Alternating architecture is disabled by default (see :c:macro:`ALT_ARCH_MODE`). To enable it, define ``ALT_ARCH_MODE`` to 1 in the application’s CMakeLists.txt.
+
+Usage
+-----
+
+Before starting processing, Stage1 must be initialised by calling :c:func:`stage1_init()`.
+This sets up internal state for the provided runtime AEC configurations and ADEC settings.
+
+Once initialised, call :c:func:`stage1_process_frame()` for each input frame.
+
+Refer to :ref:`pipeline_example` to see Stage1 integrated into an audio pipeline.
 

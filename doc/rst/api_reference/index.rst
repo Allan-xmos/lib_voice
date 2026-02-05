@@ -6,7 +6,7 @@
 API reference
 *************
 
-This section will provide a comperhensive walkthrough of the ``lib_voice``'s APIs, defines and structs.
+This section will provide a comprehensive walkthrough of ``lib_voice``'s APIs, defines and structs.
 
 .. toctree::
   :maxdepth: 2
@@ -17,4 +17,5 @@ This section will provide a comperhensive walkthrough of the ``lib_voice``'s API
   ns
   agc
   adec
+  stage1
 

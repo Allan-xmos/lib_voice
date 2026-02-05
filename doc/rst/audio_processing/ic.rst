@@ -1,47 +1,71 @@
 Interference Canceller
 ======================
 
-The Interference Canceller suppresses static noise from point sources such as cooker hoods, washing machines,
-or radios for which there is no reference audio signal available. When the :ref:`vnr_module` 
-indicates the absence of voice, the IC adapts to remove noise from point sources in the environment. When the VNR
-signal indicates the presence of voice, the IC suspends adaptation which allows the voice source to be passed but
+An interference canceller (IC) removes unwanted sounds — such as background noise,
+appliances, or competing talkers — by exploiting differences between multiple
+microphone signals. It analyses the phase and amplitude relationships across
+microphones to identify components consistent with interference rather than
+desired speech. Using these spatial differences, the IC constructs an adaptive
+filter that suppresses the unwanted components while allowing the true speech
+signal to pass. Accurate voice activity detection is required to
+distinguish speech from noise.
+
+Overview
+--------
+
+The IC component in ``lib_voice`` processes two microphone channels and attempts to cancel
+one microphone signal from the other in the absence of voice.
+
+It builds an estimate of the difference in transfer functions between the two
+microphones for any present noise sources.
+Since the transfer function includes spatial information about the noise
+sources, applying this filter to the mic input allows any signals originating
+from the noise source to be cancelled.
+It uses the :ref:`vnr_module` for detecting presence or absence of voice.
+When the VNR indicates absence of speech, the IC adapts its filter to remove noise from the environment.
+When the VNR indicates the presence of voice, the IC suspends adaptation which allows the voice source to be passed but
 maintains suppression of the interfering noise sources which have been previously adapted to.
+The IC operates at a fixed 16 kHz sample rate and produces a single output
+channel.
 
-It can offer much greater, and automatic, cancellation of broad-band noise sources when compared to beam forming
-techniques.
+Signal representation
+---------------------
 
-It is designed to work at a sample rate of 16kHz and has a fixed configuration of two input microphones and a single
-output channel.
+Processing is performed on a frame-by-frame basis. Each frame consists of 15 ms
+of new audio samples (240 samples at 16 kHz) per input channel, with a total of 2 input channels.
+Input data is expected in fixed-point 32-bit, 1.31 format. The output
+is the interference-cancelled primary microphone signal, in the same 32-bit, 1.31
+format.
 
-The interference canceller is based on an AEC architecture and attempts to cancel one microphone signal from the other in
-the absence of voice. In this way, it builds an estimate of the difference in transfer functions between the two
-microphones for any present noise sources. Since the transfer function includes spatial information about the noise
-sources, applying this filter to the mic input allows any signals originating from the noise source to be cancelled.
+Adaptive filter
+---------------
 
-The IC uses an adaptive filter which continually adapts to the acoustic environment to accommodate changes in the room
-created by events such as doors opening or closing and people moving about. However, it will hold the current transfer
-function in the presence of voice meaning it does not adapt to desired audio sources, which can be a person speaking.
+The IC uses an adaptive filter which continually adapts to the acoustic environment to
+accommodate changes in the room created by events such as doors opening or closing
+and people moving about. However, it will hold the current transfer
+function in the presence of voice meaning it does not adapt to desired audio sources,
+which can be a person speaking.
+The IC filter has 10 phases, which effectively determines the tail length of the filter.
 
-The cancellation is performed on a frame by frame basis. Each frame is made of 15msec chunks of data, which is 240
-new samples at 16kHz input sampling frequency, per input channel. This is combined with previous audio data to form
-a 512 sample frame which allows for sufficient overlap for effective operation of the filter.
+Processing flow
+---------------
 
-The first channel of input microphone data is referred to as ``y`` when in time domain and ``Y`` when in frequency
-domain. The second channel of input microphone data is referred to as ``x`` when in time domain and ``X`` when in frequency
-domain. The y signal is effectively used as the signal containing noise that needs to be cancelled and the x signal
-is the reference from which the transfer function is estimated and consequently the noise signal estimated before it
-is subtracted from y.
+For each frame, the IC performs the following steps:
 
-In general throughout the code, names starting with lower case represent time domain and those beginning with
-upper case represent frequency domain. For example ``error`` is the filter error and ``Error`` is the spectrum of
-the filter error. The filter coefficient array referred to as ``h_hat`` in time domain and ``H_hat`` in frequency domain.
+1. Transform microphone signals into the frequency domain.
+2. Estimate the interference using the adaptive filter.
+3. Subtract the estimated interference from the primary microphone signal to produce the error signal.
+4. Update the filter coefficients if the VNR indicates no speech.
+5. Transform the error signal back to the time domain to produce the
+   interference-cancelled output.
 
-The filter has multiple phases each of 15ms. The term phases refers to the tail length of the filter. A filter with more phases or a
-longer tail length will be able to model a more reverberant room response leading to better interference cancellation
-but, as with all normalised LMS based architectures, will be slower to converge in the case of a transfer function change.
+Usage
+-----
 
-Before starting the IC processing the user must call :c:func:`ic_init()` to initialise the IC. If the configuration parameters are
-to be set to non-defaults please modify these after :c:func:`ic_init()` or in the :ref:`ic_defines` file.
-Once the IC is initialised, the :c:func:`ic_process_frame()` can be called in an order to perform interference cancellation
-and to get the VNR estimate (see :ref:`pipeline_example`).
+Before starting processing, the IC must be initialised by calling
+:c:func:`ic_init()`, which sets up internal state of the IC.
+Once initialised, interference cancellation is performed by calling :c:func:`ic_process_frame()`
+for each input frame (see :ref:`pipeline_example`). :c:func:`ic_process_frame()` also outputs
+the VNR estimate for the current frame.
+
 

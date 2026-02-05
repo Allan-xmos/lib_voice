@@ -24,7 +24,7 @@
  * a given frame of mic data. So in DE mode, in order to measure both mic delay and early case, we start by initially
  * delaying the mic by 10 phases. This means, if there is no actual delay between mic and ref, DE filter will peak at the 10th
  * phase. A peak in the 0-9 phases would measure mic early and a peak in 11-29 phase would indicate mic delay. So in DE mode
- * we can measure upto 10 phases (150ms) of mic early and 20 phases(300ms) of mic delayed.
+ * we can measure up to 10 phases (150ms) of mic early and 20 phases(300ms) of mic delayed.
  */
 void init_pk_ave_ratio_history(adec_state_t *adec_state){
   const float_s32_t float_s32_thousand = {2097160000,-21}; //A large number we never normally see, so it will be clear when we get an actual

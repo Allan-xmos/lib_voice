@@ -19,3 +19,14 @@ AEC Data Structures and Enums
 .. doxygengroup:: aec_types
     :members:
 
+AEC Scheduling Data Structures
+------------------------------
+
+.. doxygengroup:: aec_schedule_types
+    :members:
+
+AEC Memory Pool
+---------------
+
+.. doxygengroup:: aec_memory_pool
+    :members:

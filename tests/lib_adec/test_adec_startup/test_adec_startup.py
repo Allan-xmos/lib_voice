@@ -7,10 +7,9 @@ import scipy.io.wavfile
 import pytest
 import numpy as np
 import tempfile
-import xscope_fileio
-import xtagctl
 import re
 from pathlib import Path
+from run_dut import run_with_xscope_fileio
 
 maximum_adec_delay_ms = 1000
 maximum_adec_estimation_time_ms = 3500
@@ -29,8 +28,7 @@ def input_vectors():
     return test_files
 
 
-def analyse_cancellation(output_file, de_end_frame):
-    rate, data = scipy.io.wavfile.read(output_file)
+def analyse_cancellation(data, de_end_frame):
     num_seconds_post = 5
     sos_pre_adapt = np.mean(np.square(data[de_end_frame-16000 : de_end_frame , 0]))
     sos_post_adapt = np.mean(np.square(data[de_end_frame+(num_seconds_post * 16000) : de_end_frame+((num_seconds_post+1) * 16000) , 0]))
@@ -42,40 +40,17 @@ def analyse_cancellation(output_file, de_end_frame):
 
 def test_adec_startup(input_vectors):
     test_file = input_vectors[0]
-    tmp_dir = tempfile.mkdtemp(prefix='tmp_', dir='.')
-    prev_dir = os.getcwd()
-    os.chdir(tmp_dir)
-    print(f"Using tmpdir: {tmp_dir}")
-    xe_file = "test_wav_adec_startup.xe"
-    input_name = "input.wav"
-    try:
-        shutil.copyfile(xcore_binary, xe_file)
-    except FileNotFoundError:
-        print(f'file: {xcore_binary} not found')
-    try:
-        shutil.copyfile(test_file, input_name)
-    except FileNotFoundError:
-        print(f'file: {test_file} not found')
-    # Create empty arguments file for test_wav_adec
-    fp = open("args.bin", "wb")
-    fp.close()
 
-    print ("Waiting for xcore simulation run to complete..")
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-        print(f"Running on {adapter_id}")
-        try:
-            with open("stdo.txt", "w+") as ff:
-                xscope_fileio.run_on_target(adapter_id, xe_file, stdout=ff)
-                ff.seek(0)
-                stdo = ff.readlines()
-        except Exception as e:
-            print(e, file=sys.stderr)
-            assert 0, f"FAILURE RUNNING: xscope_fileio.run_on_target({adapter_id} , {xe_file})"
-    xcore_stdo = []
-    for line in stdo:
-        m = re.search(r'^\s*\[DEVICE\]', line)
-        if m is not None:
-            xcore_stdo.append(re.sub(r'\[DEVICE\]\s*', '', line))
+    with tempfile.TemporaryDirectory(prefix='tmp_', dir='.') as tmp_dir:
+    
+        shutil.copyfile(test_file, os.path.join(tmp_dir, "input.wav"))
+
+        # Create empty arguments file for test_wav_adec
+        fp = open(os.path.join(tmp_dir, "args.bin"), "wb")
+        fp.close()
+
+        xcore_stdo = run_with_xscope_fileio(xcore_binary, tmp_dir)
+        _, out_data = scipy.io.wavfile.read(os.path.join(tmp_dir, "output.wav")) 
 
     transitions = []
     for line in xcore_stdo:
@@ -96,8 +71,6 @@ def test_adec_startup(input_vectors):
     print(f"first transition to DE: {transition_to_de_ms}ms, ADEC estimation time: {adec_estimation_time_ms}ms", file=sys.stderr)
 
     #Now calc 1s RMS of various bits to see AEC convergence
-    analyse_cancellation("output.wav", int(transition_out_of_de_ms / 1000 * 16000))
+    analyse_cancellation(out_data, int(transition_out_of_de_ms / 1000 * 16000))
     assert transition_to_de_ms < maximum_adec_delay_ms, f"ADEC too late: {transition_to_de_ms} max {maximum_adec_delay_ms}"
     assert adec_estimation_time_ms < maximum_adec_estimation_time_ms, f"ADEC took too long to estimate: {adec_estimation_time_ms} max {maximum_adec_estimation_time_ms}"
-    os.chdir(prev_dir)
-    shutil.rmtree(tmp_dir)

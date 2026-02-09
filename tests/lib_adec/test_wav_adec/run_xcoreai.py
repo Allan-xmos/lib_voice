@@ -1,11 +1,8 @@
 # Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import os
-import xtagctl
-import xscope_fileio
 import argparse
-
-package_dir = os.path.dirname(os.path.abspath(__file__))
+from run_dut import run_with_xscope_fileio
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -30,8 +27,5 @@ with open("args.bin", "wb") as fp:
 #fp = open("args.bin", "wb")
 #fp.close()
 
-with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-    xscope_fileio.run_on_target(adapter_id, args.xe)
-
-
-
+stdout = run_with_xscope_fileio(args.xe, ".")
+print(stdout)

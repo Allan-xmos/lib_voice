@@ -404,8 +404,6 @@ pipeline {
                         junit "pytest_result.xml"
                       }
                       dir("test_delay_estimator") {
-                        sh 'mkdir -p ./input_wavs/'
-                        sh 'mkdir -p ./output_files/'
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                         sh "python print_stats.py"

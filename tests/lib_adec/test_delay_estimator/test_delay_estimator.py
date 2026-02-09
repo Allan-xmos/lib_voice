@@ -1,7 +1,5 @@
 # Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
-from builtins import range
-from builtins import object
 import tempfile
 import os
 import warnings
@@ -13,13 +11,13 @@ import pytest
 import numpy as np
 
 import filters
-import xscope_fileio
-import xtagctl
-import glob
+from run_dut import run_with_xscope_fileio
 from pathlib import Path
 
 input_folder = os.path.abspath("input_wavs")
+Path(input_folder).mkdir(exist_ok=True)
 output_folder = os.path.abspath("output_files")
+Path(output_folder).mkdir(exist_ok=True)
 hydra_audio_base_dir = os.path.expanduser("~/hydra_audio/")
 
 delay_calc_output_file_name = "measured_delay_samples.bin"
@@ -123,9 +121,6 @@ jazz = jazz.T.astype(float) / np.iinfo(np.int32).max
 jazz_y = jazz[0, :]
 jazz_x = jazz[2, :]
 
-print(jazz_x.shape)
-print(jazz_y.shape)
-
 test_vectors = [
     TestCase('Identical Mics', filters.Identity(), filters.Identity()),
     TestCase('Impulse at minus 20 samples', filters.OneImpulse(20), filters.Identity(),
@@ -155,28 +150,28 @@ def write_output(test_name, output, xc_or_py):
 
 
 def process_audio(input_data, test_name):
-    tmp_folder = tempfile.mkdtemp(suffix=os.path.basename(test_name))
-    prev_path = os.getcwd()
-    os.chdir(tmp_folder)
-    #write runtime arguments into args.bin
-    with open("args.bin", "wb") as fargs:
-        fargs.write(f"y_channels 1\n".encode('utf-8'))
-        fargs.write(f"x_channels 1\n".encode('utf-8'))
-        fargs.write(f"main_filter_phases 30\n".encode('utf-8'))
-        fargs.write(f"shadow_filter_phases 0\n".encode('utf-8'))
-        fargs.write(f"adaption_mode 1\n".encode('utf-8'))
-        #force_mu = int(0.4 * (1<<30))
-        #fargs.write(f"force_adaption_mu {force_mu}\n".encode('utf-8'))
-    # Write input data to file
-    input_32bit = awu.convert_to_32_bit(input_data)
-    scipy.io.wavfile.write('input.wav', sample_rate, input_32bit.T)
-    with xtagctl.acquire("XCORE-AI-EXPLORER") as adapter_id:
-        xscope_fileio.run_on_target(adapter_id, xe_path)
-        with open(delay_calc_output_file_name, 'r') as f:
+    with tempfile.TemporaryDirectory(dir='.', prefix='tmp_') as tmp_folder:
+
+        #write runtime arguments into args.bin
+        with open(os.path.join(tmp_folder, "args.bin"), "wb") as fargs:
+            fargs.write(f"y_channels 1\n".encode('utf-8'))
+            fargs.write(f"x_channels 1\n".encode('utf-8'))
+            fargs.write(f"main_filter_phases 30\n".encode('utf-8'))
+            fargs.write(f"shadow_filter_phases 0\n".encode('utf-8'))
+            fargs.write(f"adaption_mode 1\n".encode('utf-8'))
+            #force_mu = int(0.4 * (1<<30))
+            #fargs.write(f"force_adaption_mu {force_mu}\n".encode('utf-8'))
+
+        # Write input data to file
+        input_32bit = awu.convert_to_32_bit(input_data)
+        scipy.io.wavfile.write(os.path.join(tmp_folder, 'input.wav'), sample_rate, input_32bit.T)
+
+        run_with_xscope_fileio(xe_path, tmp_folder)
+        
+        with open(os.path.join(tmp_folder, delay_calc_output_file_name), 'r') as f:
             output = np.array([int(l) for l in f.readlines()], dtype=float)
-        write_output(test_name, output, 'xc')
-        os.chdir(prev_path)
-        os.system("rm -r {}".format(tmp_folder))
+
+    write_output(test_name, output, 'xc')
 
     return output.T
 

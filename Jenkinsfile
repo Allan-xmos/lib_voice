@@ -262,6 +262,31 @@ pipeline {
           }
         }
 
+        stage('MIPS are memory resource usage tests') {
+          steps {
+            catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+              dir("${REPO}/tests") {
+                withTools(params.TOOLS_VERSION) {
+                  withVenv {
+                    dir("profile_memory") {
+                      sh "pytest -n 1 --junitxml=pytest_result.xml"
+                      junit "pytest_result.xml"
+                      archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
+                    }
+                    withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                      dir("profile_mips") {
+                        sh "pytest -n 2 --junitxml=pytest_result.xml"
+                        junit "pytest_result.xml"
+                        archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
         stage('VNR tests') {
           steps {
             catchError(stageResult: 'FAILURE', catchInterruptions: false){

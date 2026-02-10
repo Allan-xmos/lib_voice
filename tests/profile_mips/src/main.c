@@ -127,12 +127,10 @@ void wrapper_task(const char *input_file_name, const char *output_file_name)
 {
     file_t input_file, output_file;
 
-    if ((input_file_name != NULL) && (output_file_name != NULL)) {
-        int ret = file_open(&input_file, input_file_name, "rb");
-        assert((!ret) && "Failed to open input file");
-        ret = file_open(&output_file, output_file_name, "wb");
-        assert((!ret) && "Failed to open output file");
-    }
+    int ret = file_open(&input_file, input_file_name, "rb");
+    assert((!ret) && "Failed to open input file");
+    ret = file_open(&output_file, output_file_name, "wb");
+    assert((!ret) && "Failed to open output file");
 
     const int32_t file_size = get_file_size(&input_file);
     const unsigned frame_count =

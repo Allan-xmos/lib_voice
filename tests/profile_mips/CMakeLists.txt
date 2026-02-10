@@ -16,17 +16,16 @@ set(APP_DEPENDENT_MODULES "lib_voice"
                           "xscope_fileio")
 
 
-file(GLOB APP_C_SRCS
+file(GLOB_RECURSE APP_C_SRCS
     RELATIVE ${CMAKE_CURRENT_LIST_DIR}
     CONFIGURE_DEPENDS
     ${XMOS_SANDBOX_DIR}/lib_voice/tests/shared/file_utils/src/*.c
-    ${XMOS_SANDBOX_DIR}/lib_voice/tests/shared/profile/*.c
     ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/src
-    ${CMAKE_CURRENT_LIST_DIR}/../shared/file_utils/src
-    ${CMAKE_CURRENT_LIST_DIR}/../shared/profile)
+    ${CMAKE_CURRENT_LIST_DIR}/src/profile
+    ${CMAKE_CURRENT_LIST_DIR}/../shared/file_utils/src)
 
 set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
 
@@ -64,10 +63,6 @@ set(APP_COMPILER_FLAGS_ic
 set(APP_COMPILER_FLAGS_vnr
             ${COMPILER_FLAGS}
             -DVNR=1)
-
-set(APP_COMPILER_FLAGS_agc
-            ${COMPILER_FLAGS}
-            -DAGC=1)
 
 set(APP_COMPILER_FLAGS_agc
             ${COMPILER_FLAGS}

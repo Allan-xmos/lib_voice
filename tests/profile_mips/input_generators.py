@@ -32,6 +32,7 @@ def generate_ns_test_audio(frame_advance):
     """
     Input generator function for `ns` module
     """
+    np.random.seed(500)
     max_freq = SAMPLE_RATE // 2
     db = -20
     sample_count = frame_advance * 50
@@ -42,6 +43,7 @@ def generate_agc_test_audio(frame_advance):
     """
     Input generator function for `agc` module
     """
+    np.random.seed(500)
     max_freq = SAMPLE_RATE // 2
     db = -20
     sample_count = frame_advance * 50

@@ -31,10 +31,6 @@ set(APP_COMPILER_FLAGS_agc
             ${COMPILER_FLAGS}
             -DAGC=1)
 
-set(APP_COMPILER_FLAGS_agc
-            ${COMPILER_FLAGS}
-            -DAGC=1)
-
 set(APP_COMPILER_FLAGS_ns
             ${COMPILER_FLAGS}
             -DNS=1)

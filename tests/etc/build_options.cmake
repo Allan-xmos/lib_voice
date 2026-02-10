@@ -23,15 +23,6 @@ set(
     )
 endif()
 
-if(NOT DEFINED TEST_ADEC_PROFILE_BUILD_CONFIG)
-set(
-    TEST_ADEC_PROFILE_BUILD_CONFIG
-    "2 2 2 10 5" "1 2 2 10 5"
-    CACHE STRING
-    "AEC build configurations for test_adec_profile in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
-    )
-endif()
-
 if(NOT DEFINED TEST_ADEC_STARTUP_BUILD_CONFIG)
 set(
     TEST_ADEC_STARTUP_BUILD_CONFIG

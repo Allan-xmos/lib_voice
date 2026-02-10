@@ -1,18 +1,14 @@
 # Copyright 2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
-import subprocess
 from pathlib import Path
-import os
 from profile_xcore import parse_profile_log
 import numpy as np
 import re
 import json
 import pytest
-import soundfile as sf
+import tempfile
 from run_dut import run_dut
-from audio_generation import get_band_limited_noise
 import py_vs_c_utils as pvc
-import scipy.signal as spsig
 import input_generators
 
 """
@@ -214,16 +210,19 @@ def test_measure_mips(xe, module, pytestconfig):
 
     app = xe.stem # app name from executable
     print(f"app = {app}, module = {module}")
-    log_file = f"{app}.log"
+    log_file = Path(__file__).parent / f"{app}.log"
     xcore_stdo = gen_input_and_run_dut(xe, module)
-
-    parse_profile_log(
-        xcore_stdo,
-        src_folder,
-        file_extensions=[f"*{module}*.c"],
-        worst_case_file= log_file,
-        exclude_init=True
-    )
+    with tempfile.TemporaryDirectory(dir=".", suffix=app) as tmp_folder:
+        tmp = Path(tmp_folder)
+        parse_profile_log(
+            xcore_stdo,
+            src_folder,
+            file_extensions=[f"*{module}*.c"],
+            worst_case_file= log_file,
+            profile_file=tmp / "parsed_profile.log",
+            mapping_file=tmp / "profile_index_to_tag_mapping.log",
+            exclude_init=True
+        )
     text = Path(log_file).read_text()
     m = re.search(r'^MCPS\s+([0-9.]+)\s+MIPS', text, re.MULTILINE)
     assert m, (f"MIPS log file {log_file} doesnt seem to be formatted correctly. "

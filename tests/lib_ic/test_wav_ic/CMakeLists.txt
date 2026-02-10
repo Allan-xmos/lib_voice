@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
-project(test_ic_profile)
+project(test_wav_ic)
 
 set(APP_HW_TARGET XK-EVK-XU316)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
@@ -15,13 +15,11 @@ file(GLOB APP_C_SRCS
     RELATIVE ${CMAKE_CURRENT_LIST_DIR}
     CONFIGURE_DEPENDS
     ${XMOS_SANDBOX_DIR}/lib_voice/tests/shared/file_utils/src/*.c
-    ${XMOS_SANDBOX_DIR}/lib_voice/tests/shared/profile/*.c
     ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/src
-    ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src
-    ${CMAKE_CURRENT_LIST_DIR}/../../shared/profile)
+    ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src)
 
 if (NOT BUILD_NATIVE)
     set(APP_DEPENDENT_MODULES "lib_voice"
@@ -29,8 +27,7 @@ if (NOT BUILD_NATIVE)
     set(APP_COMPILER_FLAGS
             -Os
             -report
-            -DTEST_WAV_XSCOPE=1
-            -DENABLE_PROFILING=1)
+            -DTEST_WAV_XSCOPE=1)
 
     set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
 else()

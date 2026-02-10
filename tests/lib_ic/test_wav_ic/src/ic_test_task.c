@@ -24,8 +24,6 @@
 #error "Number of INPUT_CHANNELS has to be 2"
 #endif
 
-#include "profile.h"
-
 void ic_task(const char *input_file_name, const char *output_file_name) {
     //open files
     file_t input_file, output_file;
@@ -43,10 +41,8 @@ void ic_task(const char *input_file_name, const char *output_file_name) {
     int32_t DWORD_ALIGNED output[IC_FRAME_ADVANCE];
 
     //Start ic
-    prof(0, "start_ic_init");
     ic_state_t state;
     ic_init(&state);
-    prof(1, "end_ic_init");
 
     #if DISABLE_ADAPTION_CONTROLLER
     state.ic_adaption_controller_state.adaption_controller_config.adaption_config = IC_ADAPTION_FORCE_ON;
@@ -59,22 +55,15 @@ void ic_task(const char *input_file_name, const char *output_file_name) {
         file_read(&input_file, (uint8_t*)frame_y, sizeof(int32_t) * IC_FRAME_ADVANCE);
         file_read(&input_file, (uint8_t*)frame_x, sizeof(int32_t) * IC_FRAME_ADVANCE);
 
-        prof(2, "start_ic_filter");
         // Call IC functions to process IC_FRAME_ADVANCE new samples of data
         ic_filter(&state,  frame_y, frame_x, output);
-        prof(3, "end_ic_filter");
 
-        prof(4, "start_vad_estimate");
         float_s32_t vnr = {0,0};
         (void)vnr;
-        prof(5, "end_vad_estimate");
 
-        prof(6, "start_ic_adapt");
         ic_adapt(&state);
-        prof(7, "end_ic_adapt");
 
         file_write(&output_file, (uint8_t*)output, sizeof(int32_t) * IC_FRAME_ADVANCE);
-        print_prof(0,8,b+1);
     }
     file_close(&input_file);
     file_close(&output_file);

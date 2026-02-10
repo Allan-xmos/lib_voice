@@ -9,8 +9,6 @@
 #include <ns.h>
 
 #include <fileio.h>
-#include "profile.h"
-
 
 extern void ns_process_frame(ns_state_t * state,
                         int32_t output [NS_FRAME_ADVANCE],
@@ -32,27 +30,17 @@ void ns_task(const char *input_file_name, const char *output_file_name){
     int32_t DWORD_ALIGNED frame[NS_FRAME_ADVANCE] = {0};
 
     //Initialise noise suppressor
-    prof(0, "start_ns_init");
-
     ns_state_t DWORD_ALIGNED ch1_state;
 
     ns_init(&ch1_state);
-
-    prof(1, "end_ns_init");
 
     for(int b = 0; b < block_count; b++){
         file_read (&input_file, (uint8_t*)&frame[0], sizeof(int32_t) * NS_FRAME_ADVANCE);
         // Call Noise Suppression functions to process NS_FRAME_ADVANCE new samples of data
         // Reuse mic data memory for main filter output
-        prof(2, "start_ns_process_frame");
-
         ns_process_frame(&ch1_state, frame, frame);
 
-        prof(3, "end_ns_process_frame");
-
         file_write(&output_file, (uint8_t*)frame, sizeof(int32_t) * NS_FRAME_ADVANCE);
-
-        print_prof(0, 4, b+1);
     }
     file_close(&input_file);
     file_close(&output_file);

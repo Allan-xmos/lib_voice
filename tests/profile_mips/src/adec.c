@@ -19,7 +19,8 @@ void test_adec(int32_t (*input)[AEC_FRAME_ADVANCE])
         aec_init(&aec_state,
                 AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS,
                 AEC_MAIN_FILTER_PHASES, AEC_SHADOW_FILTER_PHASES, &aec_tdist_chans2_threads2);
-
+        adec_config.bypass = 0;
+        adec_config.force_de_cycle_trigger = 0;
         adec_init(&adec_state, &adec_config);
     }
     aec_process_frame(&aec_state, output, NULL, &input[0], &input[AEC_MAX_Y_CHANNELS]);

@@ -303,10 +303,6 @@ pipeline {
                         sh "pytest -n 4 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
-                      dir("test_vnr_profile") {
-                        sh "pytest -s --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
                     }
                   }
                 }
@@ -322,10 +318,6 @@ pipeline {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
                     withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                      dir("test_ns_profile"){
-                        sh "pytest -n 1 --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
                       dir("compare_c_py"){
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
@@ -355,10 +347,6 @@ pipeline {
                       }
                       dir("py_c_frame_compare"){
                         sh "python build_ic_frame_proc.py"
-                        sh "pytest -s --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
-                      dir("test_ic_profile"){
                         sh "pytest -s --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
@@ -440,12 +428,6 @@ pipeline {
                       dir("test_adec") {
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
-                      }
-                      dir("test_adec_profile") {
-                        sh "pytest -n 2 --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                        // Testing bit exactness of the AEC scheduling
-                        sh "diff output_1_2_2_10_5.wav output_2_2_2_10_5.wav"
                       }
                     }
                   }
@@ -548,16 +530,8 @@ pipeline {
       }// stages
       post {
         always {
-          // AEC aretfacts
-          archiveArtifacts artifacts: "${REPO}/tests/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
           // IC artefacts
-          archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_profile/ic_prof.log", fingerprint: true
           archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_spec/ic_spec_summary.txt", fingerprint: true
-          // NS artefacts
-          archiveArtifacts artifacts: "${REPO}/tests/lib_ns/test_ns_profile/ns_prof.log", fingerprint: true
-          // VNR artifacts
-          archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/*.png", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/vnr_prof.log", fingerprint: true
           // Pipelines tests
           archiveArtifacts artifacts: "${REPO}/tests/pipeline/**/results_*.csv", fingerprint: true
           archiveArtifacts artifacts: "${REPO}/tests/pipeline/**/results_*.png", fingerprint: true, allowEmptyArchive: true

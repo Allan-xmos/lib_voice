@@ -1,4 +1,7 @@
 
+# Selector to split tests into two parts for parallel build in Jenkinsfile
+set(TEST_BUILD_PART "all" CACHE STRING "Which part of tests to build: all|partA|partB")
+set_property(CACHE TEST_BUILD_PART PROPERTY STRINGS all partA partB)
 
 ## Factor by which to speed up unit tests
 if(NOT DEFINED TEST_SPEEDUP_FACTOR)

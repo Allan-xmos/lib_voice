@@ -116,7 +116,7 @@ pipeline {
             }
           }
         }
-        stage('xcore.ai executables build') {
+        stage('xcore.ai executables build, PartA') {
           when {
             expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
           }
@@ -136,7 +136,7 @@ pipeline {
                 }
               }
             }
-            stage('Build tests, xcommon-cmake xcore build') {
+            stage('Build tests, xcommon-cmake xcore build, partA') {
               steps {
                 dir("${REPO}") {
                     withTools(params.TOOLS_VERSION) {
@@ -144,13 +144,13 @@ pipeline {
                         dir("tests") {
                           script {
                             if (env.FULL_TEST == "1") {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false)
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partA")
                             }
                             else {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4")
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partA")
                             }
                           }
-                          stash name: 'xcommon_cmake_build_xcore', includes: '**/bin/**/*.xe'
+                          stash name: 'xcommon_cmake_build_xcore_partA', includes: '**/bin/**/*.xe'
                         }
                       }
                     }
@@ -182,6 +182,54 @@ pipeline {
                       sh 'make -C build -j$(nproc)'
                     }
                   }
+                }
+              }
+            }
+          }
+          post {
+            cleanup {
+              xcoreCleanSandbox()
+            }
+          }
+        }
+        stage('xcore.ai executables build, PartB') {
+          when {
+            expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
+          }
+          agent {
+            label 'x86_64&&linux'
+          }
+          stages {
+            stage('Get view') {
+              steps {
+                runningOn(env.NODE_NAME)
+
+                dir("${REPO}") {
+                  checkout scm
+                  // need ai_tools for the build
+                  // need numpy to generate aec tests, will get in from ai_tools
+                  createVenv(reqFile: "requirements.txt")
+                }
+              }
+            }
+            stage('Build tests, xcommon-cmake xcore build, PartB') {
+              steps {
+                dir("${REPO}") {
+                    withTools(params.TOOLS_VERSION) {
+                      withVenv {
+                        dir("tests") {
+                          script {
+                            if (env.FULL_TEST == "1") {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partB")
+                            }
+                            else {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partB")
+                            }
+                          }
+                          stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
+                        }
+                      }
+                    }
                 }
               }
             }
@@ -242,7 +290,8 @@ pipeline {
                   dir("stage_b") {
                     sh "python build_c_code.py"
                   }
-                  unstash 'xcommon_cmake_build_xcore'
+                  unstash 'xcommon_cmake_build_xcore_partA'
+                  unstash 'xcommon_cmake_build_xcore_partB'
                   unstash 'xcommon_cmake_build_native'
                 }
               }

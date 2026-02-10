@@ -86,24 +86,6 @@ MODULES = {
     },
 }
 
-def float_to_q31(x: np.ndarray) -> np.ndarray:
-    """
-    Convert floating-point audio to Q31 fixed-point format.
-
-    Parameters
-    ----------
-    x : np.ndarray
-        Floating-point audio array in range [-1.0, 1.0).
-
-    Returns
-    -------
-    np.ndarray
-        Audio converted to signed 32-bit Q31 format.
-    """
-    x = np.clip(x, -1.0, 1.0 - 2**-31)
-    return (x * (2**31)).astype(np.int32)
-
-
 def gen_input_and_run_dut(xe, module):
     """
     Generate input audio for a module and run the corresponding DUT xe.
@@ -133,7 +115,7 @@ def gen_input_and_run_dut(xe, module):
     generator_name = config["generator"]
     generator = getattr(input_generators, generator_name)
     input_data_float = generator(config["frame_advance"])
-    input_data = float_to_q31(input_data_float)
+    input_data = pvc.float_to_int32(input_data_float)
 
     if config["channels"] == 1:
         assert input_data.ndim == 1, f"Module {module}, {config['generator']}() returned input data with incorrect number of dimensions"

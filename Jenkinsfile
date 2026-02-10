@@ -444,6 +444,10 @@ pipeline {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
                     withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                      dir("test_aec_schedule") {
+                        sh "pytest -n 1 --junitxml=pytest_result.xml"
+                        junit "pytest_result.xml"
+                      }
                       dir("test_aec_enhancements") {
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"

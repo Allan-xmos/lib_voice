@@ -50,6 +50,7 @@ This document will cover the following topics:
 
 #. :ref:`audio_processing_section` : A walkthrough of the DSP modules supported by ``lib_voice``.
 #. :ref:`examples_section` : Simple demonstrations of how to put APIs together and get them running.
+#. :ref:`resource_usage_section` : Memory and CPU requirements for ``lib_voice`` DSP components
 #. :ref:`api_reference_section` : References to all DSP components' APIs.
 
 .. toctree::
@@ -58,4 +59,5 @@ This document will cover the following topics:
 
    audio_processing/index
    examples/index
+   resource_usage/index
    api_reference/index

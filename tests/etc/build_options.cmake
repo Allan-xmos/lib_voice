@@ -1,4 +1,7 @@
 
+# Selector to split tests into two parts for parallel build in Jenkinsfile
+set(TEST_BUILD_PART "all" CACHE STRING "Which part of tests to build: all|partA|partB")
+set_property(CACHE TEST_BUILD_PART PROPERTY STRINGS all partA partB)
 
 ## Factor by which to speed up unit tests
 if(NOT DEFINED TEST_SPEEDUP_FACTOR)
@@ -20,15 +23,6 @@ set(
     "2 2 2 10 5"
     CACHE STRING
     "AEC build configuration for test_adec in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
-    )
-endif()
-
-if(NOT DEFINED TEST_ADEC_PROFILE_BUILD_CONFIG)
-set(
-    TEST_ADEC_PROFILE_BUILD_CONFIG
-    "2 2 2 10 5" "1 2 2 10 5"
-    CACHE STRING
-    "AEC build configurations for test_adec_profile in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )
 endif()
 

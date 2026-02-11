@@ -12,7 +12,7 @@ from run_dut import run_dut
 import py_vs_c_utils as pvc
 import py_voice
 
-c_ns_xe_path = Path(__file__).parents[1] / "test_ns_profile" / "bin" / "test_ns_profile"
+c_ns_xe_path = Path(__file__).parents[1] / "test_wav_ns" / "bin" / "test_wav_ns"
 PY_VOICE_ROOT = Path(py_voice.__file__).resolve().parent
 ns_conf_path = PY_VOICE_ROOT / "config" / "components" / "ns_only.json"
 

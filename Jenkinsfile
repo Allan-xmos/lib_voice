@@ -116,7 +116,7 @@ pipeline {
             }
           }
         }
-        stage('xcore.ai executables build') {
+        stage('xcore.ai executables build, PartA') {
           when {
             expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
           }
@@ -136,7 +136,7 @@ pipeline {
                 }
               }
             }
-            stage('Build tests, xcommon-cmake xcore build') {
+            stage('Build tests, xcommon-cmake xcore build, partA') {
               steps {
                 dir("${REPO}") {
                     withTools(params.TOOLS_VERSION) {
@@ -144,13 +144,13 @@ pipeline {
                         dir("tests") {
                           script {
                             if (env.FULL_TEST == "1") {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false)
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partA")
                             }
                             else {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4")
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partA")
                             }
                           }
-                          stash name: 'xcommon_cmake_build_xcore', includes: '**/bin/**/*.xe'
+                          stash name: 'xcommon_cmake_build_xcore_partA', includes: '**/bin/**/*.xe'
                         }
                       }
                     }
@@ -182,6 +182,54 @@ pipeline {
                       sh 'make -C build -j$(nproc)'
                     }
                   }
+                }
+              }
+            }
+          }
+          post {
+            cleanup {
+              xcoreCleanSandbox()
+            }
+          }
+        }
+        stage('xcore.ai executables build, PartB') {
+          when {
+            expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
+          }
+          agent {
+            label 'x86_64&&linux'
+          }
+          stages {
+            stage('Get view') {
+              steps {
+                runningOn(env.NODE_NAME)
+
+                dir("${REPO}") {
+                  checkout scm
+                  // need ai_tools for the build
+                  // need numpy to generate aec tests, will get in from ai_tools
+                  createVenv(reqFile: "requirements.txt")
+                }
+              }
+            }
+            stage('Build tests, xcommon-cmake xcore build, PartB') {
+              steps {
+                dir("${REPO}") {
+                    withTools(params.TOOLS_VERSION) {
+                      withVenv {
+                        dir("tests") {
+                          script {
+                            if (env.FULL_TEST == "1") {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partB")
+                            }
+                            else {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partB")
+                            }
+                          }
+                          stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
+                        }
+                      }
+                    }
                 }
               }
             }
@@ -242,7 +290,8 @@ pipeline {
                   dir("stage_b") {
                     sh "python build_c_code.py"
                   }
-                  unstash 'xcommon_cmake_build_xcore'
+                  unstash 'xcommon_cmake_build_xcore_partA'
+                  unstash 'xcommon_cmake_build_xcore_partB'
                   unstash 'xcommon_cmake_build_native'
                 }
               }
@@ -256,6 +305,31 @@ pipeline {
               withTools(params.TOOLS_VERSION) {
                 withVenv{
                   sh "xtagctl reset_all XCORE-AI-EXPLORER"
+                }
+              }
+            }
+          }
+        }
+
+        stage('MIPS are memory resource usage tests') {
+          steps {
+            catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+              dir("${REPO}/tests") {
+                withTools(params.TOOLS_VERSION) {
+                  withVenv {
+                    dir("profile_memory") {
+                      sh "pytest -n 1 --junitxml=pytest_result.xml"
+                      junit "pytest_result.xml"
+                      archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
+                    }
+                    withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                      dir("profile_mips") {
+                        sh "pytest -n 2 --junitxml=pytest_result.xml"
+                        junit "pytest_result.xml"
+                        archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -278,10 +352,6 @@ pipeline {
                         sh "pytest -n 4 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
-                      dir("test_vnr_profile") {
-                        sh "pytest -s --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
                     }
                   }
                 }
@@ -297,10 +367,6 @@ pipeline {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
                     withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                      dir("test_ns_profile"){
-                        sh "pytest -n 1 --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
                       dir("compare_c_py"){
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
@@ -330,10 +396,6 @@ pipeline {
                       }
                       dir("py_c_frame_compare"){
                         sh "python build_ic_frame_proc.py"
-                        sh "pytest -s --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
-                      dir("test_ic_profile"){
                         sh "pytest -s --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
@@ -416,12 +478,6 @@ pipeline {
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
                       }
-                      dir("test_adec_profile") {
-                        sh "pytest -n 2 --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                        // Testing bit exactness of the AEC scheduling
-                        sh "diff output_1_2_2_10_5.wav output_2_2_2_10_5.wav"
-                      }
                     }
                   }
                 }
@@ -437,6 +493,10 @@ pipeline {
                 withTools(params.TOOLS_VERSION) {
                   withVenv {
                     withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                      dir("test_aec_schedule") {
+                        sh "pytest -n 1 --junitxml=pytest_result.xml"
+                        junit "pytest_result.xml"
+                      }
                       dir("test_aec_enhancements") {
                         sh "pytest -n 2 --junitxml=pytest_result.xml"
                         junit "pytest_result.xml"
@@ -523,16 +583,8 @@ pipeline {
       }// stages
       post {
         always {
-          // AEC aretfacts
-          archiveArtifacts artifacts: "${REPO}/tests/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
           // IC artefacts
-          archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_profile/ic_prof.log", fingerprint: true
           archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_spec/ic_spec_summary.txt", fingerprint: true
-          // NS artefacts
-          archiveArtifacts artifacts: "${REPO}/tests/lib_ns/test_ns_profile/ns_prof.log", fingerprint: true
-          // VNR artifacts
-          archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/*.png", fingerprint: true
-          archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/vnr_prof.log", fingerprint: true
           // Pipelines tests
           archiveArtifacts artifacts: "${REPO}/tests/pipeline/**/results_*.csv", fingerprint: true
           archiveArtifacts artifacts: "${REPO}/tests/pipeline/**/results_*.png", fingerprint: true, allowEmptyArchive: true

@@ -76,9 +76,10 @@ def bfp_s32_arr_to_double(flat_data, bfp_len, num_frames):
 # data has to be [channel, sample] and the samples have to be multiple of frame_len
 def interleave_channel_frames(data, frame_len):
     assert data.ndim == 2
-    assert data.shape[1] % frame_len == 0
     n_chans = data.shape[0]
     n_frames = data.shape[1] // frame_len
+    assert n_frames > 0, f"Not enough data.shape[1] ({data.shape[1]}) to create frames."
+    data = data[:, :n_frames * frame_len]  # truncate tail
     # reshape to split into frames
     frames = data.reshape(n_chans, n_frames, frame_len)
     # transpose to interleave (n_frames, n_chans, frame_len), flatten

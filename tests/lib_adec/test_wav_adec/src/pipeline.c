@@ -7,7 +7,6 @@
 #include "adec.h"
 
 #include "pipeline_state.h"
-#include "profile.h"
 
 
 static void aec_switch_configuration(pipeline_state_t *state, aec_conf_t *conf)
@@ -20,7 +19,6 @@ static void aec_switch_configuration(pipeline_state_t *state, aec_conf_t *conf)
 
 void pipeline_init(pipeline_state_t *state, aec_conf_t *de_conf, aec_conf_t *non_de_conf, adec_config_t *adec_config) {
     memset(state, 0, sizeof(pipeline_state_t));
-    prof(0, "start_pipeline_init"); //Start profiling after memset since the pipeline components do the memset as part of their init functions.
     state->delay_estimator_enabled = 0;
     state->adec_requested_delay_samples = 0;
     state->ref_active_threshold =  f64_to_float_s32(pow(10, -60/20.0));
@@ -33,7 +31,6 @@ void pipeline_init(pipeline_state_t *state, aec_conf_t *de_conf, aec_conf_t *non
 
     adec_init(&state->adec_state, adec_config);
     aec_switch_configuration(state, &state->aec_non_de_mode_conf);
-    prof(1, "end_pipeline_init");
 }
 
 static inline void get_delayed_frame(
@@ -67,16 +64,13 @@ void pipeline_process_frame(pipeline_state_t *state,
         )
 {
     /** Get delayed frame*/
-    prof(2, "start_get_delayed_frame");
     delay_buf_state_t *delay_state_ptr = &state->delay_state;
     get_delayed_frame(
             input_y_data,
             input_x_data,
             delay_state_ptr
             );
-    prof(3, "end_get_delayed_frame");
 
-    prof(18, "start_switch_aec_config");
     /** Switch AEC config if needed. We're doing it at the beginning of current frame instead of end of previous
      * frame to be able to read relevant outputs from the state in the test_wav code for logging. Switching at the
      * end of last frame would have reset the state.*/
@@ -95,18 +89,14 @@ void pipeline_process_frame(pipeline_state_t *state,
         aec_switch_configuration(state, &state->aec_non_de_mode_conf);
         state->delay_estimator_enabled = 0;
     }
-    prof(19, "end_switch_aec_config");
 
     //printf("frame %d\n",framenum);
 
     /** AEC*/
-    prof(6, "start_aec_process_frame");
     int32_t aec_output_shadow[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
     // Writing main filter output to output_data directly
     aec_process_frame(&state->aec_state, output_data, aec_output_shadow, input_y_data, input_x_data);
-    prof(7, "end_aec_process_frame");
 
-    prof(8, "start_estimate_delay");
     /** Delay estimator*/
     adec_input_t adec_in;
     adec_estimate_delay(
@@ -115,9 +105,6 @@ void pipeline_process_frame(pipeline_state_t *state,
             state->aec_state.main_state.num_phases
             );
 
-    prof(9, "end_estimate_delay");
-
-    prof(10, "start_adec_process_frame");
     /** ADEC*/
     // Create input to ADEC from AEC
     adec_in.from_aec.y_ema_energy_ch0 = state->aec_state.main_state.shared_state->y_ema_energy[0];
@@ -138,16 +125,11 @@ void pipeline_process_frame(pipeline_state_t *state,
             &adec_in
             );
 
-    prof(11, "end_adec_process_frame");
-
-    prof(12, "start_reset_aec");
     //** Reset AEC state if needed*/
     if(adec_output.reset_aec_flag) {
         aec_reset_state(&state->aec_state);
     }
-    prof(13, "end_reset_aec");
 
-    prof(14, "start_update_delay_buffer");
     /** Update delay samples if there's a delay change requested by ADEC*/
     if(adec_output.delay_change_request_flag == 1){
         // Update delay_buffer delay_samples with mic delay requested by adec
@@ -161,9 +143,7 @@ void pipeline_process_frame(pipeline_state_t *state,
         printf("AP Setting MIC delay to: %ld\n", state->delay_state.delay_samples);
 #endif
     }
-    prof(15, "end_update_delay_buffer");
 
-    prof(16, "start_overwrite_output_in_de_mode");
     /** Overwrite output with mic input if delay estimation enabled*/
     if (state->delay_estimator_enabled) {
         // Send the current frame unprocessed
@@ -175,7 +155,6 @@ void pipeline_process_frame(pipeline_state_t *state,
     }
     state->adec_output_delay_estimator_enabled_flag = adec_output.delay_estimator_enabled_flag; //Keep a copy so we can use it in next frame
     state->de_output_measured_delay_samples = adec_in.from_de.measured_delay_samples;
-    prof(17, "end_overwrite_output_in_de_mode");
 
 
     //For logging for test purposes
@@ -192,5 +171,4 @@ void pipeline_process_frame(pipeline_state_t *state,
     }
 
     framenum++;
-    print_prof(0, 20, framenum);
 }

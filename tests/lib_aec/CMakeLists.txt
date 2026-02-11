@@ -6,5 +6,6 @@ add_subdirectory( test_aec_enhancements )
 add_subdirectory( test_aec_spec )
 if(NOT BUILD_NATIVE)
     add_subdirectory( aec_unit_tests )
+    add_subdirectory( test_aec_schedule )
 endif()
 

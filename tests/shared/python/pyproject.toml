@@ -17,4 +17,4 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["generate_task_distribution_scheme", "run_dut", "py_vs_c_utils", "profile_xcore"]
+py-modules = ["generate_task_distribution_scheme", "run_dut", "py_vs_c_utils", "profile_xcore", "test_wav"]

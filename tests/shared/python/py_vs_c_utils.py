@@ -12,8 +12,7 @@ def float_s32_to_float(float_s32):
 
 # turn an int32 np array (Q1.31) into float
 def int32_to_float(array_int32):
-    array_float = np.array(array_int32).astype(np.float64) / (2**31)
-    return array_float
+    return (array_int32.astype(np.float32) / (2**31 - 1)).clip(-1.0, 1.0)
 
 # turn an uint8 np array (Q0.8) into float
 def uint8_to_float(array_uint8):
@@ -199,3 +198,26 @@ def float_to_int32_qxx(array_float, q_format):
     ).astype(np.int32)
 
     return array_int32
+
+def deinterleave_channel_frames(flat: np.ndarray, frame_len: int, n_chans: int) -> np.ndarray:
+    """
+    Convert a 1D interleaved-by-frame-and-channel buffer into [channels, samples].
+
+    Input layout (flat):
+      frame0 ch0 [frame_len], frame0 ch1 [frame_len], ..., frame1 ch0 [frame_len], ...
+
+    Returns:
+      deint: shape (n_chans, n_frames * frame_len,)
+    """
+    flat = np.asarray(flat)
+    assert flat.ndim == 1, "Expected 1D interleaved input"
+    total = len(flat)
+    stride = frame_len * n_chans
+    assert total % stride == 0, "Length must be a multiple of frame_len * n_chans"
+    n_frames = total // stride
+
+    # Reshape to [frames, channels, frame_len]
+    frames = flat.reshape(n_frames, n_chans, frame_len)
+    # then to [channels, frames, frame_len], then flatten to (channels, samples)
+    deint = frames.transpose(1, 0, 2).reshape(n_chans, n_frames * frame_len)
+    return deint

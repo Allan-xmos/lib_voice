@@ -25,10 +25,10 @@ int main(){
 
     par {
         xscope_host_data(xscope_chan);
-        on tile[0]: 
+        on tile[0]:
         {
           xscope_io_init(xscope_chan);
-          main_tile0(c_tile0_to_tile1, c_tile1_to_tile0, "input.wav", "output.wav");
+          main_tile0(c_tile0_to_tile1, c_tile1_to_tile0, "input.bin", "output.bin");
           _Exit(0);
         }
         on tile[1]:

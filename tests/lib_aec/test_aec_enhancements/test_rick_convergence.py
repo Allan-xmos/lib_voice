@@ -2,11 +2,11 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 '''
-The purpose of this test is to test the initial convergence behaviour. 
+The purpose of this test is to test the initial convergence behaviour.
 Pink noise is used as it gives a constant convergence rate.
 The initial attenuation rate and maximum attenuation are tested.
-The test is carried out with fixed and variable mu, which may indicate the cause of any convergence issues. 
-If the test fails with fixed mu it is an indication that something may be wrong with the normalisation. 
+The test is carried out with fixed and variable mu, which may indicate the cause of any convergence issues.
+If the test fails with fixed mu it is an indication that something may be wrong with the normalisation.
 If the test fails with variable mu, there may be a problem with the mu.
 '''
 
@@ -16,7 +16,7 @@ from pathlib import Path
 hydra_audio_path = os.environ.get('hydra_audio_PATH', '~/hydra_audio')
 
 import numpy as np
-import scipy.io.wavfile
+import soundfile as sf
 
 import soundfile as sf
 
@@ -35,9 +35,9 @@ import pytest
 @pytest.mark.parametrize("channel_count", [1, 2])
 def test_pink_convergence(adapt_config, channel_count):
     ''' test_pink_convergence - run mono/stereo pink noise convolved with a modelled impulse response
-    check that the output has some attenuation and AEC filter does not have any discontinuities 
+    check that the output has some attenuation and AEC filter does not have any discontinuities
     and converges quickly, with and without a variable mu.
-        
+
     pass/fail: check there is at least 10 dB of attenuation
     pass/fail: check the samples at frame edges are a similar magnitude to the sample in frame middle
     pass/fail: check the convergence rate over the first 2 seconds is greater than 10 dB/s
@@ -93,14 +93,14 @@ def test_pink_convergence(adapt_config, channel_count):
     in_data = np.concatenate((y, x), axis=1).T
     nFrames = (N-hN-1) // frame_advance -1
     in_data_32bit = (np.asarray(in_data * np.iinfo(np.int32).max, dtype=np.int32)).T
-    
+
     #run XC
     print("Run AEC XC")
     filter_td_file = f"{filter_dir}/{testname}_h_td_xc.npy"
     filter_fd_file = f"{filter_dir}/{testname}_H_fd_xc.npy"
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:channel_count], in_data_32bit[:,channel_count:], f"{testname}", adapt=nFrames, h_hat_dump=filter_fd_file, adapt_mode=run_xc.adapt_mode_dict[adapt_config], num_y_channels=channel_count, num_x_channels=channel_count)
-    rate, output_wav_file = scipy.io.wavfile.read(dut_output_file, 'r')
-    error = output_wav_file 
+    output_wav_file, _ = sf.read(dut_output_file)
+    error = output_wav_file
     _, leq_error = wtf.leq_smooth(error[:, 0], fs, 0.05)
     time = np.arange(len(leq_error))*0.05
     Hxmos = run_xc.get_h_hat(filter_fd_file, 'xc')[0,0]

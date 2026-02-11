@@ -1,17 +1,14 @@
 # Copyright 2022-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
-import os
 import numpy as np
-import subprocess
 from pathlib import Path
-from shutil import copyfile, rmtree
+from shutil import copyfile
 
 from .prepare_aec_input_file import prepare_input_file
 from .delay_analyser import delay_analyser
 from .delay_analyser import FRAME_ADVANCE
 import tempfile
-
-from run_dut import run_with_xscope_fileio
+from test_wav import test_wav
 
 source_wav_file_rate = 48000
 voice_sample_rate = 16000
@@ -33,45 +30,47 @@ def run_test(pipeline_config, info, path_to_regression_files, input_audio_files,
 
   # tmp_dir = tempfile.mkdtemp(prefix='tmp_', dir='.')
   with tempfile.TemporaryDirectory(dir=".", prefix="tmp_") as tmp_dir:
-
+    tmp_path = Path(tmp_dir)
     #write runtime arguments into args.bin. TODO send as config from caller
-    with open(os.path.join(tmp_dir, "args.bin"), "wb") as fargs:
+    with open(tmp_path / "args.bin", "wb") as fargs:
         fargs.write(f"y_channels {pipeline_config['num_y_channels']}\n".encode('utf-8'))
         fargs.write(f"x_channels {pipeline_config['num_x_channels']}\n".encode('utf-8'))
         fargs.write(f"main_filter_phases {pipeline_config['num_main_filter_phases']}\n".encode('utf-8'))
         fargs.write(f"shadow_filter_phases {pipeline_config['num_shadow_filter_phases']}\n".encode('utf-8'))
 
-    aec_input_file = os.path.join(tmp_dir, "stage_a_input_16k.wav")
-    ground_truth_file = os.path.join(tmp_dir, "ground_truth.txt")
+    aec_input_file = tmp_path / "stage_a_input_16k.wav"
+    ground_truth_file = tmp_path / "ground_truth.txt"
     if far_end_delay_changes is not None:
       gt_changes = len(far_end_delay_changes)
-      input_audio_dir = os.path.join(path_to_regression_files, 'input_audio_to_room_model')
-      model_dir = os.path.join(path_to_regression_files, 'room_model')
+      input_audio_dir = Path(path_to_regression_files) / 'input_audio_to_room_model'
+      model_dir = Path(path_to_regression_files) / 'room_model'
       output_audio_dir = tmp_dir
 
       prepare_input_file(input_audio_files, input_audio_dir, model_dir, output_audio_dir, far_end_delay_changes, max_seconds=test_length_s, volume_changes=volume_changes)
-      test_name = info + ", " + input_audio_files[0] + ", " + input_audio_files[1]
+      test_name = info + ", " + str(input_audio_files[0]) + ", " + str(input_audio_files[1])
     else:
       copyfile(input_audio_files, aec_input_file)
-      ground_truth_file_delays = input_audio_files.strip(".wav") + (".delays")
+      ground_truth_file_delays = str(input_audio_files).strip(".wav") + (".delays")
       copyfile(ground_truth_file_delays, ground_truth_file)
 
       gt_changes = 0
-      test_name = info + ", " + input_audio_files.split('/')[-1]
+      test_name = info + ", " + str(input_audio_files).split('/')[-1]
 
     print ("run_target = ", run_target, ", tmp_dir = ", tmp_dir)
-    copyfile(aec_input_file, os.path.join(tmp_dir, "input.wav")) #Axe sim has fixed file name input
 
-    run_with_xscope_fileio(test_exe, tmp_dir)
+    frame_advance = 240
+    AEC_MAX_Y_CHANNELS = 2
+    output_file = tmp_path / "output.wav"
+    test_wav(test_exe, aec_input_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, tmp_folder=tmp_dir)
 
     # Read estimated delay samples for every frame
-    with open(os.path.join(tmp_dir, delay_output_file_name), 'r') as f:
+    with open(tmp_path / delay_output_file_name, 'r') as f:
       estimated_delay_samples = np.array([int(l) for l in f.readlines()], dtype=float)
     estimates = estimated_delay_samples / float(voice_sample_rate)
 
 
     #Scale estimates file to seconds
-    xc_sim_de_file = os.path.join(tmp_dir, "xc_sim_delays_s.txt")
+    xc_sim_de_file = tmp_path / "xc_sim_delays_s.txt"
     print("estimates = ",estimates)
     estimates.tofile(xc_sim_de_file, sep="\n")
 

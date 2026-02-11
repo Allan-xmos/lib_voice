@@ -12,21 +12,28 @@ def test_wav(
     output_channels,
     output_frame_len,
     sample_rate=16000,
-    target="xs3a",
-    tmp_folder=None
+    **run_kwargs,  # pass-through to run_dut and further
 ):
     """
-    Run a compiled DSP application on a WAV file and write the processed
+    Run a compiled application on a WAV file and write the processed
     output to a new WAV file.
 
     Parameters
     ----------
     xe_path : str or Path
         Path to the compiled application (.xe file).
+        The application should be capable of working on interleaved input data
+        written to an input binary file (input.bin) and write interleaved output data to output.bin.
+        The binary I/O format must be interleaved per frame and channel, using
+        int32 Q31 samples:
+          frame0: ch0[frame_len], ch1[frame_len], ..., chN[frame_len]
+          frame1: ch0[frame_len], ch1[frame_len], ..., chN[frame_len]
     input_wav_path : str or Path
         Path to the input WAV file.
+        WAV format can be either Signed 32 bit PCM [PCM_32] or 32 bit float [FLOAT]
+        The data should be in [1.0, 1.0) range if float or signed Q31 if int32 format
     output_wav_path : str or Path
-        Path where the processed WAV file will be written.
+        Path where the processed WAV file will be written. Output wav format is  32 bit float
     input_frame_len : int
         Number of samples per frame per channel expected by the DUT input.
     output_channels : int
@@ -36,17 +43,8 @@ def test_wav(
     sample_rate : int, optional
         Sample rate used when writing the output WAV file.
         Default is 16000 Hz.
-    target : str, optional
-        Target architecture identifier passed to the DUT runner.
-        Default is "xs3a".
-
-    Notes
-    -----
-    - Input WAV files are assumed to contain floating-point samples.
-    - Multi-channel input must be arranged as (channels, samples).
-    - DUT input/output is expected in Q31 fixed-point format.
+    **run_kwargs : Optional arguments forwarded to run_dut
     """
-
     assert Path(input_wav_path).exists(), "Input WAV file does not exist"
 
     print(f"Running input wav {input_wav_path} through executable {xe_path}")
@@ -67,7 +65,8 @@ def test_wav(
         print(f"Num input channels = 1")
 
     # Run DUT
-    output_interleaved_q31, xcore_stdout = run_dut(input_q31, xe_path, target=target, tmp_folder=tmp_folder)
+    print(f"input_q31.shape = {input_q31.shape}")
+    output_interleaved_q31, xcore_stdout = run_dut(input_q31, xe_path, **run_kwargs)
 
     # Deinterleave output to (channels, frames) format
     output_q31 = pvc.deinterleave_channel_frames(
@@ -76,12 +75,9 @@ def test_wav(
         output_channels,
     )
 
-
     # Convert Q31 -> float
     output_float = pvc.int32_to_float(output_q31)
-
-    print(f"Writing output (shape: {output_float.shape}) to wav file {output_wav_path}")
-
+    print(f"Writing output (shape:{output_float.shape}, dtype:{output_float.dtype}) to wav file {output_wav_path}")
     # Write output WAV (samples x channels)
     sf.write(
         output_wav_path,
@@ -90,6 +86,10 @@ def test_wav(
         format="WAV",
         subtype="FLOAT",
     )
+    return xcore_stdout
+
+# Prevent pytest from collecting this helper as a test
+test_wav.__test__ = False
 
 if __name__ == "__main__":
     hydra_audio_path = Path(os.environ.get("hydra_audio_PATH", "~/hydra_audio")).expanduser()

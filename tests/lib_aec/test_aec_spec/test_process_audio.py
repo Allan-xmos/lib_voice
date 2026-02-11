@@ -10,7 +10,7 @@ import numpy as np
 import shutil
 from pathlib import Path
 import soundfile as sf
-from run_dut import run_with_xscope_fileio
+from test_wav import test_wav
 
 parser = configparser.ConfigParser()
 parser.read("parameters.cfg")
@@ -33,24 +33,28 @@ def run_aec_xc(audio_in, audio_ref, audio_out, adapt=-1, h_hat_dump=None):
     y_data, rate = sf.read(audio_in, dtype="int32", always_2d=True)
     x_data, rate = sf.read(audio_ref, dtype="int32", always_2d=True)
     data = np.hstack((y_data, x_data)) #mic+ref
-
-    sf.write(dut_in_wav, data, rate)
+    frame_advance = 240
+    sf.write(dut_in_wav, data, rate) # TODO remove this?
 
     with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
+        tmp_path = Path(tmp_folder)
+        input_file = tmp_path / dut_in_wav
+        output_file = tmp_path / dut_out_wav
+        AEC_MAX_Y_CHANNELS = 1
 
-        sf.write(os.path.join(tmp_folder, dut_in_wav), data, rate, "PCM_32")
-    
-        with open(os.path.join(tmp_folder, runtime_args_file), "wb") as ref_file:
+        sf.write(input_file, data, rate, "PCM_32")
+
+        with open(tmp_path / runtime_args_file, "wb") as ref_file:
             ref_file.write(f"stop_adapting {adapt}".encode('utf-8'))
 
-        stdo = run_with_xscope_fileio(aec_xe, tmp_folder)
+        test_wav(aec_xe, input_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, tmp_folder=tmp_folder)
 
         #test_check_output expects a 2 channel output despite building AEC for 1 y channel, so convert dut output to 2ch
-        data, rate = sf.read(os.path.join(tmp_folder, dut_out_wav), dtype="int32", always_2d=True)
+        data, rate = sf.read(output_file, always_2d=True)
         data = np.hstack((data, data))
 
         if h_hat_dump != None:
-            shutil.copy2(os.path.join(tmp_folder, dut_H_hat_file), h_hat_dump)
+            shutil.copy2(tmp_path / dut_H_hat_file, h_hat_dump)
 
     sf.write(audio_out, data, rate, "PCM_32")
 

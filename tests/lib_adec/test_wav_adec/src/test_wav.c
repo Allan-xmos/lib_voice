@@ -2,7 +2,6 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include "xmath/xmath.h"
 #include "fileio.h"
-#include "wav_utils.h"
 #include "aec.h"
 #include "pipeline_state.h"
 #include "dump_H_hat.h"
@@ -116,47 +115,13 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     file_t debug_log_file;
     ret = file_open(&debug_log_file, "debug_log.bin", "wb");
 #endif
-
-    wav_header input_header_struct, output_header_struct;
-    unsigned input_header_size;
-    if(get_wav_header_details(&input_file, &input_header_struct, &input_header_size) != 0){
-        printf("error in att_get_wav_header_details()\n");
-        _Exit(1);
-    }
-
-    file_seek(&input_file, input_header_size, SEEK_SET);
-    // Ensure 32bit wav file
-    if(input_header_struct.bit_depth != 32)
-     {
-         printf("Error: unsupported wav bit depth (%d) for %s file. Only 32 supported\n", input_header_struct.bit_depth, input_file_name);
-         _Exit(1);
-     }
-    // Ensure input wav file contains correct number of channels
-    if(input_header_struct.num_channels != (AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS)){
-        printf("Error: wav num channels(%d) does not match aec(%u)\n", input_header_struct.num_channels, (AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS));
-        _Exit(1);
-    }
-
-    unsigned frame_count = wav_get_num_frames(&input_header_struct);
-    // Calculate number of frames in the wav file
-    unsigned block_count = frame_count / AEC_FRAME_ADVANCE;
-    wav_form_header(&output_header_struct,
-            input_header_struct.audio_format,
-            AEC_MAX_Y_CHANNELS,
-            input_header_struct.sample_rate,
-            input_header_struct.bit_depth,
-            block_count*AEC_FRAME_ADVANCE);
-
-    file_write(&output_file, (uint8_t*)(&output_header_struct),  WAV_HEADER_BYTES);
-
-    int32_t input_read_buffer[AEC_FRAME_ADVANCE * (AEC_MAX_Y_CHANNELS + AEC_MAX_X_CHANNELS)] = {0}; // Array for storing interleaved input read from wav file
-    int32_t output_write_buffer[AEC_FRAME_ADVANCE * (AEC_MAX_Y_CHANNELS)];
+    const int32_t file_size = get_file_size(&input_file);
+    const unsigned frame_count =
+        file_size / ((AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS) * (unsigned)sizeof(int32_t) * AEC_FRAME_ADVANCE);
 
     int32_t DWORD_ALIGNED frame_y[AEC_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
     int32_t DWORD_ALIGNED frame_x[AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
     int32_t DWORD_ALIGNED pipeline_output[2][AEC_FRAME_ADVANCE];
-
-    unsigned bytes_per_frame = wav_get_num_bytes_per_frame(&input_header_struct);
 
     // Initialise pipeline
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
@@ -198,21 +163,9 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     pipeline_state.aec_state.main_state.shared_state->config_params.coh_mu_conf.adaption_config = runtime_args[ADAPTION_MODE];
     pipeline_state.aec_state.main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30 = runtime_args[FORCE_ADAPTION_MU];
 
-    for(unsigned b=0;b<block_count;b++){
-        long input_location =  wav_get_frame_start(&input_header_struct, b * AEC_FRAME_ADVANCE, input_header_size);
-        file_seek (&input_file, input_location, SEEK_SET);
-        file_read (&input_file, (uint8_t*)&input_read_buffer[0], bytes_per_frame* AEC_FRAME_ADVANCE);
-        // Deinterleave and copy y and x samples to their respective buffers
-        for(unsigned f=0; f<AEC_FRAME_ADVANCE; f++){
-            for(unsigned ch=0;ch<AEC_MAX_Y_CHANNELS;ch++){
-                unsigned i =(f * (AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS)) + ch;
-                frame_y[ch][f] = input_read_buffer[i];
-            }
-            for(unsigned ch=0;ch<AEC_MAX_X_CHANNELS;ch++){
-                unsigned i =(f * (AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS)) + AEC_MAX_Y_CHANNELS + ch;
-                frame_x[ch][f] = input_read_buffer[i];
-            }
-        }
+    for(unsigned b=0; b < frame_count; b++){
+        file_read(&input_file, (uint8_t*)&frame_y[0][0], (unsigned)sizeof(int32_t) * AEC_MAX_Y_CHANNELS * AEC_FRAME_ADVANCE);
+        file_read(&input_file, (uint8_t*)&frame_x[0][0], (unsigned)sizeof(int32_t) * AEC_MAX_X_CHANNELS * AEC_FRAME_ADVANCE);
 
         if (runtime_args[STOP_ADAPTING] > 0) {
             runtime_args[STOP_ADAPTING]--;
@@ -244,14 +197,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
 #endif
 
-        // Create interleaved output that can be written to wav file
-        for (unsigned ch=0;ch<AEC_MAX_Y_CHANNELS;ch++){
-            for(unsigned i=0;i<AEC_FRAME_ADVANCE;i++){
-                output_write_buffer[i*(AEC_MAX_Y_CHANNELS) + ch] = pipeline_output[ch][i];
-            }
-        }
-
-        file_write(&output_file, (uint8_t*)(output_write_buffer), output_header_struct.bit_depth/8 * AEC_FRAME_ADVANCE * AEC_MAX_Y_CHANNELS);
+        file_write(&output_file, (uint8_t*)pipeline_output, (AEC_MAX_Y_CHANNELS * AEC_FRAME_ADVANCE * sizeof(int32_t)));
 
         char strbuf[100];
         sprintf(strbuf, "%ld\n", pipeline_state.adec_requested_delay_samples);

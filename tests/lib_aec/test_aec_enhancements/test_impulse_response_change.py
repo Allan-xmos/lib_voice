@@ -3,13 +3,13 @@
 
 ''' impulse response change checker
 this test is intended to check the ability of the
-shadow filter to detect a change in the impulse response 
+shadow filter to detect a change in the impulse response
 and speed up filter adaptation accordingly
 
 some mono white noise convolved with a modelled impulse response is run
 a change in the impulse response happens midway through the signal
 the convergence time and total attenuation is monitored after change
-        
+
 pass/fail: check if the convergence rate is at least 7 dB/s
 
 '''
@@ -19,8 +19,8 @@ from pathlib import Path
 hydra_audio_path = os.environ.get('hydra_audio_PATH', '~/hydra_audio')
 
 import numpy as np
-import scipy.io.wavfile
 import scipy.signal as spsig
+import soundfile as sf
 
 import wav_test_functions as wtf
 import run_xc
@@ -42,22 +42,22 @@ def conv_impulse_array(x, h, fade_len):
         if n > 0:
             y[n][:n*sec_l - fade_len//2] = 0.0
             y[n][n*sec_l - fade_len//2:n*sec_l + fade_len//2] *= np.arange(fade_len)/fade_len
-        
+
         if n < n_impulses - 1:
             y[n][(n+1)*sec_l + fade_len//2:] = 0.0
             y[n][(n+1)*sec_l - fade_len//2:(n+1)*sec_l + fade_len//2] *= np.flip(np.arange(fade_len)/fade_len)
 
         y_out += y[n]
-    
+
     return y_out, y
-   
+
 
 @pytest.mark.parametrize("adapt_config", ['AEC_ADAPTION_FORCE_ON', 'AEC_ADAPTION_AUTO'])
 def test_impulse_response_change(adapt_config):
 
     fs = 16000
     N = fs * 20
-    np.random.seed(500)  
+    np.random.seed(500)
     testname = f"{(Path(__file__).stem)[5:]}_{adapt_config}"
 
     y_channel_count = 1
@@ -85,13 +85,13 @@ def test_impulse_response_change(adapt_config):
     # u, fs2 = sf.read(filepath)
     # u = u[:N]
     # assert fs==fs2
-  
+
     # filename = "white"
     u = np.random.randn(N)
-    
+
     if u.ndim == 1:
-        u = u[:, np.newaxis]    
-    
+        u = u[:, np.newaxis]
+
     if u.shape[0] < N:
         u = np.tile(u, (N // u.shape[0] + 1, 1))
 
@@ -109,20 +109,20 @@ def test_impulse_response_change(adapt_config):
     # run AEC
     in_data = np.stack((d, u[hN-1:N]), axis=0)
     in_data_32bit = (np.asarray(in_data * np.iinfo(np.int32).max, dtype=np.int32)).T
-    
+
     #run XC
     print("Run AEC XC")
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict[adapt_config], num_y_channels=y_channel_count, num_x_channels=x_channel_count)
 
-    rate, output_wav_file = scipy.io.wavfile.read(dut_output_file, 'r')
-    error_xc = output_wav_file[:,0] 
+    output_wav_file, _ = sf.read(dut_output_file)
+    error_xc = output_wav_file[:,0]
     _, leq_error = wtf.leq_smooth(error_xc, fs, 0.05)
     change_index, = np.where(leq_error == leq_error.max())
     leq_e = leq_error[int(change_index):]
     t = np.arange(len(leq_e))*0.05
     reconvergence_rate = wtf.calc_convergence_rate(t, leq_e)
     print(f"XC reconvergence_rate: {reconvergence_rate}")
-    # test    
+    # test
     assert reconvergence_rate > 12,"XC reconvergence_rate error"
 
     # plot
@@ -136,7 +136,7 @@ def test_impulse_response_change(adapt_config):
         plt.ylim([-50, 10])
         plt.xlim([0, time[-1]])
         #plt.show()
-        
+
 
 
 if __name__ == "__main__":

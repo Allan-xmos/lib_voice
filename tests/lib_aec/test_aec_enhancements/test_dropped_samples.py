@@ -13,7 +13,7 @@ hydra_audio_path = os.environ.get('hydra_audio_PATH', '~/hydra_audio')
 
 import numpy as np
 import scipy.signal as spsig
-import scipy.io.wavfile
+import soundfile as sf
 
 import soundfile as sf
 
@@ -28,7 +28,7 @@ import pytest
 def test_dropped_samples(drop_amount, room):
     ''' test_dropped_samples - run a  mono pink noise convolved with a modelled impulse response
     remove drop_amount samples after 10 seconds, and check for the length of time taken for 10 dB reconvergence
-        
+
     pass/fail: check it takes less than 0.75 seconds for 10 dB reconvergence after the dropped samples'''
 
     np.random.seed(42)
@@ -61,7 +61,7 @@ def test_dropped_samples(drop_amount, room):
     u, fs3 = sf.read(filepath)
     u = u[:,0]
     assert fs==fs3
-  
+
     d = spsig.convolve(u, h, 'full')[:N]
     if fN > hN:
         d = d[hN-1:hN-fN]
@@ -75,11 +75,11 @@ def test_dropped_samples(drop_amount, room):
 
     # set the dropped samples
     decim_ratio = 3
-    fs2 = decim_ratio*fs    
+    fs2 = decim_ratio*fs
     drop_start = 10*fs2
     drop_stop = 15*fs2
     drop_rate = int(5*fs2)
-    
+
     # upsample, set dropped to nan, remove and downsample
     u2 = spsig.resample_poly(u[hN-1:], decim_ratio, 1)
     for n in range(drop_amount):
@@ -89,15 +89,15 @@ def test_dropped_samples(drop_amount, room):
 
     # run AEC
     #XC expects 4ch input
-    in_data = np.stack((d, u[:N-hN+1]), axis=0) 
+    in_data = np.stack((d, u[:N-hN+1]), axis=0)
     in_data_32bit = (np.asarray(in_data * np.iinfo(np.int32).max, dtype=np.int32)).T
     nFrames = (N-hN-1) // frame_advance -1
 
     #run XC
     print("Run AEC XC")
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_AUTO'], num_y_channels=y_channel_count, num_x_channels=x_channel_count)
-    rate, output_wav_file = scipy.io.wavfile.read(dut_output_file, 'r')
-    error = output_wav_file 
+    output_wav_file, _ = sf.read(dut_output_file)
+    error = output_wav_file
     _, leq_error = wtf.leq_smooth(error[:, 0], fs, 0.05)
     time = np.arange(len(leq_error))*0.05
     # find max deconvergence point

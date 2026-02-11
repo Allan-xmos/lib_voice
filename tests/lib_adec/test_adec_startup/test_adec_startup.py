@@ -3,13 +3,14 @@
 import sys
 import os
 import shutil
-import scipy.io.wavfile
 import pytest
 import numpy as np
 import tempfile
 import re
 from pathlib import Path
-from run_dut import run_with_xscope_fileio
+from test_wav import test_wav
+import soundfile as sf
+import py_vs_c_utils as pvc
 
 maximum_adec_delay_ms = 1000
 maximum_adec_estimation_time_ms = 3500
@@ -18,13 +19,16 @@ xcore_binary = Path(__file__).parent / "bin" / "test_adec_startup.xe"
 
 @pytest.fixture
 def input_vectors():
-    hydra_audio_base_dir = os.path.expanduser("~/hydra_audio/")
-    try:
-        hydra_audio_base_dir = os.environ['hydra_audio_PATH']
-    except:
-        print(f'Warning: hydra_audio_PATH environment variable not set. Using local path {hydra_audio_base_dir}')
-    test_files = [os.path.abspath(os.path.join(hydra_audio_base_dir, "adec_regression/startup_test_case/david_b_vestel.wav"))]
+    env_base = os.environ.get("hydra_audio_PATH")
+    if env_base:
+        hydra_audio_base_dir = Path(env_base)
+    else:
+        hydra_audio_base_dir = Path("~/hydra_audio").expanduser()
+        print(f"Warning: hydra_audio_PATH environment variable not set. Using local path {hydra_audio_base_dir}")
 
+    test_files = [
+        hydra_audio_base_dir / "adec_regression" / "startup_test_case" / "david_b_vestel.wav"
+    ]
     return test_files
 
 
@@ -37,20 +41,24 @@ def analyse_cancellation(data, de_end_frame):
     assert cancel_dB > 3
 
 
-
 def test_adec_startup(input_vectors):
     test_file = input_vectors[0]
 
     with tempfile.TemporaryDirectory(prefix='tmp_', dir='.') as tmp_dir:
-    
-        shutil.copyfile(test_file, os.path.join(tmp_dir, "input.wav"))
+        tmp_path = Path(tmp_dir)
+        shutil.copyfile(test_file, tmp_path / "input.bin")
 
         # Create empty arguments file for test_wav_adec
-        fp = open(os.path.join(tmp_dir, "args.bin"), "wb")
+        fp = open(tmp_path / "args.bin", "wb")
         fp.close()
 
-        xcore_stdo = run_with_xscope_fileio(xcore_binary, tmp_dir)
-        _, out_data = scipy.io.wavfile.read(os.path.join(tmp_dir, "output.wav")) 
+        frame_advance = 240
+        AEC_MAX_Y_CHANNELS = 2
+        output_file = tmp_path / "output.wav"
+        xcore_stdo = test_wav(xcore_binary, test_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, tmp_folder=tmp_dir)
+
+        out_data, _ = sf.read(output_file)
+        out_data = pvc.float_to_int32(out_data)
 
     transitions = []
     for line in xcore_stdo:

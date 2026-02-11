@@ -2,7 +2,6 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import os
 import numpy as np
-import scipy.io.wavfile
 import soundfile as sf
 
 import wav_test_functions as wtf
@@ -21,7 +20,7 @@ filter_dir = parser.get("Folders", "filter_dir")
 def test_skype(channel_count):
     ''' test_skype - run a  mono skype signal convolved with a modelled impulse response
     check that the output has some attenuation and AEC filter does not have any discontinuities
-        
+
     pass/fail: check there is at least 10 dB of attenuation
     pass/fail: check the samples at frame edges are a similar magnitude to the sample in frame middle'''
 
@@ -42,7 +41,7 @@ def test_skype(channel_count):
         x = x[:, np.newaxis]
     assert fs==fs2
     y = np.zeros((N, channel_count)) # microphone signal
-  
+
     # load impulse response
     filename1 = "000_LAB_XTS_DUTL_fs16kHz"
     filename2 = "001_LAB_XTS_DUTR_fs16kHz"
@@ -75,7 +74,7 @@ def test_skype(channel_count):
     filter_fd_file = f"{filter_dir}/{testname}_H_fd_xc.npy"
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:channel_count], in_data_32bit[:,channel_count:], testname, adapt=nFrames, h_hat_dump=filter_fd_file, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_FORCE_ON'], num_y_channels=channel_count, num_x_channels=channel_count)
 
-    rate, output_wav_file = scipy.io.wavfile.read(dut_output_file, 'r')
+    output_wav_file, _ = sf.read(dut_output_file)
     error_xc = output_wav_file[:,0]
     _, leq_error_xc = wtf.leq_smooth(error_xc, fs, 0.05)
 
@@ -87,7 +86,7 @@ def test_skype(channel_count):
     for p in range(phases):
         hxmos_xc[p*frame_advance: frame_advance*(p+1)] = h[p, :frame_advance]
     np.save(filter_td_file, hxmos_xc)
-    
+
     print('Check XC')
     disco_res_xc = wtf.disco_check(hxmos_xc, phases, frame_advance)
     assert(disco_res_xc)

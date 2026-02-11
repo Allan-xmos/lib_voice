@@ -4,14 +4,21 @@ Acoustic Echo Canceller
 =======================
 
 An acoustic echo canceller (AEC) removes signal that is played through a
-device’s loudspeaker, into the room, and picked up again by its microphones.
-The loudspeaker signal, referred to as the
-*reference signal*, is used by the AEC to model the acoustic paths
+device's loudspeaker, into the room, and picked up again by its microphones.
+The difference between the loudspeaker signal, referred to as the
+*reference signal*, and the microphone signal is used by the AEC to model the acoustic paths
 between loudspeakers and microphones. Using this model, the AEC
 predicts the resulting echo and subtracts it from the captured
 microphone signal in real time. By eliminating this feedback, the AEC
 ensures clear communication and prevents far-end listeners from hearing
 their own voice echoed back.
+
+.. _aec_filter:
+
+.. figure:: ../images/aec_filter.drawio.svg
+    :align: center
+
+    A basic AEC filter.
 
 Overview
 --------
@@ -57,13 +64,22 @@ Two types of adaptive filters are used:
 - Main filter
 - Shadow filter
 
-Each microphone–reference pair has one main filter and one shadow
+Each microphone-reference pair has one main filter and one shadow
 filter.
 
 The main filter is used to generate the echo-cancelled output of the AEC.
 It typically has a longer tail length, allowing it to converge to a more
 accurate estimate of the room impulse response and achieve deeper echo
-cancellation.
+cancellation. In larger rooms with more reverberation, a longer tail length
+may be necessary to achieve good echo cancellation, as the echo path is longer. This is shown in
+:numref:`aec_delay_path`.
+
+.. _aec_delay_path:
+
+.. figure:: ../images/aec_delay_path.drawio.svg
+    :align: center
+
+    Echo paths from the speakers to the microphones.
 
 The shadow filter has fewer phases and is designed to adapt more
 quickly. It is used to detect changes in the acoustic environment, such
@@ -126,6 +142,7 @@ avoiding dynamic memory allocation at runtime. There are two layers of configura
   The runtime configuration must be a :ref:`valid subset <aec-preconditions>` of the compile-time
   limits. Changing any of these parameters requires calling :c:func:`aec_init()` again to
   reinitialise the AEC state.
+
 
 Memory pools
 ^^^^^^^^^^^^
@@ -226,3 +243,53 @@ and pass ``&tdist`` as an argument to :c:func:`aec_init()`.
 .. note::
    A given schedule would work for any runtime subset (fewer y/x channels or phases) as long as
    :c:func:`aec_init()` preconditions defined in :ref:`aec-preconditions` are met.
+
+
+Parameters
+----------
+
+The key AEC parameters are highlighted below:
+
+* :c:func:`aec_init` ``num_main_filter_phases`` - Number of phases for the main filter, typically
+  10-20. This determines the effective tail length of the main filter, with 15ms (240) samples per
+  phase. More phases allow for better echo cancellation in more reverberant environments, at the
+  cost of increased computation and slower adaptation.
+* :c:func:`aec_init` ``num_shadow_filter_phases`` - Number of phases for the shadow filter,
+  typically 5. This determines the effective tail length of the shadow filter, with 15ms (240)
+  samples per phase. The shadow filter is designed to adapt more quickly than the main filter, so
+  it typically has fewer phases than the main filter in order to quickly capture acoustic state
+  changes.
+* :c:member:`coherence_mu_config_params_t.mu_scalar` - Scalar controlling the overall rate of 
+  the AEC filter adaption, set to 1.0 by default. When ``adaption_config`` is set to
+  ``AEC_ADAPTION_FORCE_ON``, this value controls the rate of adaption for all frames. When
+  ``adaption_config`` is set to ``AEC_ADAPTION_AUTO``, this value controls the relative rate of
+  adaption. Values less than 1.0 will slow down the rate of adaption, which can improve stability
+  in some environments, at the cost of slower convergence. Values greater than 1.0 will speed up
+  the rate of adaption, which can improve convergence speed but may reduce stability and
+  attenuation.
+* :c:member:`coherence_mu_config_params_t.erle_thresh` - The AEC adaption will be paused when the
+  estimated ERLE (Echo Return Loss Enhancement) drops by this much relative to the long term
+  average. Increasing this value can improve convergence in noisy environments, at the cost of
+  increased deconvergence during near end noise or speech.
+* :c:member:`coherence_mu_config_params_t.coh_thresh_abs` - Sets the minimum coherence threshold
+  for AEC adaption. The coherence is measured between the microphone signal and the estimated
+  microphone signal. When the coherence is below this threshold, the AEC filters will not adapt.
+  Decreasing this value can allow for faster convergence in noisy environments, at the cost of
+  increased deconvergence during near end noise or speech.
+* :c:member:`coherence_mu_config_params_t.coh_thresh_slow` - Sets the relative coherence threshold
+  for the current frame against the slow moving average. Reducing with value will allow frames with
+  lower coherence than the average to adapt, which can improve convergence in noisy environments,
+  at the cost of increased deconvergence during near end noise or speech.
+* :c:member:`coherence_mu_config_params_t.adaption_config` - Configures the adaption behaviour of
+  the AEC. When set to ``AEC_ADAPTION_AUTO``, the AEC will automatically adjust the adaption rate
+  based on the coherence and ERLE thresholds above. When set to ``AEC_ADAPTION_FORCE_ON``, the AEC
+  will adapt on every frame regardless of the coherence or ERLE. When set to
+  ``AEC_ADAPTION_FORCE_OFF``, the AEC will not adapt on any frames.
+* :c:macro:`REF_ACTIVE_THRESHOLD_dB` - This macro set the threshold for determining whether the
+  reference signal is active, in decibels relative to full scale. When the maximum value of the 
+  reference signal in a frame is below this threshold, the AEC will consider it inactive and will
+  pause adaption. If the reference signal is expected to be far below full scale for a reasonable
+  SPL output, this threshold can be reduced to allow for adaption during low-level playback.
+  
+Other AEC parameters are described in the ``aec_state.h`` header file, and are described in detail in
+:c:struct:`aec_config_params_t`.

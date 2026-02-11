@@ -3,13 +3,14 @@
 Voice to Noise Ratio estimator
 ==============================
 
-The Voice to Noise Ratio estimator (VNR) predicts the signal to noise ratio of a speech signal in noise, using a pre-trained neural network.
+The Voice to Noise Ratio estimator (VNR) estimates the signal to noise ratio of a speech signal in noise, using a pre-trained neural network.
 The VNR neural network model outputs a value between 0 and 1, with 1 indicating the strongest speech, and 0,
-the weakest speech compared to noise in a frame of audio data.
+the weakest speech compared to noise in a frame of audio data. A VNR value of 0.5 indicates a 
+voice to noise ratio of -5 dB.
 
 VNR estimations can be very helpful in voice processing pipelines.
 Applications for VNR include intelligent power management,
-control of adaptive filters for reducing noise sources and improved performance of the :ref:`agc_module`
+control of adaptive filters for reducing noise sources in the :ref:`ic_module`, and improved performance of the :ref:`agc_module`
 blocks that provide a more natural listening experience.
 
 The VNR operates on short frames of audio, transforming the input into the
@@ -18,6 +19,14 @@ most recent frames are then fed into a pre-trained neural network that outputs
 the VNR estimate.
 
 The VNR model is a pre-trained TensorFlow Lite model, optimised for the XCORE platform.
+
+.. _vnr_basics:
+
+.. figure:: ../images/vnr.drawio.svg
+    :align: center
+
+    The VNR topology.
+
 
 Overview
 --------
@@ -58,3 +67,8 @@ There are no user configurable parameters within the VNR and so no arguments are
 Once the VNR is initialised, the :c:func:`vnr_form_input_frame()`, :c:func:`vnr_extract_features()` and :c:func:`vnr_inference()` functions should be called on a frame by frame basis.
 
 Refer to the IC source code to see how to initialise and run the VNR using the advanced API.
+
+Parameters
+----------
+
+The VNR has no user configurable parameters.

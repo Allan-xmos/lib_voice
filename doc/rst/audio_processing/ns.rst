@@ -5,6 +5,14 @@ The Noise Suppressor (NS) reduces stationary noise in an audio signal so that
 speech is clearer and easier to process. It estimates the noise present in the
 signal and attenuates it in the frequency domain, producing a cleaner output.
 
+.. _ns_basics:
+
+.. figure:: ../images/ns_filter.drawio.svg
+    :align: center
+
+    The Noise Suppressor topology.
+
+
 Overview
 --------
 
@@ -36,3 +44,8 @@ NS instance by calling :c:func:`ns_init()`. Then for each frame,
 :c:func:`ns_process_frame()` will update the NS instance's internal state and produce
 the output frame by applying the NS algorithm to the input frame.
 Refer to the :ref:`pipeline_example` to see how the APIs above are used.
+
+Parameters
+----------
+
+The Noise Suppressor has no user configurable parameters.

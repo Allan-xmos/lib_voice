@@ -29,6 +29,14 @@ echo.
 An optional soft clipping stage is applied at the end of the AGC to
 avoid hard clipping of the output signal during sudden loud sounds.
 
+.. _agc_basics:
+
+.. figure:: ../images/agc.drawio.svg
+    :align: center
+
+    The AGC topology.
+
+
 AGC Application
 ---------------
 
@@ -108,5 +116,5 @@ The key AGC parameters are highlighted below:
 
 
 
-Other AGC parameters are described in the `agc_profiles.h` header file,
+Other AGC parameters are described in the ``agc_profiles.h`` header file,
 and are described in detail in :c:struct:`agc_config_t`.

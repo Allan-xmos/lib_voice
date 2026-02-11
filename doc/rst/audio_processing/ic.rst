@@ -1,14 +1,24 @@
+.. _`ic_module`:
+
 Interference Canceller
 ======================
 
-An interference canceller (IC) removes unwanted sounds — such as background noise,
-appliances, or competing talkers — by exploiting differences between multiple
-microphone signals. It analyses the phase and amplitude relationships across
-microphones to identify components consistent with interference rather than
-desired speech. Using these spatial differences, the IC constructs an adaptive
-filter that suppresses the unwanted components while allowing the true speech
-signal to pass. Accurate voice activity detection is required to
-distinguish speech from noise.
+An interference canceller (IC) removes unwanted point noise sources such as cooker hoods, washing
+machines, or radios for which there is no reference audio signal available.
+It achieves this by adapting a filter to cancel one microphone with the other. The filter is only
+updated when speech is not present, which allows the filter to converge to cancel the noise sources
+in the room. When speech occurs, the filter is held constant, which allows the speech to pass
+through while maintaining suppression of the noise sources. 
+The IC uses the :ref:`vnr_module` to detect when speech is present.
+A delay line is used to improve the causality of the IC filter by moving the peak towards the middle
+of the filter taps.
+
+.. _ic_basics:
+
+.. figure:: ../images/ic_basics.drawio.svg
+    :align: center
+
+    The IC filter topology.
 
 Overview
 --------
@@ -69,3 +79,29 @@ for each input frame (see :ref:`pipeline_example`). :c:func:`ic_process_frame()`
 the VNR estimate for the current frame.
 
 
+Parameters
+----------
+
+The key IC parameters are highlighted below:
+
+* :c:member:`ic_adaption_controller_config_t.input_vnr_threshold` - If the VNR estimate for the current frame is above this
+  threshold, the IC will suspend adaptation of its filter coefficients. This allows the IC to
+  maintain suppression of noise sources while allowing speech to pass through. Lowering this
+  threshold will cause the IC to adapt less often, which may reduce the amount of noise suppression
+  but will allow more speech to pass through. This may be desirable in environments with higher
+  levels of diffuse noise, which cannot be cancelled by the IC.
+* :c:member:`ic_adaption_controller_config_t.input_vnr_threshold_high` - If the microphone VNR estimate for the current frame is
+  above this threshold, this indicates that the noise in the room is low, and the IC is not needed.
+  The IC will suspend adaptation of its filter coefficients and will also leak the filter
+  coefficients to reduce the amount of noise suppression applied to the output.
+  This allows more speech to pass through at the cost of reduced noise suppression. Lowering this
+  threshold will cause the IC to adapt less often, which may reduce the amount of noise suppression
+  but will allow more speech to pass through.
+* :c:macro:`IC_Y_CHANNEL_DELAY_SAMPS` - The ideal filter for the interference canceller is the
+  deconvolution of the impulse responses between the noise source and each of the two microphones.
+  This filter is non-causal, and the delay between the channels allow the IC to adapt to the ideal
+  filter. However, this adds latency, which can be reduced by reducing `IC_Y_CHANNEL_DELAY_SAMPS`, 
+  at the cost of reduced IC performance.
+
+Other IC parameters are described in the ``ic_state.h`` header file, and are described in detail in
+:c:struct:`ic_adaption_controller_config_t`.

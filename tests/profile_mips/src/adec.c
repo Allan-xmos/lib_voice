@@ -4,7 +4,7 @@
 #include "voice.h"
 #include "profile.h"
 
-void test_adec(int32_t (*input)[AEC_FRAME_ADVANCE])
+void test_adec(int32_t (*input)[AEC_FRAME_ADVANCE], int32_t (*output)[AEC_FRAME_ADVANCE])
 {
     static int framenum = 0;
 
@@ -13,7 +13,6 @@ void test_adec(int32_t (*input)[AEC_FRAME_ADVANCE])
     static adec_output_t adec_output;
     static adec_input_t adec_input;
     static aec_state_t DWORD_ALIGNED aec_state;
-    static int32_t DWORD_ALIGNED output[AEC_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
 
     if(!framenum) {
         aec_init(&aec_state,

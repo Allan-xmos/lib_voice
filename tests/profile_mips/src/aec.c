@@ -5,9 +5,9 @@
 #include "profile.h"
 
 extern aec_task_distribution_t tdist;
-void test_aec(int32_t (*input)[AEC_FRAME_ADVANCE]) {
+void test_aec(int32_t (*input)[AEC_FRAME_ADVANCE], int32_t (*output)[AEC_FRAME_ADVANCE])
+{
     static int framenum = 0;
-    static int32_t DWORD_ALIGNED output[AEC_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
 
     // Initialise AEC
     static aec_state_t DWORD_ALIGNED aec_state;

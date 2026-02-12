@@ -5,7 +5,8 @@ project(ns_unit_tests)
 
 set(APP_HW_TARGET XK-EVK-XU316)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
-set(APP_DEPENDENT_MODULES lib_unity lib_voice)
+set(APP_DEPENDENT_MODULES "lib_unity(2.6.1)"
+                          "lib_voice")
 
 set(APP_INCLUDES ${CMAKE_CURRENT_LIST_DIR}/src ${CMAKE_CURRENT_LIST_DIR}/../../shared/pseudo_rand ${CMAKE_CURRENT_LIST_DIR}/../../shared/testing)
 file(GLOB_RECURSE TEST_C_SRCS CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_LIST_DIR} src/*.c)

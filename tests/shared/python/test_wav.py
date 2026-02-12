@@ -1,3 +1,5 @@
+# Copyright 2026 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 from run_dut import run_dut
 import soundfile as sf
 import os

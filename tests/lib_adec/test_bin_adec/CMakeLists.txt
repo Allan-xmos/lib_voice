@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
-project(test_wav_adec)
+project(test_bin_adec)
 
 set(APP_HW_TARGET XK-EVK-XU316)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
@@ -23,11 +23,11 @@ set(APP_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src)
 
 
-set(AEC_SCHEDULE_CONFIG ${TEST_WAV_ADEC_BUILD_CONFIG})
+set(AEC_SCHEDULE_CONFIG ${TEST_BIN_ADEC_BUILD_CONFIG})
+
+include(${CMAKE_CURRENT_LIST_DIR}/../../test_deps.cmake)
 
 if (NOT BUILD_NATIVE)
-    set(APP_DEPENDENT_MODULES "lib_voice"
-                                "xscope_fileio")
     set(APP_COMPILER_FLAGS
             -report
             -Os
@@ -35,8 +35,6 @@ if (NOT BUILD_NATIVE)
 
     set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
 else()
-    set(APP_DEPENDENT_MODULES "lib_voice")
-
     set(APP_COMPILER_FLAGS
             -DX86_BUILD=1)
 endif()

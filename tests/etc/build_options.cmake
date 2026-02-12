@@ -44,12 +44,12 @@ set(
     )
 endif()
 
-if(NOT DEFINED TEST_WAV_ADEC_BUILD_CONFIG)
+if(NOT DEFINED TEST_BIN_ADEC_BUILD_CONFIG)
 set(
-    TEST_WAV_ADEC_BUILD_CONFIG
+    TEST_BIN_ADEC_BUILD_CONFIG
     "2 2 2 10 5"
     CACHE STRING
-    "AEC build configuration for test_wav_adec in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
+    "AEC build configuration for test_bin_adec in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )
 endif()
 

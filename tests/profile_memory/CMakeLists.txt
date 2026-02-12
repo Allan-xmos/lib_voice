@@ -42,6 +42,6 @@ set(APP_COMPILER_FLAGS_adec
 set(APP_COMPILER_FLAGS_empty
             ${COMPILER_FLAGS})
 
-set(APP_DEPENDENT_MODULES lib_voice)
+include(${CMAKE_CURRENT_LIST_DIR}/../test_deps.cmake)
 
 XMOS_REGISTER_APP()

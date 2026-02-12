@@ -6,8 +6,7 @@ set(APP_HW_TARGET XK-EVK-XU316)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
 include(${XMOS_SANDBOX_DIR}/lib_voice/tests/etc/build_options.cmake)
 
-set(APP_DEPENDENT_MODULES "lib_unity(2.6.1)"
-                          "lib_voice")
+include(${CMAKE_CURRENT_LIST_DIR}/../../test_deps.cmake)
 
 set(APP_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/src

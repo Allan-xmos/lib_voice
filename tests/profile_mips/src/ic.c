@@ -14,7 +14,7 @@ void test_ic(int32_t (*input)[IC_FRAME_ADVANCE], int32_t (*output)[IC_FRAME_ADVA
         ic_init(&ic_state);
 #if DISABLE_ADAPTION_CONTROLLER
         ic_state.ic_adaption_controller_state.adaption_controller_config.adaption_config = IC_ADAPTION_FORCE_ON;
-        ic_state.leakage_alpha = f32_to_float_s32(1.0); //From test_wav_ic
+        ic_state.leakage_alpha = f32_to_float_s32(1.0); //From test_bin_ic
 #endif
     }
 

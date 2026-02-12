@@ -48,7 +48,7 @@ def test_adec_startup(input_vectors):
         tmp_path = Path(tmp_dir)
         shutil.copyfile(test_file, tmp_path / "input.bin")
 
-        # Create empty arguments file for test_wav_adec
+        # Create empty arguments file for test_bin_adec
         fp = open(tmp_path / "args.bin", "wb")
         fp.close()
 

@@ -12,8 +12,7 @@ file(GLOB CONFIG_XSCOPE_REL_PATH
     CONFIGURE_DEPENDS
     ${CONFIG_XSCOPE_PATH}/config.xscope)
 
-set(APP_DEPENDENT_MODULES "lib_voice"
-                          "xscope_fileio")
+include(${CMAKE_CURRENT_LIST_DIR}/../../test_deps.cmake)
 
 
 file(GLOB APP_C_SRCS

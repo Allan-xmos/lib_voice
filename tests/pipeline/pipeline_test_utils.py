@@ -8,14 +8,17 @@ from conftest import pipeline_bins, pipeline_output_base_dir, keyword_input_base
 import re
 from pathlib import Path
 import sys
-import pytest 
-from run_dut import run_with_xscope_fileio
+import pytest
+from test_wav import test_wav
 
 sys.path.append(str(Path(__file__).parent / "py_pipeline"))
 import wav_pipeline
 
 def process_xcore(xe_file, input_file, output_file):
-
+    frame_advance = 240
+    AP_MAX_Y_CHANNELS = 2
+    stdout = test_wav(xe_file, input_file, output_file, frame_advance, AP_MAX_Y_CHANNELS, frame_advance, timeout=xtag_aquire_timeout_s)
+    '''
     with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
         tmp_folder = Path(tmp_folder)
         shutil.copyfile(input_file, tmp_folder / "input.wav")
@@ -24,7 +27,7 @@ def process_xcore(xe_file, input_file, output_file):
         stdout = run_with_xscope_fileio(xe_file, tmp_folder, xtag_aquire_timeout_s)
 
         shutil.copyfile(tmp_folder / "output.wav", output_file)
-
+    '''
     return stdout
 
 def process_python(input_file, output_file, arch):
@@ -51,7 +54,7 @@ def process_python(input_file, output_file, arch):
 
 def process_file(input_file, arch, target="xcore"):
     wav_name = input_file.name
-    output_file = Path(__file__).parent / f"{pipeline_output_base_dir}_{arch}_{target}" / wav_name 
+    output_file = Path(__file__).parent / f"{pipeline_output_base_dir}_{arch}_{target}" / wav_name
 
     if target == "xcore":
         pipeline_bin = pipeline_bins[arch][target]
@@ -72,7 +75,7 @@ def convert_keyword_wav(input_file, arch, target):
 
 def log_vnr(stdo, input_file, arch, target): # Read VNR predicitions from stdo and store in .npy files of the same name as input files
     xcore_stdo = stdo
-    
+
     vnr_output_pred = np.empty(0, dtype=np.float64)
     vnr_input_pred = np.empty(0, dtype=np.float64)
     mu_log = np.empty(0, dtype=np.float64)
@@ -97,7 +100,7 @@ def log_vnr(stdo, input_file, arch, target): # Read VNR predicitions from stdo a
             mu_exp = float(match.group(2))
             mu = mu_mant * (2.0 ** mu_exp)
             mu_log = np.append(mu_log, mu)
-    
+
     if(len(vnr_input_pred) > 0):
         filename = f"vnr_input_pred_{input_file.stem}.npy"
         filename = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / filename

@@ -60,50 +60,57 @@
  * for the finer granularity profile info.
  */
 
-extern void test_aec(int32_t (*input)[AEC_FRAME_ADVANCE]);
-extern void test_ic(int32_t (*input)[IC_FRAME_ADVANCE]);
-extern void test_vnr(int32_t (*input)[VNR_FRAME_ADVANCE]);
-extern void test_agc(int32_t (*input)[AGC_FRAME_ADVANCE]);
-extern void test_ns(int32_t (*input)[NS_FRAME_ADVANCE]);
-extern void test_adec(int32_t (*input)[AEC_FRAME_ADVANCE]);
+extern void test_aec(int32_t (*input)[AEC_FRAME_ADVANCE], int32_t (*output)[AEC_FRAME_ADVANCE]);
+extern void test_ic(int32_t (*input)[IC_FRAME_ADVANCE], int32_t (*output)[IC_FRAME_ADVANCE]);
+extern void test_vnr(int32_t (*input)[VNR_FRAME_ADVANCE], int32_t (*output)[VNR_FRAME_ADVANCE]);
+extern void test_agc(int32_t (*input)[AGC_FRAME_ADVANCE], int32_t (*output)[AGC_FRAME_ADVANCE]);
+extern void test_ns(int32_t (*input)[NS_FRAME_ADVANCE], int32_t (*output)[NS_FRAME_ADVANCE]);
+extern void test_adec(int32_t (*input)[AEC_FRAME_ADVANCE], int32_t (*output)[AEC_FRAME_ADVANCE]);
 
 /**
  * Module selection via preprocessor.
  *
  * The following macros configure:
  *
- * - MODULE_CHANS          : number of input channels
+ * - MODULE_IN_CHANS          : number of input channels
  * - MODULE_FRAME_ADVANCE  : frame size in samples
  * - MODULE_TEST_FUNC      : module test function called per frame
  */
 #if NS
-  #define MODULE_CHANS 1
+  #define MODULE_IN_CHANS 1
+  #define MODULE_OUT_CHANS 1
   #define MODULE_FRAME_ADVANCE   NS_FRAME_ADVANCE
   #define MODULE_TEST_FUNC  test_ns
 #elif AGC
-  #define MODULE_CHANS 1
+  #define MODULE_IN_CHANS 1
+  #define MODULE_OUT_CHANS 1
   #define MODULE_FRAME_ADVANCE   AGC_FRAME_ADVANCE
   #define MODULE_TEST_FUNC  test_agc
 #elif IC
-  #define MODULE_CHANS 2
+  #define MODULE_IN_CHANS 2
+  #define MODULE_OUT_CHANS 1
   #define MODULE_FRAME_ADVANCE   IC_FRAME_ADVANCE
   #define MODULE_TEST_FUNC  test_ic
 #elif VNR
-  #define MODULE_CHANS 1
+  #define MODULE_IN_CHANS 1
+  #define MODULE_OUT_CHANS 0
   #define MODULE_FRAME_ADVANCE   VNR_FRAME_ADVANCE
   #define MODULE_TEST_FUNC  test_vnr
 #elif AEC
-  #define MODULE_CHANS (AEC_MAX_Y_CHANNELS + AEC_MAX_X_CHANNELS)
+  #define MODULE_IN_CHANS (AEC_MAX_Y_CHANNELS + AEC_MAX_X_CHANNELS)
+  #define MODULE_OUT_CHANS AEC_MAX_Y_CHANNELS
   #define MODULE_FRAME_ADVANCE   AEC_FRAME_ADVANCE
   #define MODULE_TEST_FUNC  test_aec
 #elif ADEC
-  #define MODULE_CHANS (AEC_MAX_Y_CHANNELS + AEC_MAX_X_CHANNELS)
+  #define MODULE_IN_CHANS (AEC_MAX_Y_CHANNELS + AEC_MAX_X_CHANNELS)
+  #define MODULE_OUT_CHANS AEC_MAX_Y_CHANNELS
   #define MODULE_FRAME_ADVANCE   AEC_FRAME_ADVANCE
   #define MODULE_TEST_FUNC  test_adec
 #else
   #error "Select exactly one module (NS/AGC/IC/VNR/AEC/ADEC)"
 #endif
 
+#define _MAX(a,b) (((a)>(b))?(a):(b))
 /**
  * @brief File-driven profiling wrapper.
  *
@@ -118,7 +125,7 @@ extern void test_adec(int32_t (*input)[AEC_FRAME_ADVANCE]);
  * 4. Invokes MODULE_TEST_FUNC(frame) for profiling.
  * 5. Closes file and shuts down session.
  *
- * Frame buffer layout: int32_t DWORD_ALIGNED frame[MODULE_CHANS][MODULE_FRAME_ADVANCE]
+ * Frame buffer layout: int32_t DWORD_ALIGNED frame[MODULE_IN_CHANS][MODULE_FRAME_ADVANCE]
  *
  * The MODULE_TEST_FUNC functions need to handle splitting the incoming
  * frame into relevant input buffers, for e.g. `y` and `x` channel inputs.
@@ -134,19 +141,22 @@ void wrapper_task(const char *input_file_name, const char *output_file_name)
 
     const int32_t file_size = get_file_size(&input_file);
     const unsigned frame_count =
-        file_size / (MODULE_CHANS * (unsigned)sizeof(int32_t) * MODULE_FRAME_ADVANCE);
+        file_size / (MODULE_IN_CHANS * (unsigned)sizeof(int32_t) * MODULE_FRAME_ADVANCE);
 
-    int32_t DWORD_ALIGNED frame[MODULE_CHANS][MODULE_FRAME_ADVANCE] = {{0}};
+    int32_t DWORD_ALIGNED input_frame[MODULE_IN_CHANS][MODULE_FRAME_ADVANCE] = {{0}};
+    int32_t DWORD_ALIGNED output_frame[_MAX(MODULE_OUT_CHANS, 1)][MODULE_FRAME_ADVANCE] = {{0}};
 
     for (unsigned b = 0; b < frame_count; ++b) {
-        for (unsigned ch = 0; ch < MODULE_CHANS; ++ch) {
-            file_read(&input_file, (uint8_t*)&frame[ch][0],
+        for (unsigned ch = 0; ch < MODULE_IN_CHANS; ++ch) {
+            file_read(&input_file, (uint8_t*)&input_frame[ch][0],
                       (unsigned)sizeof(int32_t) * MODULE_FRAME_ADVANCE);
         }
-        MODULE_TEST_FUNC(frame);
+        MODULE_TEST_FUNC(input_frame, output_frame);
+        file_write(&output_file, (uint8_t*)output_frame, (MODULE_OUT_CHANS * MODULE_FRAME_ADVANCE * sizeof(int32_t)));
     }
 
     file_close(&input_file);
+    file_close(&output_file);
     shutdown_session();
 }
 
@@ -171,7 +181,7 @@ void wrapper_task(const char *input_file_name, const char *output_file_name)
  * 4. Extend module selection block:
  *
  *        #elif FOO
- *          #define MODULE_CHANS <number_of_channels>
+ *          #define MODULE_IN_CHANS <number_of_channels>
  *          #define MODULE_FRAME_ADVANCE FOO_FRAME_ADVANCE
  *          #define MODULE_TEST_FUNC test_foo
  *
@@ -186,7 +196,7 @@ void wrapper_task(const char *input_file_name, const char *output_file_name)
  *
  *        MODULES["foo"] = {
  *            "generator": "generate_foo_test_audio",
- *            "channels": <same as MODULE_CHANS>,
+ *            "channels": <same as MODULE_IN_CHANS>,
  *            "frame_advance": FOO_FRAME_ADVANCE
  *        }
  *

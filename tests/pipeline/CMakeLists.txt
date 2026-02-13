@@ -23,8 +23,7 @@ set(APP_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/src
     ${CMAKE_CURRENT_LIST_DIR}/../shared/file_utils/src)
 
-set(APP_DEPENDENT_MODULES "lib_voice"
-                            "xscope_fileio")
+include(${CMAKE_CURRENT_LIST_DIR}/../test_deps.cmake)
 
 set(APP_COMMON_FLAGS -report
                         -Os

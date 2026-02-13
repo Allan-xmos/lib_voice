@@ -8,7 +8,6 @@
 #include <limits.h>
 
 #include "fileio.h"
-#include "wav_utils.h"
 
 extern void test_init();
 extern void test(int32_t *output, int32_t *input);
@@ -21,19 +20,19 @@ void test_vnr_unit(const char *input_file_name, const char *output_file_name)
     // Open output wav file that will contain the AEC output
     ret = file_open(&output_file, output_file_name, "wb");
     assert((!ret) && "Failed to open file");
-    
+
     int filesize = get_file_size(&input_file);
     printf("filesize = %d\n",filesize);
-    
+
     int input_framesize, output_framesize;
     file_read(&input_file, &input_framesize, sizeof(int32_t)); //No. of int32 values per frame
     file_read(&input_file, &output_framesize, sizeof(int32_t)); //No. of int32 values per frame
     printf("input_framesize=%d, output_framesize=%d\n",input_framesize, output_framesize);
-    
+
     int filesize_words = filesize/4; //No. of int32_t words in file
     int num_frames = (filesize_words - 2)/input_framesize;
     printf("num_frames = %d\n",num_frames);
-    
+
     int32_t biggest_possible_input_frame[2048];
     int32_t biggest_possible_output_frame[512];
 

@@ -12,7 +12,7 @@ import platform
 
 def get_binary_path(xe, target="xs3a"):
     xe_path = Path(xe) if not isinstance(xe, Path) else xe
-    
+
     # Ensure path has at most one suffix, strip it to get the base name
     assert len(xe_path.suffixes) <= 1, f"Path has multiple suffixes: {xe_path}"
     xe_path = xe_path.with_suffix("")
@@ -27,8 +27,27 @@ def get_binary_path(xe, target="xs3a"):
     else:
         assert 0, f"{target} target is unsupported"
 
+
 def run_with_xscope_fileio(xe_path, cwd, timeout=600):
+    """
+    Run a .xe image on hardware via xscope_fileio, capturing device stdout.
+
+    Parameters
+    ----------
+    xe_path : str or Path
+        Path to the .xe executable that uses xscope_fileio to read input.bin and write output.bin.
+    cwd : str or Path
+        Working directory. Must contain input.bin before launch; output.bin and stdout.txt are created here.
+    timeout : int, optional
+        Seconds to wait for an XTAG adapter (XCORE-AI-EXPLORER) via xtagctl.acquire. Default: 600.
+
+    Returns
+    -------
+    list[str]
+        Device stdout lines with the leading “[DEVICE]” tag stripped; only lines tagged by the device are returned.
+    """
     target_stdout = []
+
     with xtagctl.acquire("XCORE-AI-EXPLORER", timeout=timeout) as adapter_id:
         print(f"Running on {adapter_id}")
         with open(Path(cwd, "stdout.txt"), "w+") as ff:
@@ -43,25 +62,65 @@ def run_with_xscope_fileio(xe_path, cwd, timeout=600):
             target_stdout.append(re.sub(r'\[DEVICE\]\s*', '', line))
     return target_stdout
 
-def run_dut(input_data, xe, target="xs3a"):
-    target_stdout = []
-    output_data = np.empty(0, dtype=np.int32)
-    xe_path = get_binary_path(xe, target)
+def _run_dut_inner(input_data, xe_path, tmp_path, **run_kwargs):
+    """Internal helper that performs the actual DUT execution."""
+    input_file = tmp_path / "input.bin"
+    input_data.astype(np.int32).tofile(input_file)
 
-    with tempfile.TemporaryDirectory(dir=".", suffix=xe_path.stem) as tmp_folder:
-        tmp_folder = Path(tmp_folder)
+    if xe_path.suffix == ".xe":
+        target_stdout = run_with_xscope_fileio(xe_path, tmp_path, **run_kwargs)
+    else:
+        res = subprocess.run(
+            [str(xe_path), "input.bin", "output.bin"],
+            cwd=tmp_path,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        target_stdout = res.stdout.splitlines()
 
-        input_file = tmp_folder / "input.bin"
-        input_data.astype(np.int32).tofile(input_file)
-
-        if xe_path.suffix == ".xe":  # xcore run
-            target_stdout = run_with_xscope_fileio(xe_path, tmp_folder)
-
-        else:  # native run
-            res = subprocess.run([str(xe_path), "input.bin", "output.bin"], cwd=tmp_folder, stdout=subprocess.PIPE, text=True)
-            target_stdout = res.stdout.splitlines()
-
-        output_file = tmp_folder / "output.bin"
-        output_data = np.fromfile(output_file, dtype=np.int32)
+    output_file = tmp_path / "output.bin"
+    output_data = np.fromfile(output_file, dtype=np.int32)
 
     return output_data, target_stdout
+
+def run_dut(input_data, xe, target="xs3a", tmp_folder=None, **run_kwargs):
+    """
+    Run DUT executable with binary input.
+
+    Parameters
+    ----------
+    input_data : np.ndarray
+        Interleaved input samples (int32)
+        frame0: ch0[frame_len], ch1[frame_len], ..., chN[frame_len]
+        frame1: ch0[frame_len], ch1[frame_len], ..., chN[frame_len]
+    xe : str or Path
+        Path to executable.
+    target : str, optional
+        Target architecture (default: "xs3a").
+    tmp_folder : str or Path, optional
+        If provided, use this directory for I/O files.
+        If None, a TemporaryDirectory is created and cleaned up automatically.
+    **run_kwargs
+        Additional keyword arguments forwarded to run_with_xscope_fileio
+
+    Returns
+    -------
+    output_data : np.ndarray
+        Output samples read from output.bin (int32).
+    target_stdout : list[str]
+        Captured stdout lines from DUT execution.
+    """
+    xe_path = get_binary_path(xe, target)
+    if tmp_folder is not None:
+        print(f"running DUT from pre-created tmp directory {tmp_folder}")
+        tmp_path = Path(tmp_folder)
+        tmp_path.mkdir(parents=True, exist_ok=True)
+        output_data, target_stdout = _run_dut_inner(input_data, xe_path, tmp_path, **run_kwargs)
+        return output_data, target_stdout
+
+    with tempfile.TemporaryDirectory(dir=".", suffix=xe_path.stem) as auto_tmp:
+        tmp_path = Path(auto_tmp)
+        output_data, target_stdout = _run_dut_inner(input_data, xe_path, tmp_path, **run_kwargs)
+
+    return output_data, target_stdout
+

@@ -1,6 +1,6 @@
 // This file relates to internal XMOS infrastructure and should be ignored by external users
 
-@Library('xmos_jenkins_shared_library@v0.43.3') _
+@Library('xmos_jenkins_shared_library@v0.45.0') _
 
 def runningOn(machine) {
   println "Stage running on:"
@@ -25,7 +25,7 @@ pipeline {
     )
     string(
       name: 'INFR_APPS_VERSION',
-      defaultValue: 'v3.2.1',
+      defaultValue: 'v3.3.0',
       description: 'The infr_apps version'
     )
     booleanParam(name: 'FULL_TEST_OVERRIDE',
@@ -103,10 +103,15 @@ pipeline {
                   warnError("Docs build failed") {
                     buildDocs()
                   }
-                  archiveSandbox(REPO)
                 }
               }
             } // Docs build
+
+            stage("Archive Lib") {
+              steps {
+                archiveSandbox(REPO)
+              }
+            } //stage("Archive Lib")
 
           } // stages
 
@@ -599,5 +604,14 @@ pipeline {
         }
       }
     }// stage xcore.ai Verification
-  }
-}
+
+    stage('🚀 Release') {
+      when {
+      expression { triggerRelease.isReleasable() }
+      }
+      steps {
+        triggerRelease()
+      }
+    } // stage('🚀 Release')
+  } // stages
+} // pipeline

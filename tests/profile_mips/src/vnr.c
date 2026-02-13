@@ -4,7 +4,8 @@
 #include "voice.h"
 #include "profile.h"
 
-void test_vnr(int32_t (*input)[VNR_FRAME_ADVANCE]) {
+void test_vnr(int32_t (*input)[VNR_FRAME_ADVANCE], int32_t (*output)[VNR_FRAME_ADVANCE])
+{
     static int framenum = 0;
     static float_s32_t vnr_out;
     static vnr_state_t vnr;

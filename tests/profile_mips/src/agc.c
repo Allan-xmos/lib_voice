@@ -4,11 +4,10 @@
 #include "voice.h"
 #include "profile.h"
 
-void test_agc(int32_t (*input)[AGC_FRAME_ADVANCE])
+void test_agc(int32_t (*input)[AGC_FRAME_ADVANCE], int32_t (*output)[AGC_FRAME_ADVANCE])
 {
     static int framenum = 0;
     static agc_state_t agc_state;
-    static int32_t output[AGC_FRAME_ADVANCE];
     static agc_meta_data_t agc_md;
     static agc_config_t agc_conf_asr;
 
@@ -18,7 +17,7 @@ void test_agc(int32_t (*input)[AGC_FRAME_ADVANCE])
     }
 
     prof(0, "start_agc_process_frame");
-    agc_process_frame(&agc_state, output, input[0], &agc_md);
+    agc_process_frame(&agc_state, output[0], input[0], &agc_md);
     prof(1, "end_agc_process_frame");
 
     print_prof(0, 2, framenum);

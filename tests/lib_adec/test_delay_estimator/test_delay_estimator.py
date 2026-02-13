@@ -4,19 +4,20 @@ import tempfile
 import os
 import warnings
 
-import scipy.io.wavfile
 import audio_generation
 import audio_wav_utils as awu
 import pytest
 import numpy as np
+import soundfile as sf
+import scipy
 
 import filters
-from run_dut import run_with_xscope_fileio
 from pathlib import Path
+from test_wav import test_wav
 
-input_folder = os.path.abspath("input_wavs")
-Path(input_folder).mkdir(exist_ok=True)
-output_folder = os.path.abspath("output_files")
+input_folder = Path(__file__).parent / "input_wavs"
+input_folder.mkdir(exist_ok=True)
+output_folder = Path(__file__).parent / "output_files"
 Path(output_folder).mkdir(exist_ok=True)
 hydra_audio_base_dir = os.path.expanduser("~/hydra_audio/")
 
@@ -113,8 +114,8 @@ class DelaySpec(object):
     convergence_time = 2.0
 
 
-data, jazz = scipy.io.wavfile.read(hydra_audio_base_dir+'/fwk_voice_tests/test_delay_estimator/jazz_4ch_record_10s.wav')
-jazz = jazz.T.astype(float) / np.iinfo(np.int32).max
+jazz, sample_rate = sf.read(hydra_audio_base_dir+'/fwk_voice_tests/test_delay_estimator/jazz_4ch_record_10s.wav')
+jazz = jazz.T
 #jazz_y = np.sum(jazz[:2], axis=0)[:jazz_length*16000]
 #jazz_x = np.sum(jazz[2:], axis=0)[:jazz_length*16000]
 
@@ -138,22 +139,20 @@ test_vectors = [
 
 def write_input(test_name, input_data):
     input_32bit = awu.convert_to_32_bit(input_data)
-    input_filename = os.path.abspath(os.path.join(
-        input_folder, test_name + "-input.wav"))
-    scipy.io.wavfile.write(input_filename, sample_rate, input_32bit.T)
+    input_filename = input_folder /  f"{test_name}-input.wav"
+    sf.write(input_filename, input_32bit.T, sample_rate, "PCM_32")
 
 
 def write_output(test_name, output, xc_or_py):
-    output_filename = os.path.abspath(os.path.join(
-        output_folder, test_name + "-output-{}.txt".format(xc_or_py)))
+    output_filename = output_folder / f"{test_name}-output-{xc_or_py}.txt"
     np.savetxt(output_filename, output)
 
 
 def process_audio(input_data, test_name):
     with tempfile.TemporaryDirectory(dir='.', prefix='tmp_') as tmp_folder:
-
+        tmp_path = Path(tmp_folder)
         #write runtime arguments into args.bin
-        with open(os.path.join(tmp_folder, "args.bin"), "wb") as fargs:
+        with open(tmp_path / "args.bin", "wb") as fargs:
             fargs.write(f"y_channels 1\n".encode('utf-8'))
             fargs.write(f"x_channels 1\n".encode('utf-8'))
             fargs.write(f"main_filter_phases 30\n".encode('utf-8'))
@@ -164,11 +163,14 @@ def process_audio(input_data, test_name):
 
         # Write input data to file
         input_32bit = awu.convert_to_32_bit(input_data)
-        scipy.io.wavfile.write(os.path.join(tmp_folder, 'input.wav'), sample_rate, input_32bit.T)
+        input_file = tmp_path / "input.wav"
+        sf.write(input_file, input_32bit.T, sample_rate, "PCM_32")
 
-        run_with_xscope_fileio(xe_path, tmp_folder)
-        
-        with open(os.path.join(tmp_folder, delay_calc_output_file_name), 'r') as f:
+        AEC_MAX_Y_CHANNELS = 2
+        output_file = tmp_path / "output.wav"
+        test_wav(xe_path, input_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, tmp_folder=tmp_folder)
+
+        with open(tmp_path / delay_calc_output_file_name, 'r') as f:
             output = np.array([int(l) for l in f.readlines()], dtype=float)
 
     write_output(test_name, output, 'xc')

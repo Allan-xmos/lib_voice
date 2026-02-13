@@ -4,9 +4,9 @@ from .impulse_3510 import do_simulation
 from .delay_estimator_utils import apply_delay_changes
 from .delay_estimator_utils import frame_advance, frame_size, input_file_fs, voice_sample_rate
 from shutil import copyfile
-import os
 import subprocess
 import numpy as np
+from pathlib import Path
 
 def prepare_input_file(input_audio_files, input_audio_dir, model_dir, output_audio_dir, far_end_delay_changes, max_seconds=False, volume_changes=None):
 
@@ -17,14 +17,14 @@ def prepare_input_file(input_audio_files, input_audio_dir, model_dir, output_aud
     do_simulation(input_audio_dir, input_audio_files, model_dir, output_audio_dir, volume_changes=volume_changes)
 
   input_audio_file = 'simulated_room_output.wav'
-  input_audio = os.path.join(output_audio_dir, input_audio_file)
+  input_audio = Path(output_audio_dir) / input_audio_file
 
   output_audio_file = 'stage_a_input_48k.wav'
-  output_audio = os.path.join(output_audio_dir, output_audio_file)
+  output_audio = Path(output_audio_dir) / output_audio_file
   copyfile(input_audio, output_audio)
 
   ground_truth = apply_delay_changes(output_audio, output_audio, far_end_delay_changes)
-  aec_input_file = os.path.join(output_audio_dir, "stage_a_input_16k.wav")
+  aec_input_file = Path(output_audio_dir) / "stage_a_input_16k.wav"
 
 
   #Resample to 16kHz as required by python VTB models
@@ -39,7 +39,7 @@ def prepare_input_file(input_audio_files, input_audio_dir, model_dir, output_aud
   ground_truth_by_vtb_frame = ground_truth_by_vtb_frame / voice_sample_rate
 
   #Write ground truth
-  ground_truth_by_vtb_frame.tofile(os.path.join(output_audio_dir, "ground_truth.txt"), sep="\n")
+  ground_truth_by_vtb_frame.tofile(Path(output_audio_dir) / "ground_truth.txt", sep="\n")
 
 
 

@@ -16,24 +16,23 @@ file(GLOB APP_C_SRCS
     RELATIVE ${CMAKE_CURRENT_LIST_DIR}
     CONFIGURE_DEPENDS
     ${XMOS_SANDBOX_DIR}/lib_voice/tests/shared/file_utils/src/*.c
-    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_adec/test_wav_adec/src/*.c)
+    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_adec/test_bin_adec/src/*.c)
 
 file(GLOB APP_XC_SRCS
     RELATIVE ${CMAKE_CURRENT_LIST_DIR}
     CONFIGURE_DEPENDS
-    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_adec/test_wav_adec/src/*.xc)
+    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_adec/test_bin_adec/src/*.xc)
 
 
 set(APP_INCLUDES
-    ${CMAKE_CURRENT_LIST_DIR}/../test_wav_adec/src
+    ${CMAKE_CURRENT_LIST_DIR}/../test_bin_adec/src
     ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src)
 
 
 set(AEC_SCHEDULE_CONFIG ${TEST_ADEC_STARTUP_BUILD_CONFIG})
+include(${CMAKE_CURRENT_LIST_DIR}/../../test_deps.cmake)
 
 if (NOT BUILD_NATIVE)
-    set(APP_DEPENDENT_MODULES "lib_voice"
-                                "xscope_fileio")
     set(APP_COMPILER_FLAGS
             -report
             -Os
@@ -43,8 +42,6 @@ if (NOT BUILD_NATIVE)
 
     set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
 else()
-    set(APP_DEPENDENT_MODULES "lib_voice")
-
     set(APP_COMPILER_FLAGS
             -DX86_BUILD=1)
 endif()

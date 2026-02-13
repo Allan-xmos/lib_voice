@@ -30,7 +30,7 @@ def import_calibrate_impulse(file):
 
 #input audio numpy array, volume changes in sample inicies and decibels
 def apply_volume_changes(input_audio, volume_changes):
-    
+
     last_volume_change = volume_changes[0]
     list_to_iterate = volume_changes[1:]
     list_to_iterate.append([input_audio.shape[0] - 1,0])
@@ -128,15 +128,15 @@ def do_simulation(input_audio_dir, input_audio_files, model_dir, output_audio_di
         mic_output[:, 0] += spsig.fftconvolve(ic, mic0[audio_input_channel_idx, :], 'same')
         mic_output[:, 1] += spsig.fftconvolve(ic, mic1[audio_input_channel_idx, :], 'same')
 
-    
-    #Account for offset generated during convolution 
+
+    #Account for offset generated during convolution
     half_impulse_len_zeros = np.zeros((int(impulse_file_frames/2), 2))
     mic_output = np.concatenate((half_impulse_len_zeros, mic_output[: -int(impulse_file_frames/2), :]))
 
     # input_rms = np.sqrt(np.mean(audio**2.0))
     # output_rms = np.sqrt(np.mean(output**2.0))
     # outgain = input_rms/output_rms
-        
+
     #Add in far end as channels 3 & 4
     print("Adding far end reference channels to simulated mics")
     far_end_transposed = np.stack(input_channels[0:2])
@@ -144,7 +144,7 @@ def do_simulation(input_audio_dir, input_audio_files, model_dir, output_audio_di
 
     if not os.path.exists(output_audio_dir):
         os.makedirs(output_audio_dir)
-    
+
     sf.write(os.path.join(output_audio_dir, "simulated_room_output.wav"), output, fs)
 
 

@@ -16,20 +16,20 @@ file(GLOB APP_C_SRCS
     RELATIVE ${CMAKE_CURRENT_LIST_DIR}
     CONFIGURE_DEPENDS
     ${XMOS_SANDBOX_DIR}/lib_voice/tests/shared/file_utils/src/*.c
-    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_ic/test_wav_ic/src/*.c)
+    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_ic/test_bin_ic/src/*.c)
 
 file(GLOB APP_XC_SRCS
     RELATIVE ${CMAKE_CURRENT_LIST_DIR}
     CONFIGURE_DEPENDS
-    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_ic/test_wav_ic/src/*.xc)
+    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_ic/test_bin_ic/src/*.xc)
 
 set(APP_INCLUDES
-    ${CMAKE_CURRENT_LIST_DIR}/../test_wav_ic/src
+    ${CMAKE_CURRENT_LIST_DIR}/../test_bin_ic/src
     ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src)
 
+include(${CMAKE_CURRENT_LIST_DIR}/../../test_deps.cmake)
+
 if (NOT BUILD_NATIVE)
-    set(APP_DEPENDENT_MODULES "lib_voice"
-                                "xscope_fileio")
     set(APP_COMPILER_FLAGS
             -Os
             -report
@@ -38,8 +38,6 @@ if (NOT BUILD_NATIVE)
 
     set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
 else()
-    set(APP_DEPENDENT_MODULES "lib_voice")
-
     set(APP_COMPILER_FLAGS
             -DX86_BUILD=1
             -DDISABLE_ADAPTION_CONTROLLER=1)

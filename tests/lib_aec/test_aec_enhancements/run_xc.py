@@ -1,13 +1,12 @@
 # Copyright 2021-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import numpy as np
-import os
 import tempfile
 import shutil
-import scipy.io.wavfile
 import configparser
 from pathlib import Path
-from run_dut import run_with_xscope_fileio
+from test_wav import test_wav
+import soundfile as sf
 
 parser = configparser.ConfigParser()
 parser.read("parameters.cfg")
@@ -32,7 +31,7 @@ def run_aec_xc(y_data, x_data, testname, adapt=-1, h_hat_dump=None, adapt_mode=a
         y_data = np.atleast_2d(y_data).T
     if(x_data.ndim == 1):
         x_data = np.atleast_2d(x_data).T
-    
+
     y_chans = y_data.shape[-1]
     x_chans = x_data.shape[-1]
 
@@ -47,24 +46,22 @@ def run_aec_xc(y_data, x_data, testname, adapt=-1, h_hat_dump=None, adapt_mode=a
         extra_x = np.tile(x_data[:,[-1]], extra_x_chans)
         x_data = np.hstack((x_data, extra_x))
     input_data = np.hstack((y_data, x_data))
-    scipy.io.wavfile.write(input_file, 16000, input_data)
- 
+    sf.write(input_file, input_data, 16000, format="WAV", subtype="PCM_32")
+
     with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
+        tmp_path = Path(tmp_folder)
         #write runtime arguments into args.bin
-        with open(os.path.join(tmp_folder, runtime_args_file), "wb") as fargs:
+        with open(tmp_path / runtime_args_file, "wb") as fargs:
             fargs.write(f"y_channels {num_y_channels}\n".encode('utf-8'))
             fargs.write(f"x_channels {num_x_channels}\n".encode('utf-8'))
             fargs.write(f"stop_adapting {adapt}\n".encode('utf-8'))
             fargs.write(f"adaption_mode {adapt_mode}\n".encode('utf-8'))
-        
-        shutil.copy2(input_file, os.path.join(tmp_folder, "input.wav"))
 
-        run_with_xscope_fileio(aec_xe, tmp_folder)
+        test_wav(aec_xe, input_file, output_file, 240, AEC_MAX_Y_CHANNELS, 240, tmp_folder=tmp_folder)
 
-        shutil.copy2(os.path.join(tmp_folder, "output.wav"), output_file)
         if h_hat_dump is not None:
-            shutil.copy2(os.path.join(tmp_folder, dut_H_hat_file), h_hat_dump)
-        
+            shutil.copy2(tmp_path / dut_H_hat_file, h_hat_dump)
+
     return input_file, output_file
 
 

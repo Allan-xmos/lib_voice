@@ -8,12 +8,12 @@
 # - Scipy 1.2.1
 # - SoundFile 0.10.2
 
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 import soundfile as sf
 from shutil import copyfile
 import pandas
+from pathlib import Path
 
 
 frame_advance = 240
@@ -77,10 +77,10 @@ def apply_delay_changes(audio_file_name_input, audio_file_name_output, far_end_d
       if print_stats:
         print("next_change_base: ", next_change_base)
 
-      #Handle the case where we want near end signal before t0 - just pad with zeros 
+      #Handle the case where we want near end signal before t0 - just pad with zeros
       if near_copy_from_base < 0:
         new_near[this_change_base:-near_copy_from_base, :] = np.zeros((-near_copy_from_base, 2))
-        new_near[-near_copy_from_base:next_change_base, :] = near[0:next_change_base + this_change_amount, :]    
+        new_near[-near_copy_from_base:next_change_base, :] = near[0:next_change_base + this_change_amount, :]
       else:
         new_near[this_change_base:next_change_base, :] = near[near_copy_from_base:next_change_base + this_change_amount, :]
       ground_truth[this_change_base:next_change_base] = this_change_amount
@@ -119,7 +119,7 @@ class ema_filter():
     self.last_val = initial_val
 
   def get(self):
-    return self.last_val 
+    return self.last_val
 
   def do(self, new_val):
     new_val = self.neg_clip if new_val < self.neg_clip else new_val
@@ -171,7 +171,7 @@ def extract_audio_and_gt_section(input_audio_file, output_file, frames_base, fra
   extract = data[frames_base:frames_base + frames_length, :]
   sf.write(output_file, extract, fs, subtype='PCM_32')
 
-  #Ground truth 
+  #Ground truth
   gt = np.array(ground_truth)
   ground_truth = gt[frames_base:frames_base + frames_length]
   return ground_truth
@@ -192,7 +192,7 @@ def get_erle(mic_in_array, aec_out_array, aec_ref_array):
   mic_in_power_sum = mic_in_power_ewm.sum()
   aec_out_power_sum = aec_out_power_ewm.sum()
   aec_ref_power_sum = aec_ref_power_ewm.sum()
-  
+
   erle = 10 * np.log10(mic_in_power_sum/(aec_out_power_sum + np.finfo(float).eps))
   return erle, mic_in_power_sum, aec_out_power_sum, aec_ref_power_sum
 
@@ -236,13 +236,13 @@ if __name__ == '__main__':
     input_audio_file = 'simulated_room_output.wav'
     output_audio_dir = '.'
     output_audio_file = 'stage_a_input_48k.wav'
-    input_audio = os.path.join(input_audio_dir, input_audio_file)
-    output_audio = os.path.join(output_audio_dir, output_audio_file)
+    input_audio = Path(input_audio_dir) / input_audio_file
+    output_audio = Path(output_audio_dir) / output_audio_file
     copyfile(input_audio, output_audio)
     #far_end_delay_changes = [(48000*20, 48000 * -0.1), (48000*30, 48000 * 0.0), (48000*40, 48000 * 0.1), (48000*50, 48000 * 0.0)]
     #far_end_delay_changes = [(48000*0, 48000 * -0.25), (48000*10, 48000 * -0.00), (48000*20, 48000 * 0.20), (48000*30, 48000 * -0.1), (48000*40, 48000 * 0.0), (48000*5, 48000 * 0.10)]
     far_end_delay_changes = [(48000*0, 48000 * -0.25), (48000*10, 48000 * -0.00), (48000*20, 48000 * 0.20), (48000*30, 48000 * -0.1), (48000*40, 48000 * 0.0), (48000*50, 48000 * 0.10)]
-    
+
     gt = apply_delay_changes(output_audio, output_audio, far_end_delay_changes)
 
     plt.plot(gt)

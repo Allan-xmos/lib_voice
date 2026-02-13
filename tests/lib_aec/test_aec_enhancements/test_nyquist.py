@@ -1,7 +1,7 @@
 # Copyright 2021-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 '''
-The purpose of this test is to test the Nyquist bin is present. 
+The purpose of this test is to test the Nyquist bin is present.
 White noise is used as it gives a constant convergence rate.
 The maximum attenuation is tested, as this should be higher with the Nyquist bin present.
 '''
@@ -9,7 +9,7 @@ The maximum attenuation is tested, as this should be higher with the Nyquist bin
 import os
 import numpy as np
 import scipy.signal as spsig
-import scipy.io.wavfile
+import soundfile as sf
 from pathlib import Path
 
 import wav_test_functions as wtf
@@ -26,13 +26,13 @@ def calc_max_attenuation(output):
 def test_nyquist():
     ''' test_nyquist - run mono white noise convolved with a modelled impulse response
     If the Nyquist is present in the AEC, the maximum attenuation should be greater than 60dB for python and 80dB for XC
-        
+
     pass/fail: check there is at least 60dB attenuation for python and 80db for XC'''
     testname = (Path(__file__).stem)[5:]
 
     fs = 16000
     N = fs * 10
-    np.random.seed(500)    
+    np.random.seed(500)
 
     y_channel_count = 1
     x_channel_count = 1
@@ -59,7 +59,7 @@ def test_nyquist():
 
     d = d * 0.01 #20dB attenuation
     u = u * 0.2
-    
+
     # ideal results
     f_ideal = h[:fN]
     y_ideal = spsig.convolve(f_ideal, u, 'full')[hN-1:N]
@@ -71,8 +71,8 @@ def test_nyquist():
 
     print("Run AEC XC")
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_FORCE_ON'], num_y_channels=y_channel_count, num_x_channels=x_channel_count)
-    rate, output_wav_file = scipy.io.wavfile.read(dut_output_file, 'r')
-    error_xc = output_wav_file[:,0]    
+    output_wav_file, _ = sf.read(dut_output_file)
+    error_xc = output_wav_file[:,0]
     _, leq_error_xc = wtf.leq_smooth(error_xc, fs, 0.05)
     max_atten_xc = wtf.calc_max_attenuation(leq_error_xc)
     print('max_atten xc =',max_atten_xc)

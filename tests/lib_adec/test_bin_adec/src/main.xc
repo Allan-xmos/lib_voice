@@ -22,13 +22,13 @@ int main(){
     par {
 #if TEST_WAV_XSCOPE
         xscope_host_data(xscope_chan);
-#endif         
-        on tile[1]: 
+#endif
+        on tile[1]:
         {
 #if TEST_WAV_XSCOPE
         xscope_io_init(xscope_chan);
-#endif 
-          pipeline_wrapper("input.wav", "output.wav");
+#endif
+          pipeline_wrapper("input.bin", "output.bin");
           _Exit(0);
         }
     }

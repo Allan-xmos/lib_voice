@@ -3,7 +3,7 @@
 lib_name: lib_voice
 project: '{{lib_name}}'
 title: '{{lib_name}}: Voice processing library'
-version: 0.9.0
+version: 1.0.0
 
 documentation:
   root_doc: doc/rst/lib_voice.rst

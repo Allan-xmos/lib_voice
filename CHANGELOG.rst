@@ -1,13 +1,19 @@
 lib_voice change log
 ====================
 
-UNRELEASED
-----------
+1.0.0
+-----
 
   * ADDED: Top-level header file - `voice.h`
-  * CHANGED: Examples renamed to the form of: `app_<example_name>` 
-  * CHANGED: Examples changed to use `xcommon_cmake`
+  * ADDED: Documentation updates
+  * ADDED: Automated memory and MIPS profiling
+  * CHANGED: Examples renamed to the form of: `app_<example_name>`
+  * CHANGED: All examples and tests changed to build with `xcommon_cmake`
   * CHANGED: Improved AEC deconvergence during near end speech
+
+  * Changes to dependencies:
+
+    - lib_xcore_math: Added dependency 2.4.1
 
 0.9.0
 -----

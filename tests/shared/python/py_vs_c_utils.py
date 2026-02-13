@@ -12,7 +12,7 @@ def float_s32_to_float(float_s32):
 
 # turn an int32 np array (Q1.31) into float
 def int32_to_float(array_int32):
-    return (array_int32.astype(np.float32) / (2**31 - 1)).clip(-1.0, 1.0)
+    return (array_int32.astype(np.float32) / (2**31)).clip(-1.0, 1.0)
 
 # turn an uint8 np array (Q0.8) into float
 def uint8_to_float(array_uint8):

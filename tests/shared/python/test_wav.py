@@ -33,7 +33,7 @@ def test_wav(
     input_wav_path : str or Path
         Path to the input WAV file.
         WAV format can be either Signed 32 bit PCM [PCM_32] or 32 bit float [FLOAT]
-        The data should be in [1.0, 1.0) range if float or signed Q31 if int32 format
+        The data should be in [-1.0, 1.0) range if float or signed Q31 if int32 format
     output_wav_path : str or Path
         Path where the processed WAV file will be written. Output wav format is  32 bit float
     input_frame_len : int

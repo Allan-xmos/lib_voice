@@ -34,7 +34,6 @@ def run_aec_xc(audio_in, audio_ref, audio_out, adapt=-1, h_hat_dump=None):
     x_data, rate = sf.read(audio_ref, dtype="int32", always_2d=True)
     data = np.hstack((y_data, x_data)) #mic+ref
     frame_advance = 240
-    sf.write(dut_in_wav, data, rate) # TODO remove this?
 
     with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
         tmp_path = Path(tmp_folder)

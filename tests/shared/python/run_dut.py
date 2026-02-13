@@ -111,14 +111,10 @@ def run_dut(input_data, xe, target="xs3a", tmp_folder=None, **run_kwargs):
         Captured stdout lines from DUT execution.
     """
     xe_path = get_binary_path(xe, target)
-    target_stdout = []
-    output_data = np.empty(0, dtype=np.int32)
-
     if tmp_folder is not None:
         print(f"running DUT from pre-created tmp directory {tmp_folder}")
         tmp_path = Path(tmp_folder)
         tmp_path.mkdir(parents=True, exist_ok=True)
-
         output_data, target_stdout = _run_dut_inner(input_data, xe_path, tmp_path, **run_kwargs)
         return output_data, target_stdout
 
@@ -128,27 +124,3 @@ def run_dut(input_data, xe, target="xs3a", tmp_folder=None, **run_kwargs):
 
     return output_data, target_stdout
 
-'''
-def run_dut(input_data, xe, target="xs3a", tmp_folder=None):
-    target_stdout = []
-    output_data = np.empty(0, dtype=np.int32)
-    xe_path = get_binary_path(xe, target)
-
-    with tempfile.TemporaryDirectory(dir=".", suffix=xe_path.stem) as tmp_folder:
-        tmp_folder = Path(tmp_folder)
-
-        input_file = tmp_folder / "input.bin"
-        input_data.astype(np.int32).tofile(input_file)
-
-        if xe_path.suffix == ".xe":  # xcore run
-            target_stdout = run_with_xscope_fileio(xe_path, tmp_folder)
-
-        else:  # native run
-            res = subprocess.run([str(xe_path), "input.bin", "output.bin"], cwd=tmp_folder, stdout=subprocess.PIPE, text=True)
-            target_stdout = res.stdout.splitlines()
-
-        output_file = tmp_folder / "output.bin"
-        output_data = np.fromfile(output_file, dtype=np.int32)
-
-    return output_data, target_stdout
-'''

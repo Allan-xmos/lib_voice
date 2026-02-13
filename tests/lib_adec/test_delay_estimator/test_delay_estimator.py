@@ -173,9 +173,6 @@ def process_audio(input_data, test_name):
         with open(tmp_path / delay_calc_output_file_name, 'r') as f:
             output = np.array([int(l) for l in f.readlines()], dtype=float)
 
-        with open(tmp_path / delay_calc_output_file_name, 'r') as f:
-            output = np.array([int(l) for l in f.readlines()], dtype=float)
-
     write_output(test_name, output, 'xc')
 
     return output.T
@@ -197,7 +194,6 @@ def test_input(request):
     # Write the input audio to file
     input_32bit = awu.convert_to_32_bit(combined_data)
     write_input(test_name, input_32bit)
-    print(test_case, combined_data)
     return (test_case, combined_data)
 
 

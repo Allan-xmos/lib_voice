@@ -1,6 +1,6 @@
 // This file relates to internal XMOS infrastructure and should be ignored by external users
 
-@Library('xmos_jenkins_shared_library@v0.45.0') _
+@Library('xmos_jenkins_shared_library@v0.46.0') _
 
 def runningOn(machine) {
   println "Stage running on:"
@@ -8,7 +8,7 @@ def runningOn(machine) {
 }
 
 getApproval()
-
+  
 pipeline {
   agent none
 

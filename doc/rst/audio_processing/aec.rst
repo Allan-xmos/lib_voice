@@ -285,7 +285,7 @@ The key AEC parameters are highlighted below:
   based on the coherence and ERLE thresholds above. When set to ``AEC_ADAPTION_FORCE_ON``, the AEC
   will adapt on every frame regardless of the coherence or ERLE. When set to
   ``AEC_ADAPTION_FORCE_OFF``, the AEC will not adapt on any frames.
-* :c:macro:`REF_ACTIVE_THRESHOLD_dB` - This macro set the threshold for determining whether the
+* :c:macro:`REF_ACTIVE_THRESHOLD_DB` - This macro set the threshold for determining whether the
   reference signal is active, in decibels relative to full scale. When the maximum value of the 
   reference signal in a frame is below this threshold, the AEC will consider it inactive and will
   pause adaption. If the reference signal is expected to be far below full scale for a reasonable

@@ -30,9 +30,9 @@ typedef struct {
     /** Bypass ADEC decision making process. When set to 1, ADEC evaluates the current input frame metrics but doesn't
      * make any delay correction or aec reset and reconfiguration requests*/
     int32_t bypass;
-    /** Force trigger a delay estimation cycle. When set to 1, ADEC bypasses the ADEC monitoring process and transitions to delay
-     * estimation mode for measuring delay offset.
-    */
+    /** Force trigger a delay estimation cycle. When set to 1, ADEC bypasses the ADEC monitoring
+     * process and transitions to delay estimation mode for measuring delay offset. Initialising
+     * ADEC with this flag set to 1 can be used to get an initial delay estimate at boot. */
     int32_t force_de_cycle_trigger;
 }adec_config_t;
 

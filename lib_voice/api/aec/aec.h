@@ -11,6 +11,13 @@
 #include "aec_schedule.h"
 #include "aec_memory_pool.h"
 
+/** Reference input level above which it is considered active
+ *
+ * @ingroup aec_types
+ */
+#define REF_ACTIVE_THRESHOLD_DB (-60)
+
+
 /**
  * @defgroup aec_func     AEC API Functions
  */

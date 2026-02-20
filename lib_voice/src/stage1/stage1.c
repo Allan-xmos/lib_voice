@@ -36,7 +36,7 @@ void stage1_init(stage1_t *state, aec_conf_t *de_conf, aec_conf_t *non_de_conf, 
     state->delay_estimator_enabled = 0;
     state->ref_active_threshold =  f64_to_float_s32(pow(10, REF_ACTIVE_THRESHOLD_DB/20.0)); //-60dB
     state->hold_aec_count = 0; //No. of consecutive frames reference has been absent for
-    state->hold_aec_limit = (16000*HOLD_AEC_LIMIT_SECONDS)/AEC_FRAME_ADVANCE; //bypass AEC only when reference has been absent for atleast 3 seconds (200 frames)
+    state->hold_aec_limit = (16000*HOLD_AEC_LIMIT_SECONDS)/AEC_FRAME_ADVANCE; //bypass AEC only when reference has been absent for at least 3 seconds (200 frames)
 
     delay_buffer_init(&state->delay_state, 0/*Initialise with 0 delay_samples*/);
     memcpy(&state->aec_de_mode_conf, de_conf, sizeof(aec_conf_t));

@@ -1,4 +1,4 @@
-.. _`ic_module`:
+.. _ic_module:
 
 Interference Canceller
 ======================
@@ -38,7 +38,7 @@ maintains suppression of the interfering noise sources which have been previousl
 The IC operates at a fixed 16 kHz sample rate and produces a single output
 channel.
 
-Signal representation
+Signal Representation
 ---------------------
 
 Processing is performed on a frame-by-frame basis. Each frame consists of 15 ms
@@ -47,7 +47,7 @@ Input data is expected in fixed-point 32-bit, 1.31 format. The output
 is the interference-cancelled primary microphone signal, in the same 32-bit, 1.31
 format.
 
-Adaptive filter
+Adaptive Filter
 ---------------
 
 The IC uses an adaptive filter which continually adapts to the acoustic environment to
@@ -57,7 +57,7 @@ function in the presence of voice meaning it does not adapt to desired audio sou
 which can be a person speaking.
 The IC filter has 10 phases, which effectively determines the tail length of the filter.
 
-Processing flow
+Processing Flow
 ---------------
 
 For each frame, the IC performs the following steps:
@@ -90,7 +90,7 @@ The key IC parameters are highlighted below:
   threshold will cause the IC to adapt less often, which may reduce the amount of noise suppression
   but will allow more speech to pass through. This may be desirable in environments with higher
   levels of diffuse noise, which cannot be cancelled by the IC.
-* :c:member:`ic_adaption_controller_config_t.input_vnr_threshold_high` - If the microphone VNR estimate for the current frame is
+* :c:member:`ic_adaption_controller_config_t.input_vnr_threshold_high` - If the input VNR estimate for the current frame is
   above this threshold, this indicates that the noise in the room is low, and the IC is not needed.
   The IC will suspend adaptation of its filter coefficients and will also leak the filter
   coefficients to reduce the amount of noise suppression applied to the output.
@@ -99,7 +99,7 @@ The key IC parameters are highlighted below:
   but will allow more speech to pass through.
 * :c:macro:`IC_Y_CHANNEL_DELAY_SAMPS` - The ideal filter for the interference canceller is the
   deconvolution of the impulse responses between the noise source and each of the two microphones.
-  This filter is non-causal, and the delay between the channels allow the IC to adapt to the ideal
+  This filter is non-causal, and the delay between the channels allows the IC to adapt to the ideal
   filter. However, this adds latency, which can be reduced by reducing `IC_Y_CHANNEL_DELAY_SAMPS`, 
   at the cost of reduced IC performance.
 

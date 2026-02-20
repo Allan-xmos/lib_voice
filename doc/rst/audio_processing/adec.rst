@@ -29,8 +29,8 @@ should delay the microphone channel.
     reference signals to be estimated and corrected.
 
 
-AEC delays
-----------
+AEC Delays and Alignment
+-------------------------
 
 The time window modelled by the Acoustic Echo Canceller (AEC) is finite due to the filter tail length.
 To maximise its performance it is important to ensure that the reference audio is presented to the
@@ -183,6 +183,13 @@ offsets.
 
 Usage
 -----
+
+For most applications where a fixed delay cannot be used, it is recommended to enable ADEC on boot
+so the AEC starts with correct delay alignment and converges quickly. However, enabling automatic
+mode should be reserved for systems where delay changes cannot be predicted, as ADEC relies on
+monitoring AEC performance and may take time to react to changes. When possible, trigger delay
+estimation manually (via ``force_de_cycle_trigger``) when delay changes are expected, such as when
+users change audio output settings.
 
 Before processing any frames, the application must configure and initialise the ADEC instance by
 calling :c:func:`adec_init()`. This function takes a pointer to the :c:type:`adec_state_t`

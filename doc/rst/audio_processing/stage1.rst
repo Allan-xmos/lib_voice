@@ -7,6 +7,39 @@ Stage1 is typically the first stage in an audio pipeline. It orchestrates
 delay alignment, Acoustic Echo Cancellation (AEC), and Adaptive Delay
 Estimation/Canceller (ADEC), and propagates per-frame metadata downstream.
 
+Overview
+--------
+
+The Stage1 component in ``lib_voice`` integrates the :ref:`aec_module`, :ref:`adec_module`,
+and delay buffering to provide echo-cancelled audio with automatic delay correction.
+Stage1 operates at a fixed 16 kHz sample rate.
+
+Stage1 manages the transition between normal AEC operation and delay estimation mode,
+applies delay corrections to maintain optimal AEC performance, and generates metadata
+(reference energy, correlation factors, and activity flags) for downstream processing stages.
+
+Two pipeline architectures are supported:
+
+- **Standard Architecture**: Processes multiple microphone channels through both AEC and IC sequentially
+- **Alternating Architecture**: Selectively enables AEC or IC based on reference signal presence,
+  reducing memory requirements and enabling longer AEC filter tails
+
+Signal Representation
+---------------------
+
+Stage1 processes audio on a frame-by-frame basis. Each frame consists of 15 ms of audio
+(240 samples at 16 kHz), with input and output data in fixed-point 32-bit 1.31 format.
+
+Inputs:
+
+- Microphone (Y) channels: Up to 2 channels of microphone input
+- Reference (X) channels: Up to 2 channels of reference (loudspeaker) input
+
+Outputs:
+
+- Echo-cancelled audio: Same number of channels as microphone input
+- Metadata: Maximum reference energy, AEC correlation factors, reference activity flag
+
 Standard Architecture
 ---------------------
 

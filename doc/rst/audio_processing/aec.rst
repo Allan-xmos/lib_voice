@@ -277,7 +277,7 @@ The key AEC parameters are highlighted below:
   Decreasing this value can allow for faster convergence in noisy environments, at the cost of
   increased deconvergence during near end noise or speech.
 * :c:member:`coherence_mu_config_params_t.coh_thresh_slow` - Sets the relative coherence threshold
-  for the current frame against the slow moving average. Reducing with value will allow frames with
+  for the current frame against the slow moving average. Reducing this value will allow frames with
   lower coherence than the average to adapt, which can improve convergence in noisy environments,
   at the cost of increased deconvergence during near end noise or speech.
 * :c:member:`coherence_mu_config_params_t.adaption_config` - Configures the adaption behaviour of
@@ -285,7 +285,7 @@ The key AEC parameters are highlighted below:
   based on the coherence and ERLE thresholds above. When set to ``AEC_ADAPTION_FORCE_ON``, the AEC
   will adapt on every frame regardless of the coherence or ERLE. When set to
   ``AEC_ADAPTION_FORCE_OFF``, the AEC will not adapt on any frames.
-* :c:macro:`REF_ACTIVE_THRESHOLD_DB` - This macro set the threshold for determining whether the
+* :c:macro:`REF_ACTIVE_THRESHOLD_DB` - This macro sets the threshold for determining whether the
   reference signal is active, in decibels relative to full scale. When the maximum value of the 
   reference signal in a frame is below this threshold, the AEC will consider it inactive and will
   pause adaption. If the reference signal is expected to be far below full scale for a reasonable

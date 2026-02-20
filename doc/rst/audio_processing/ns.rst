@@ -1,3 +1,5 @@
+.. _ns_module:
+
 Noise Suppressor
 =================
 
@@ -28,13 +30,27 @@ The NS component in ``lib_voice`` works on a single input channel.
 If multiple channels need to be processed by the application, or multiple outputs
 are required, an independent instance of the NS must be run for each channel.
 
-Signal representation
+Signal Representation
 ---------------------
 
 Noise suppression is performed on a frame-by-frame basis.
-Each frame consists of 15 ms of audio (240 samples at 16 kHz input sampling rate),
+Each frame consists of 15 ms of audio (240 samples at 16 kHz input sampling rate),
 with input data expected in fixed-point 32-bit 1.31 format.
 The output is the noise-suppressed signal in the same format.
+
+Processing Flow
+---------------
+
+For each frame, the NS performs the following steps:
+
+1. Form the input frame from new samples and previous samples.
+2. Apply an analysis window and transform the signal into the frequency domain
+   using a 512-point FFT.
+3. Compute the magnitude spectrum.
+4. Estimate the noise spectrum and apply spectral subtraction to attenuate noise.
+5. Rescale the frequency-domain signal and transform back to the time domain
+   using an inverse FFT.
+6. Apply a synthesis window and form the output using overlap-add.
 
 Usage
 -----

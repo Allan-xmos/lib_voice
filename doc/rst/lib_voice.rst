@@ -25,7 +25,7 @@ All source code is provided, enabling full customization and the integration of 
 .. rubric:: Usage
 
 ``lib_voice`` is intended to be used with the `XCommon CMake <https://www.xmos.com/file/xcommon-cmake-documentation/?version=latest>`_
-, the `XMOS` application build and dependency management system.
+, the XMOS application build and dependency management system.
 
 To use this library in an application include ``lib_voice`` in the application's ``APP_DEPENDENT_MODULES`` list in
 `CMakeLists.txt`, for example:

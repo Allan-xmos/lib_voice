@@ -67,9 +67,7 @@ of the impulse response.
     In this AEC filter, the microphone signal arrives before the reference signal, and the start of
     the impulse response is lost.
 
-Since the time window modelled by the AEC is finite, to maximise its performance it is important to
-ensure that the reference audio is presented to the AEC time aligned to the audio being reproduced
-by the loudspeakers. The reference audio path delay and the audio reproduction path delay may be
+The reference audio path delay and the audio reproduction path delay may be
 significantly different, requiring additional delay to be inserted into one of the two paths, to
 correct this delay difference. This can be achieved by either using a fixed delay or ADEC,
 depending on the system design.
@@ -185,7 +183,7 @@ Usage
 -----
 
 For most applications where a fixed delay cannot be used, it is recommended to enable ADEC on boot
-so the AEC starts with correct delay alignment and converges quickly. However, enabling automatic
+so the AEC starts with correct delay alignment and converges quickly. Enabling automatic
 mode should be reserved for systems where delay changes cannot be predicted, as ADEC relies on
 monitoring AEC performance and may take time to react to changes. When possible, trigger delay
 estimation manually (via ``force_de_cycle_trigger``) when delay changes are expected, such as when
@@ -255,11 +253,11 @@ Parameters
 
 ADEC has two user configurable parameters, both part of the :c:type:`adec_config_t` structure:
 
-* ``bypass`` - When set to 1, ADEC evaluates the current input frame metrics but does not make any
+* :c:member:`adec_config_t.bypass` - When set to 1, ADEC evaluates the current input frame metrics but does not make any
   delay correction or AEC reset and reconfiguration requests. This is useful for testing or when
   delay correction needs to be temporarily disabled. Default: 0.
 
-* ``force_de_cycle_trigger`` - When set to 1, ADEC bypasses the normal monitoring process and
+* :c:member:`adec_config_t.force_de_cycle_trigger` - When set to 1, ADEC bypasses the normal monitoring process and
   immediately transitions to delay estimation mode for measuring the delay offset. This is useful
   for triggering delay estimation at startup or when the system configuration is known to have
   changed. When using ADEC through the :ref:`stage1_module` (recommended), this flag is

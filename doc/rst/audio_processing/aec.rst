@@ -252,7 +252,7 @@ The key AEC parameters are highlighted below:
 
 * :c:func:`aec_init` ``num_main_filter_phases`` - Number of phases for the main filter, typically
   10-20. This determines the effective tail length of the main filter, with 15ms (240) samples per
-  phase. More phases allow for better echo cancellation in more reverberant environments, at the
+  phase with the default :c:macro:`AEC_FRAME_ADVANCE`. More phases allow for better echo cancellation in more reverberant environments, at the
   cost of increased computation and slower adaptation.
 * :c:func:`aec_init` ``num_shadow_filter_phases`` - Number of phases for the shadow filter,
   typically 5. This determines the effective tail length of the shadow filter, with 15ms (240)

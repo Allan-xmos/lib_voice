@@ -337,15 +337,28 @@ pipeline {
               }
             } // Get View
 
+            stage('Reset XTAGs'){
+              steps{
+                dir("${REPO}/tests") {
+                  sh 'rm -f ~/.xtag/acquired' // Hacky but ensure it always works even when previous failed run left lock file present
+                  withTools(params.TOOLS_VX4_VERSION) {
+                    withVenv{
+                      sh "xtagctl reset_all XK-EVK-XU416"
+                    }
+                  }
+                }
+              }
+            }
+
             stage('tests') {
               steps {
                 catchError(stageResult: 'FAILURE', catchInterruptions: false){
                   dir("${REPO}/tests/lib_aec") {
-                    withTools(params.TOOLS_VERSION) {
+                    withTools(params.TOOLS_VX4_VERSION) {
                       withVenv {
                         dir("aec_unit_tests") {
-                          // sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          // junit "pytest_result.xml"
+                          sh "pytest --arch vx4b --junitxml=pytest_result.xml"
+                          junit "pytest_result.xml"
                         }
                       }
                     }

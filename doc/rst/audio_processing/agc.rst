@@ -29,36 +29,38 @@ echo.
 An optional soft clipping stage is applied at the end of the AGC to
 avoid hard clipping of the output signal during sudden loud sounds.
 
-AGC Application
----------------
+.. _agc_basics:
 
-The AGC takes as input a frame of data from an audio channel. This could be the
-microphone input or the output of another module in the application.
+.. figure:: ../images/agc.drawio.svg
+    :align: center
 
-Gain control is performed on a frame-by-frame basis. Each frame consists of 15ms
-of data, which is 240 samples at 16kHz input sampling frequency. Input data is
-expected to be in a fixed-point 32-bit 1.31 format.
+    The AGC topology.
 
-Before processing any frames, the application must configure and initialise the
-AGC instance by calling :c:func:`agc_init()`. Several parameter sets are provided in
-`agc_profiles.h` which can be used to configure the AGC for different
-applications. Details on the profiles and key parameters are provided in :ref:`agc_profiles`.
 
-After initialisation, :c:func:`agc_process_frame()` should be called for each frame.
-This will update the AGC instance's internal state and produce
-the output frame by applying the AGC algorithm to the input frame.
-Refer to the :ref:`pipeline_example` to see how to use APIs above.
+Overview
+--------
 
-The gain values in this module for AGC gain and Loss Control gain are
-multiplicative factors that are applied to scale the input frame. Therefore, a
-fixed gain value of 1.0 (without loss control) will create no change to the input.
+The AGC component in ``lib_voice`` works on a single input channel, dynamically adapting
+the audio gain to maintain voice content at a desired output level while avoiding amplification
+of noise sources. The AGC operates at a fixed 16 kHz sample rate.
+
+The AGC uses the :ref:`vnr_module` to detect voice activity and normalise voice content, ensuring
+that gain adaption only occurs during speech and not on noise. An optional Loss Control feature
+can be enabled to attenuate residual far-end echo using metadata from the :ref:`aec_module`.
+A soft limiter can also be applied to prevent clipping on the output.
 
 If multiple channels need to be processed by the application, or multiple outputs
 are required, an independent instance of the AGC must be run for each channel.
 
+Signal Representation
+---------------------
 
-AGC Logic
----------
+Gain control is performed on a frame-by-frame basis. Each frame consists of 15 ms
+of audio (240 samples at 16 kHz input sampling frequency), with input data expected
+in fixed-point 32-bit 1.31 format. The output is the gain-adjusted signal in the same format.
+
+Processing Flow
+---------------
 
 The internal logic of the AGC algorithm is represented in the flow chart
 shown in :numref:`agc_logic`. This diagram illustrates the main decision points and processing
@@ -87,8 +89,31 @@ loss control feature is enabled in the AGC configuration.
 
     Loss Control Logic Flow Chart
 
-AGC Parameters
---------------
+
+A startup delay can be configured to mute output for a specified number of frames after
+initialisation.
+
+Usage
+-----
+
+Before processing any frames, the application must configure and initialise the
+AGC instance by calling :c:func:`agc_init()`. Several parameter sets are provided in
+``agc_profiles.h`` which can be used to configure the AGC for different
+applications. Details on the profiles and key parameters are provided in :ref:`agc_profiles`.
+
+After initialisation, :c:func:`agc_process_frame()` should be called for each frame.
+This will update the AGC instance's internal state and produce
+the output frame by applying the AGC algorithm to the input frame.
+Refer to the :ref:`pipeline_example` to see how to use the APIs above.
+
+The AGC gain and Loss Control gain values are
+multiplicative factors that are applied to scale the input frame. Therefore, a
+fixed gain value of 1.0 (without loss control) will create no change to the input.
+
+
+
+Parameters
+----------
 
 The key AGC parameters are highlighted below:
 
@@ -108,5 +133,5 @@ The key AGC parameters are highlighted below:
 
 
 
-Other AGC parameters are described in the `agc_profiles.h` header file,
+Other AGC parameters are described in the ``agc_profiles.h`` header file,
 and are described in detail in :c:struct:`agc_config_t`.

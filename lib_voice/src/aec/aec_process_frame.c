@@ -7,8 +7,7 @@
 enum e_td_ema {Y_EMA, X_EMA, ERROR_EMA};
 enum e_fft {Y_FFT, X_FFT, ERROR_FFT};
 
-#define REF_ACTIVE_THRESHOLD_dB (-60) // Reference input level above which it is considered active
-#define REF_ACTIVE_THRESHOLD f64_to_float_s32(pow(10, REF_ACTIVE_THRESHOLD_dB/20.0))
+#define REF_ACTIVE_THRESHOLD f64_to_float_s32(pow(10, REF_ACTIVE_THRESHOLD_DB/20.0))
 
 #ifdef __XS3A__
 #include <xcore/parallel.h>

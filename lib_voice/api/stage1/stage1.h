@@ -23,11 +23,6 @@
 #define ALT_ARCH_MODE (0)
 #endif
 
-/** Reference input level above which it is considered active
- *
- * @ingroup stage1_types
- */
-#define REF_ACTIVE_THRESHOLD_dB (-60) //
 
 /** Limit in seconds for which AEC is kept enabled after detecting reference as inactive.
  *  Used only in alt arch configuration.

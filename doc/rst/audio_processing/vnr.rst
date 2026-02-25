@@ -1,15 +1,16 @@
 .. _vnr_module:
 
-Voice to Noise Ratio estimator
+Voice to Noise Ratio Estimator
 ==============================
 
-The Voice to Noise Ratio estimator (VNR) predicts the signal to noise ratio of a speech signal in noise, using a pre-trained neural network.
+The Voice to Noise Ratio estimator (VNR) estimates the signal to noise ratio of a speech signal in noise, using a pre-trained neural network.
 The VNR neural network model outputs a value between 0 and 1, with 1 indicating the strongest speech, and 0,
-the weakest speech compared to noise in a frame of audio data.
+the weakest speech compared to noise in a frame of audio data. A VNR value of 0.5 indicates a 
+voice to noise ratio of -5 dB.
 
 VNR estimations can be very helpful in voice processing pipelines.
 Applications for VNR include intelligent power management,
-control of adaptive filters for reducing noise sources and improved performance of the :ref:`agc_module`
+control of adaptive filters for reducing noise sources in the :ref:`ic_module`, and improved performance of the :ref:`agc_module`
 blocks that provide a more natural listening experience.
 
 The VNR operates on short frames of audio, transforming the input into the
@@ -19,14 +20,47 @@ the VNR estimate.
 
 The VNR model is a pre-trained TensorFlow Lite model, optimised for the XCORE platform.
 
+.. _vnr_basics:
+
+.. figure:: ../images/vnr.drawio.svg
+    :align: center
+
+    The VNR topology.
+
+
 Overview
 --------
+
+The VNR component in ``lib_voice`` processes a single channel of microphone input, estimating the
+voice to noise ratio in the signal. The VNR operates at a fixed 16 kHz sample rate.
 
 The VNR module processes :c:macro:`VNR_FRAME_ADVANCE` new audio PCM samples every frame.
 The time domain input is transformed to frequency domain using a :c:macro:`VNR_PROC_FRAME_LENGTH` point DFT.
 A MEL filterbank is then applied to compress the DFT output spectrum into fewer data points.
 The MEL filter outputs of :c:macro:`VNR_PATCH_WIDTH` most recent frames are normalised and fed as input features
 to the VNR prediction model which runs an inference over the features to output the VNR estimate value.
+
+Signal Representation
+---------------------
+
+Processing is performed on a frame-by-frame basis. Each frame consists of 15 ms
+of new audio samples (240 samples at 16 kHz). Input data is expected in fixed-point
+32-bit, 1.31 format. The output is a single VNR estimate value in :c:type:`float_s32_t` format,
+ranging from 0 to 1, with 1 indicating the strongest speech and 0 indicating the weakest speech
+compared to noise. A VNR value of 0.5 indicates a voice to noise ratio of -5 dB.
+
+Processing Flow
+---------------
+
+For each frame, the VNR performs the following steps:
+
+1. Transform the input signal into the frequency domain using a 512-point DFT.
+2. Compute the squared magnitude spectrum.
+3. Apply a 24-band MEL filterbank to compress the frequency spectrum.
+4. Add the new MEL filter output to a rolling buffer of the most recent 4 frames.
+5. Normalise the feature patch by subtracting the maximum value.
+6. Run inference on the normalised features using the pre-trained TensorFlow Lite model to produce
+   the VNR estimate.
 
 
 Basic Usage
@@ -58,3 +92,8 @@ There are no user configurable parameters within the VNR and so no arguments are
 Once the VNR is initialised, the :c:func:`vnr_form_input_frame()`, :c:func:`vnr_extract_features()` and :c:func:`vnr_inference()` functions should be called on a frame by frame basis.
 
 Refer to the IC source code to see how to initialise and run the VNR using the advanced API.
+
+Parameters
+----------
+
+The VNR has no user configurable parameters.

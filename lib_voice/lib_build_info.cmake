@@ -21,6 +21,7 @@ set(lib_ASM_SRCS "")
 
 file(GLOB_RECURSE LIB_C_SRCS RELATIVE ${CMAKE_CURRENT_LIST_DIR}
                                         "${CMAKE_CURRENT_LIST_DIR}/src/aec/*.c"
+                                        "${CMAKE_CURRENT_LIST_DIR}/src/ns/*.c"
                                         )
 
 set(LIB_INCLUDES
@@ -31,8 +32,8 @@ set(LIB_INCLUDES
     # api/agc
     # api/ic
     # src/ic
-    # api/ns
-    # src/ns
+    api/ns
+    src/ns
     # api/stage1
     # api/vnr
     # src/vnr

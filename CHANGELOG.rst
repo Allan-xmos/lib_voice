@@ -7,7 +7,7 @@ lib_voice change log
   * ADDED: Top-level header file - `voice.h`
   * ADDED: Documentation updates
   * ADDED: Automated memory and MIPS profiling
-  * CHANGED: Examples renamed to the form of: `app_<example_name>`
+  * CHANGED: Examples renamed to the form of: `app_EXAMPLE_NAME`
   * CHANGED: All examples and tests changed to build with `xcommon_cmake`
   * CHANGED: Improved AEC deconvergence during near end speech
 

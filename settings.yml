@@ -8,7 +8,7 @@ version: 1.0.0
 documentation:
   root_doc: doc/rst/lib_voice.rst
   exclude_patterns_path: doc/exclude_patterns.inc
-  cognidox_part_number: XM-010445-UG
+  cognidox_part_number: XM-015513-UG
   latex_toc_depth: 2
   latex_secnum_depth: 2
   doxygen_projects:
@@ -23,4 +23,4 @@ documentation:
       pdf_filename: '{{lib_name}}_v{{version}}_readme'
       pdf_short: yes
 software:
-  cognidox_part_number: XM-010449-SM
+  cognidox_part_number: XM-015512-SM

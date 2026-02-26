@@ -1,6 +1,6 @@
 set(LIB_NAME lib_voice)
 set(LIB_VERSION 1.0.0)
-set(LIB_DEPENDENT_MODULES "lib_xcore_math(develop)")
+set(LIB_DEPENDENT_MODULES "lib_xcore_math(lib_voice_fixes)")
 
 set(LIB_COMPILER_FLAGS
             -g
@@ -21,6 +21,7 @@ set(lib_ASM_SRCS "")
 
 file(GLOB_RECURSE LIB_C_SRCS RELATIVE ${CMAKE_CURRENT_LIST_DIR}
                                         "${CMAKE_CURRENT_LIST_DIR}/src/aec/*.c"
+                                        "${CMAKE_CURRENT_LIST_DIR}/src/agc/*.c"
                                         "${CMAKE_CURRENT_LIST_DIR}/src/ns/*.c"
                                         )
 
@@ -29,7 +30,7 @@ set(LIB_INCLUDES
     # api/adec
     api/aec
     src/aec
-    # api/agc
+    api/agc
     # api/ic
     # src/ic
     api/ns

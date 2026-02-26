@@ -80,6 +80,9 @@ pipeline {
                     dir("app_aec") {
                       xcoreBuild(archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
                     }
+                    dir("app_vnr") {
+                      xcoreBuild(archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
+                    }
                   }
                 }
               }

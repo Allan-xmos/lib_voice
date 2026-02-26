@@ -5,6 +5,7 @@ set(LIB_DEPENDENT_MODULES "lib_xcore_math(lib_voice_fixes)")
 set(LIB_COMPILER_FLAGS
             -g
             -Os
+            -D__VX4A__
             -DHEADROOM_CHECK=0)
 
 # if(BUILD_NATIVE)
@@ -16,13 +17,14 @@ set(LIB_COMPILER_FLAGS
 
 set(LIB_CXX_SRCS "")
 set(lib_ASM_SRCS "")
-# include(${CMAKE_CURRENT_LIST_DIR}/vnr_model.cmake)
-# file(RELATIVE_PATH MODEL_OUT_DIR_REL ${CMAKE_CURRENT_LIST_DIR} ${MODEL_OUT_DIR})
+include(${CMAKE_CURRENT_LIST_DIR}/vnr_model.cmake)
+file(RELATIVE_PATH MODEL_OUT_DIR_REL ${CMAKE_CURRENT_LIST_DIR} ${MODEL_OUT_DIR})
 
 file(GLOB_RECURSE LIB_C_SRCS RELATIVE ${CMAKE_CURRENT_LIST_DIR}
                                         "${CMAKE_CURRENT_LIST_DIR}/src/aec/*.c"
                                         "${CMAKE_CURRENT_LIST_DIR}/src/agc/*.c"
                                         "${CMAKE_CURRENT_LIST_DIR}/src/ns/*.c"
+                                        "${CMAKE_CURRENT_LIST_DIR}/src/vnr/*.c"
                                         )
 
 set(LIB_INCLUDES
@@ -36,15 +38,15 @@ set(LIB_INCLUDES
     api/ns
     src/ns
     # api/stage1
-    # api/vnr
-    # src/vnr
-    # ${MODEL_OUT_DIR_REL}
+    api/vnr
+    src/vnr
+    ${MODEL_OUT_DIR_REL}
 )
 
-# file(GLOB VNR_CXX_SOURCES RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/src/vnr/*.cpp")
-# file(RELATIVE_PATH VNR_MODEL_SOURCES ${CMAKE_CURRENT_LIST_DIR} ${MODEL_OUT_PATH}.cpp)
+file(GLOB VNR_CXX_SOURCES RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/src/vnr/*.cpp")
+file(RELATIVE_PATH VNR_MODEL_SOURCES ${CMAKE_CURRENT_LIST_DIR} ${MODEL_OUT_PATH}.cpp)
 
-# list(APPEND LIB_CXX_SRCS ${VNR_MODEL_SOURCES} ${VNR_CXX_SOURCES})
+list(APPEND LIB_CXX_SRCS ${VNR_MODEL_SOURCES} ${VNR_CXX_SOURCES})
 
 XMOS_REGISTER_MODULE()
 
@@ -56,7 +58,7 @@ XMOS_REGISTER_MODULE()
 # list(LENGTH single_config_sched singleconfig_list_len)
 # list(LENGTH multi_config_sched multi_config_list_len)
 
-# foreach(target ${APP_BUILD_TARGETS})
+foreach(target ${APP_BUILD_TARGETS})
 #     # Apply AEC schedule if needed
 #     if(singleconfig_list_len EQUAL 1) # App only does set(AEC_SCHEDULE_CONFIG <schedule>). Attach this schedule to all targets
 #         list(GET single_config_sched 0 sched)
@@ -75,9 +77,9 @@ XMOS_REGISTER_MODULE()
 #         endforeach()
 #     endif()
 
-#     # Link aitools with the targets
-#     target_link_libraries(${target} PRIVATE tflite_micro)
+    # Link aitools with the targets
+    target_link_libraries(${target} PRIVATE tflite_micro)
 # if(BUILD_NATIVE)
 #     target_compile_features(${target} PRIVATE cxx_std_11)
 # endif()
-# endforeach()
+endforeach()

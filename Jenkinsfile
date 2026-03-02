@@ -173,6 +173,9 @@ pipeline {
                       dir("lib_agc/test_process_frame") {
                         xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416 -DTEST_SPEEDUP_FACTOR=8")
                       }
+                      dir("lib_vnr/vnr_unit_tests") {
+                        xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
+                      }
                       stash name: 'vx4b_build_xcore', includes: '**/bin/**/*.xe'
                     }
                   }
@@ -374,6 +377,10 @@ pipeline {
                           junit "pytest_result.xml"
                         }
                         dir("lib_agc/test_process_frame") {
+                          sh "pytest --arch vx4b --junitxml=pytest_result.xml"
+                          junit "pytest_result.xml"
+                        }
+                        dir("lib_vnr/vnr_unit_tests") {
                           sh "pytest --arch vx4b --junitxml=pytest_result.xml"
                           junit "pytest_result.xml"
                         }

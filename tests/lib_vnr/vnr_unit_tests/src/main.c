@@ -48,9 +48,14 @@ void test_vnr_unit(const char *input_file_name, const char *output_file_name)
     shutdown_session();
 }
 
+int main() {
 #if X86_BUILD
-int main(int argc, char **argv) {
+    chanend_t xscope_chan = chanend_alloc();
+    xscope_io_init(xscope_chan);
+#endif
     test_vnr_unit("input.bin", "output.bin");
+#if X86_BUILD
+    chanend_free(xscope_chan);
+#endif
     return 0;
 }
-#endif

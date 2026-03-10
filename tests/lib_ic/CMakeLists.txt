@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
-project(fwk_voice_tests_ic)
+project(lib_voice_tests_ic)
 if(NOT BUILD_NATIVE)
     add_subdirectory( ic_unit_tests )
 endif()

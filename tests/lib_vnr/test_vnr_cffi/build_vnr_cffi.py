@@ -44,7 +44,7 @@ LIBRARY_DIRS = [
 ]
 
 LIBRARIES = [
-    'fwk_voice_module_lib_vnr',
+    'lib_voice_module_lib_vnr',
     'lib_xcore_math',
     str(TFLITE_MICRO_LIB),
     'm',

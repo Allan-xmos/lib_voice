@@ -46,8 +46,8 @@ LIBRARY_DIRS=[
 ]
 
 LIBRARIES = [
-    'fwk_voice_module_lib_ic',
-    'fwk_voice_module_lib_vnr',
+    'lib_voice_module_lib_ic',
+    'lib_voice_module_lib_vnr',
     'lib_xcore_math',
     TFLITE_MICRO_LIB,
     'm',

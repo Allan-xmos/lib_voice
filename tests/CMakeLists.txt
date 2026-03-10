@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
-project(fwk_voice_tests)
+project(lib_voice_tests)
 
 include(${CMAKE_CURRENT_LIST_DIR}/etc/build_options.cmake)
 

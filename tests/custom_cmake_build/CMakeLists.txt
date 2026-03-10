@@ -23,12 +23,12 @@ generate_schedule(pipeline_custom_cmake "1 2 2 10 5")
 
 target_link_libraries(pipeline_custom_cmake
     PUBLIC
-        fwk_voice::aec
-        fwk_voice::adec
-        fwk_voice::ns
-        fwk_voice::agc
-        fwk_voice::ic
-        fwk_voice::stage1)
+        lib_voice::aec
+        lib_voice::adec
+        lib_voice::ns
+        lib_voice::agc
+        lib_voice::ic
+        lib_voice::stage1)
 
 set(COMMON_OPTIONS
                     -Os

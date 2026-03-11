@@ -5,7 +5,6 @@ set(LIB_DEPENDENT_MODULES "lib_xcore_math(lib_voice_fixes)")
 set(LIB_COMPILER_FLAGS
             -g
             -Os
-            -D__VX4A__
             -DHEADROOM_CHECK=0)
 
 # if(BUILD_NATIVE)

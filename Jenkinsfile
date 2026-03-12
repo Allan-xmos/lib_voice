@@ -167,6 +167,9 @@ pipeline {
                       dir("lib_aec/aec_unit_tests") {
                         xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416 -DTEST_SPEEDUP_FACTOR=8")
                       }
+                      dir("lib_aec/test_aec_schedule") {
+                        xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
+                      }
                       dir("lib_ns/ns_unit_tests") {
                         xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
                       }
@@ -371,6 +374,12 @@ pipeline {
                         dir("lib_aec/aec_unit_tests") {
                           sh "pytest --arch vx4b --junitxml=pytest_result.xml"
                           junit "pytest_result.xml"
+                        }
+                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                          dir("lib_aec/test_aec_schedule") {
+                            sh "pytest --arch vx4b --junitxml=pytest_result.xml"
+                            junit "pytest_result.xml"
+                          }
                         }
                         dir("lib_ns/ns_unit_tests"){
                           sh "pytest --arch vx4b --junitxml=pytest_result.xml"

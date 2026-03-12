@@ -69,20 +69,9 @@ pipeline {
                   checkoutScmShallow()
                   createVenv(reqFile: "requirements.txt")
                 }
-                // dir("${REPO}/examples") {
-                //   withVenv {
-                //     xcoreBuild(archiveBins: false)
-                //   }
-                // }
                 dir("${REPO}/examples") {
                   withVenv {
-                    // only an aec example builds on vx4b so far
-                    dir("app_aec") {
-                      xcoreBuild(archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
-                    }
-                    dir("app_vnr") {
-                      xcoreBuild(archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
-                    }
+                    xcoreBuild(archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
                   }
                 }
               }

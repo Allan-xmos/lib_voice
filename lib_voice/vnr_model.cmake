@@ -1,26 +1,33 @@
 
-# set(CMD "\
-# import os; \
-# import xmos_ai_tools.runtime as rt; \
-# print(os.path.dirname(rt.__file__)) \
-# ")
+set(CMD "\
+import os; \
+import xmos_ai_tools.runtime as rt; \
+print(os.path.dirname(rt.__file__)) \
+")
 
-# execute_process(
-#     COMMAND python -c "${CMD}"
-#     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-#     OUTPUT_VARIABLE XMOS_AITOOLSLIB_PATH
-#     OUTPUT_STRIP_TRAILING_WHITESPACE
-# )
+execute_process(
+    COMMAND python -c "${CMD}"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+    OUTPUT_VARIABLE XMOS_AITOOLSLIB_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
 # Add tflite_micro
-# set(XMOS_AITOOLSLIB_PATH_CMAKE "${XMOS_AITOOLSLIB_PATH}/buildfiles/aitoolslib.cmake")
-set(XMOS_AITOOLSLIB_PATH_CMAKE "${CMAKE_CURRENT_LIST_DIR}/../new_ai_tools/libxtflitemicro.cmake")
+if (APP_BUILD_ARCH STREQUAL "xs3a")
+    set(XMOS_AITOOLSLIB_PATH_CMAKE "${XMOS_AITOOLSLIB_PATH}/buildfiles/aitoolslib.cmake")
+    set(MODEL_TH 0.50)
+    set(ARCH_STR "XS3A")
+elseif (APP_BUILD_ARCH STREQUAL "vx4b")
+    set(XMOS_AITOOLSLIB_PATH_CMAKE "${CMAKE_CURRENT_LIST_DIR}/../new_ai_tools/libxtflitemicro.cmake")
+    set(MODEL_TH 2)
+    set(ARCH_STR "VX4A")
+endif()
 
-# if(XMOS_AITOOLSLIB_PATH STREQUAL "")
-    # message(FATAL_ERROR "Path to XMOS AI tools NOT found")
-# elseif(NOT EXISTS  ${XMOS_AITOOLSLIB_PATH_CMAKE})
-    # message(FATAL_ERROR "Cmake file 'aitoolslib.cmake' NOT found in this path")
-# else()
+if(XMOS_AITOOLSLIB_PATH STREQUAL "")
+    message(FATAL_ERROR "Path to XMOS AI tools NOT found")
+elseif(NOT EXISTS  ${XMOS_AITOOLSLIB_PATH_CMAKE})
+    message(FATAL_ERROR "Cmake file 'aitoolslib.cmake' NOT found in this path")
+else()
     message(STATUS "Found python package xmos-ai-tools at: ${XMOS_AITOOLSLIB_PATH}")
     include(${XMOS_AITOOLSLIB_PATH_CMAKE})
     if(NOT TARGET tflite_micro)
@@ -32,20 +39,18 @@ set(XMOS_AITOOLSLIB_PATH_CMAKE "${CMAKE_CURRENT_LIST_DIR}/../new_ai_tools/libxtf
             IMPORTED_LOCATION ${XMOS_AITOOLSLIB_LIBRARIES}
             INTERFACE_INCLUDE_DIRECTORIES ${XMOS_AITOOLSLIB_INCLUDES})
     endif()
-# endif()
+endif()
 
 ## Export model
-# set(MODEL_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/src.autogen/vnr_model/)
-set(MODEL_OUT_DIR ${CMAKE_CURRENT_LIST_DIR}/../new_ai_tools/vnr_model/)
-# set(MODEL_IN_PATH ${CMAKE_CURRENT_LIST_DIR}/src/vnr/model/trained_model.tflite)
+set(MODEL_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/src.autogen/vnr_model/)
+set(MODEL_IN_PATH ${CMAKE_CURRENT_LIST_DIR}/src/vnr/model/trained_model.tflite)
 set(MODEL_OUT_PATH ${MODEL_OUT_DIR}/trained_model_xcore.tflite)
-# set(MODEL_N_CORES 1)
-# set(MODEL_TH 0.50)
+set(MODEL_N_CORES 1)
 
 file(MAKE_DIRECTORY ${MODEL_OUT_DIR})
 
-# add_custom_command(
-#     OUTPUT ${MODEL_OUT_PATH}.cpp ${MODEL_OUT_PATH}.h ${MODEL_OUT_PATH}
-#     COMMAND xcore-opt ${MODEL_IN_PATH} -tc ${MODEL_N_CORES} -o ${MODEL_OUT_PATH} --xcore-conv-err-threshold ${MODEL_TH} --xcore-target-arch=VX4A
-#     DEPENDS ${MODEL_IN_PATH}
-# )
+add_custom_command(
+    OUTPUT ${MODEL_OUT_PATH}.cpp ${MODEL_OUT_PATH}.h ${MODEL_OUT_PATH}
+    COMMAND xcore-opt ${MODEL_IN_PATH} -tc ${MODEL_N_CORES} -o ${MODEL_OUT_PATH} --xcore-conv-err-threshold ${MODEL_TH} --xcore-target-arch=${ARCH_STR}
+    DEPENDS ${MODEL_IN_PATH}
+)

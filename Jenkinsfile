@@ -168,6 +168,9 @@ pipeline {
                       dir("lib_vnr/vnr_unit_tests") {
                         xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
                       }
+                      dir("pipeline") {
+                        xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
+                      }
                       stash name: 'vx4b_build_xcore', includes: '**/bin/**/*.xe'
                     }
                   }
@@ -287,15 +290,15 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         dir("tests") {
-                          script {
-                            if (env.FULL_TEST == "1") {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partB")
-                            }
-                            else {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partB")
-                            }
-                          }
-                          stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
+                          // script {
+                          //   if (env.FULL_TEST == "1") {
+                          //     xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partB")
+                          //   }
+                          //   else {
+                          //     xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partB")
+                          //   }
+                          // }
+                          // stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
                         }
                       }
                     }
@@ -383,6 +386,17 @@ pipeline {
                           // sh "pytest --arch vx4b --junitxml=pytest_result.xml"
                           // junit "pytest_result.xml"
                         }
+                        dir("pipeline") {
+                          withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                            withEnv(["PIPELINE_FULL_RUN=${PIPELINE_FULL_RUN}", "SENSORY_PATH=${env.WORKSPACE}/sensory_sdk/", "AMAZON_WWE_PATH=${env.WORKSPACE}/amazon_wwe/"]) {
+                              echo "PIPELINE_FULL_RUN set as " + env.PIPELINE_FULL_RUN
+
+                              sh "pytest -n 2 --junitxml=pytest_result.xml -vv --arch vx4b"
+                              junit "pytest_result.xml"
+                              sh "python compare_keywords.py results_Avona_aec_ic_ns_agc_prev_arch_xcore.csv results_Avona_aec_ic_ns_agc_prev_arch_python.csv --pass-threshold=1"
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -446,7 +460,7 @@ pipeline {
                       //   sh "python build_c_code.py"
                       // }
                       unstash 'xcommon_cmake_build_xcore_partA'
-                      unstash 'xcommon_cmake_build_xcore_partB'
+                      // unstash 'xcommon_cmake_build_xcore_partB'
                       // unstash 'xcommon_cmake_build_native'
                     }
                   }

@@ -8,6 +8,7 @@
 #include <xcore/assert.h>
 #include <xcore/hwtimer.h>
 #include "xmath/xmath.h"
+#include "xscope_io_device.h"
 #include "fileio.h"
 
 #include "pipeline_config.h"
@@ -16,6 +17,9 @@
 DECLARE_JOB(tx, (chanend_t, chanend_t, const char*));
 DECLARE_JOB(pipeline_tile0, (chanend_t, chanend_t));
 DECLARE_JOB(rx, (chanend_t, chanend_t, const char*));
+
+DECLARE_JOB(main_tile0, (chanend_t, chanend_t, const char *, const char *));
+DECLARE_JOB(main_tile1, (chanend_t, chanend_t));
 
 extern void pipeline_tile1(chanend_t c_pcm_in_b, chanend_t c_pcm_out_a);
 
@@ -79,3 +83,16 @@ void main_tile1(chanend_t c_t0_t1, chanend_t c_t1_t0)
     pipeline_tile1(c_t0_t1, c_t1_t0);
 }
 
+int main() {
+    chanend_t xscope_chan = chanend_alloc();
+    channel_t c_th0_to_th1 = chan_alloc();
+    channel_t c_th1_to_th0 = chan_alloc();
+    xscope_io_init(xscope_chan);
+    PAR_JOBS(
+        PJOB(main_tile0, (c_th0_to_th1.end_a, c_th1_to_th0.end_a, "input.bin", "output.bin")),
+        PJOB(main_tile1, (c_th0_to_th1.end_b, c_th1_to_th0.end_b))
+    );
+    chanend_free(xscope_chan);
+    chan_free(c_th0_to_th1);
+    chan_free(c_th1_to_th0);
+}

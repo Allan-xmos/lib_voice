@@ -210,15 +210,15 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         dir("tests") {
-                          // script {
-                          //   if (env.FULL_TEST == "1") {
-                          //     xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partA")
-                          //   }
-                          //   else {
-                          //     xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partA")
-                          //   }
-                          // }
-                          // stash name: 'xcommon_cmake_build_xcore_partA', includes: '**/bin/**/*.xe'
+                          script {
+                            if (env.FULL_TEST == "1") {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partA")
+                            }
+                            else {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partA")
+                            }
+                          }
+                          stash name: 'xcommon_cmake_build_xcore_partA', includes: '**/bin/**/*.xe'
                         }
                       }
                     }
@@ -287,15 +287,15 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         dir("tests") {
-                          // script {
-                          //   if (env.FULL_TEST == "1") {
-                          //     xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partB")
-                          //   }
-                          //   else {
-                          //     xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partB")
-                          //   }
-                          // }
-                          // stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
+                          script {
+                            if (env.FULL_TEST == "1") {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partB")
+                            }
+                            else {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partB")
+                            }
+                          }
+                          stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
                         }
                       }
                     }
@@ -426,26 +426,27 @@ pipeline {
                   withTools(params.TOOLS_VERSION) {
                     withVenv {
 
-                      sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
+                      // sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
 
-                      // Build x86 versions locally as we had problems with moving bins and libs over from previous build due to brew
-                      dir("custom_cmake_build") {
-                        sh "cmake --version"
-                        sh 'cmake -B build'
-                        sh 'make -C build -j$(nproc)'
-                      }
-                      // We do this again on the NUCs for verification later, but this just checks we have no build error
-                      dir("lib_ic/py_c_frame_compare") {
-                        sh "python build_ic_frame_proc.py"
-                      }
-                      // We do this again on the NUCs for verification later, but this just checks we have no build error
-                      dir("lib_vnr/test_vnr_cffi") {
-                        sh "python build_vnr_cffi.py"
-                      }
-                      dir("stage_b") {
-                        sh "python build_c_code.py"
-                      }
-                      // unstash 'xcommon_cmake_build_xcore'
+                      // // Build x86 versions locally as we had problems with moving bins and libs over from previous build due to brew
+                      // dir("custom_cmake_build") {
+                      //   sh "cmake --version"
+                      //   sh 'cmake -B build'
+                      //   sh 'make -C build -j$(nproc)'
+                      // }
+                      // // We do this again on the NUCs for verification later, but this just checks we have no build error
+                      // dir("lib_ic/py_c_frame_compare") {
+                      //   sh "python build_ic_frame_proc.py"
+                      // }
+                      // // We do this again on the NUCs for verification later, but this just checks we have no build error
+                      // dir("lib_vnr/test_vnr_cffi") {
+                      //   sh "python build_vnr_cffi.py"
+                      // }
+                      // dir("stage_b") {
+                      //   sh "python build_c_code.py"
+                      // }
+                      unstash 'xcommon_cmake_build_xcore_partA'
+                      unstash 'xcommon_cmake_build_xcore_partB'
                       // unstash 'xcommon_cmake_build_native'
                     }
                   }
@@ -471,18 +472,18 @@ pipeline {
                   dir("${REPO}/tests") {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
-                        dir("profile_memory") {
-                          sh "pytest -n 1 --junitxml=pytest_result.xml"
-                          junit "pytest_result.xml"
-                          archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
-                        }
-                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          dir("profile_mips") {
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                            archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
-                          }
-                        }
+                        // dir("profile_memory") {
+                        //   sh "pytest -n 1 --junitxml=pytest_result.xml"
+                        //   junit "pytest_result.xml"
+                        //   archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
+                        // }
+                        // withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                        //   dir("profile_mips") {
+                        //     sh "pytest -n 2 --junitxml=pytest_result.xml"
+                        //     junit "pytest_result.xml"
+                        //     archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
+                        //   }
+                        // }
                       }
                     }
                   }
@@ -501,15 +502,15 @@ pipeline {
                             sh "pytest -n 2 --junitxml=pytest_result.xml"
                             junit "pytest_result.xml"
                           }
-                          dir("test_vnr_cffi") {
-                            sh "python build_vnr_cffi.py"
-                            sh "pytest -n 4 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("test_vnr_profile") {
-                            sh "pytest -s --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
+                          // dir("test_vnr_cffi") {
+                          //   sh "python build_vnr_cffi.py"
+                          //   sh "pytest -n 4 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("test_vnr_profile") {
+                          //   sh "pytest -s --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
                         }
                       }
                     }
@@ -525,14 +526,14 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          dir("test_ns_profile"){
-                            sh "pytest -n 1 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("compare_c_py"){
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
+                          // dir("test_ns_profile"){
+                          //   sh "pytest -n 1 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("compare_c_py"){
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
                           dir("ns_unit_tests"){
                             sh "pytest -n 1 --junitxml=pytest_result.xml"
                             junit "pytest_result.xml"
@@ -552,49 +553,49 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          dir("ic_unit_tests"){
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("py_c_frame_compare"){
-                            sh "python build_ic_frame_proc.py"
-                            sh "pytest -s --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("test_ic_profile"){
-                            sh "pytest -s --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("test_ic_spec"){
-                            // This test compares the model and C implementation over a range of scenarious for:
-                            // convergence_time, db_suppression, maximum noise added to input (to test for stability)
-                            // and expected group delay. It will fail if these are not met.
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                            sh "python print_stats.py > ic_spec_summary.txt"
-                            // This script generates a number of polar plots of attenuation vs null point angle vs freq
-                            // It currently only uses the python model to do this. It takes about 40 mins for all plots
-                            // and generates a series of IC_performance_xxxHz.svg files which could be archived
-                            //sh "python plot_ic.py"
-                          }
-                          dir("characterise_c_py"){
-                            // This test compares the suppression performance across angles between model and C implementation
-                            // and fails if they differ significantly. It requires that the C implementation run with fixed mu
-                            sh "pytest -s --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                            // This script sweeps the y_delay value to find what the optimum suppression is across RT60 and angle.
-                            // It's more of a model develpment tool than testing the implementation so not run. It take a few minutes.
-                            //sh "python sweep_ic_delay.py"
-                          }
-                          dir("test_calc_vnr_pred"){
-                            // This is a unit test for ic_calc_vnr_pred function.
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("test_bad_state"){
-                            sh "pytest -s --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
+                          // dir("ic_unit_tests"){
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("py_c_frame_compare"){
+                          //   sh "python build_ic_frame_proc.py"
+                          //   sh "pytest -s --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("test_ic_profile"){
+                          //   sh "pytest -s --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("test_ic_spec"){
+                          //   // This test compares the model and C implementation over a range of scenarious for:
+                          //   // convergence_time, db_suppression, maximum noise added to input (to test for stability)
+                          //   // and expected group delay. It will fail if these are not met.
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          //   sh "python print_stats.py > ic_spec_summary.txt"
+                          //   // This script generates a number of polar plots of attenuation vs null point angle vs freq
+                          //   // It currently only uses the python model to do this. It takes about 40 mins for all plots
+                          //   // and generates a series of IC_performance_xxxHz.svg files which could be archived
+                          //   //sh "python plot_ic.py"
+                          // }
+                          // dir("characterise_c_py"){
+                          //   // This test compares the suppression performance across angles between model and C implementation
+                          //   // and fails if they differ significantly. It requires that the C implementation run with fixed mu
+                          //   sh "pytest -s --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          //   // This script sweeps the y_delay value to find what the optimum suppression is across RT60 and angle.
+                          //   // It's more of a model develpment tool than testing the implementation so not run. It take a few minutes.
+                          //   //sh "python sweep_ic_delay.py"
+                          // }
+                          // dir("test_calc_vnr_pred"){
+                          //   // This is a unit test for ic_calc_vnr_pred function.
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("test_bad_state"){
+                          //   sh "pytest -s --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
                         }
                       }
                     }
@@ -610,8 +611,8 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          sh "pytest -n 1 --junitxml=pytest_result.xml"
-                          junit "pytest_result.xml"
+                          // sh "pytest -n 1 --junitxml=pytest_result.xml"
+                          // junit "pytest_result.xml"
                         }
                       }
                     }
@@ -627,31 +628,31 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          dir("de_unit_tests") {
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("test_delay_estimator") {
-                            sh 'mkdir -p ./input_wavs/'
-                            sh 'mkdir -p ./output_files/'
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                            sh "python print_stats.py"
-                          }
-                          dir("test_adec_startup") {
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("test_adec") {
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          dir("test_adec_profile") {
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                            // Testing bit exactness of the AEC scheduling
-                            sh "diff output_1_2_2_10_5.wav output_2_2_2_10_5.wav"
-                          }
+                          // dir("de_unit_tests") {
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("test_delay_estimator") {
+                          //   sh 'mkdir -p ./input_wavs/'
+                          //   sh 'mkdir -p ./output_files/'
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          //   sh "python print_stats.py"
+                          // }
+                          // dir("test_adec_startup") {
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("test_adec") {
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
+                          // dir("test_adec_profile") {
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          //   // Testing bit exactness of the AEC scheduling
+                          //   sh "diff output_1_2_2_10_5.wav output_2_2_2_10_5.wav"
+                          // }
                         }
                       }
                     }
@@ -667,29 +668,29 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          dir("test_aec_enhancements") {
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
+                          // dir("test_aec_enhancements") {
+                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
+                          //   junit "pytest_result.xml"
+                          // }
                           dir("aec_unit_tests") {
                             sh "pytest -n 2 --junitxml=pytest_result.xml"
                             junit "pytest_result.xml"
                           }
-                          dir("test_aec_spec") {
-                            script {
-                              if (env.FULL_TEST == "0") {
-                                sh 'mv excluded_tests_quick.txt excluded_tests.txt'
-                              }
-                            }
-                            sh "python generate_audio.py"
-                            sh "pytest -n 2 --junitxml=results_process.xml test_process_audio.py"
-                            catchError {
-                              sh "pytest --junitxml=results_check.xml test_check_output.py"
-                            }
-                            sh "python parse_results.py"
-                            sh "pytest --junitxml=results_final.xml test_evaluate_results.py"
-                            junit "results_final.xml"
-                          }
+                          // dir("test_aec_spec") {
+                          //   script {
+                          //     if (env.FULL_TEST == "0") {
+                          //       sh 'mv excluded_tests_quick.txt excluded_tests.txt'
+                          //     }
+                          //   }
+                          //   sh "python generate_audio.py"
+                          //   sh "pytest -n 2 --junitxml=results_process.xml test_process_audio.py"
+                          //   catchError {
+                          //     sh "pytest --junitxml=results_check.xml test_check_output.py"
+                          //   }
+                          //   sh "python parse_results.py"
+                          //   sh "pytest --junitxml=results_final.xml test_evaluate_results.py"
+                          //   junit "results_final.xml"
+                          // }
                         }
                       }
                     }
@@ -754,15 +755,15 @@ pipeline {
           post {
             always {
               // AEC aretfacts
-              archiveArtifacts artifacts: "${REPO}/tests/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
+              // archiveArtifacts artifacts: "${REPO}/tests/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
               // IC artefacts
-              archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_profile/ic_prof.log", fingerprint: true
-              archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_spec/ic_spec_summary.txt", fingerprint: true
+              // archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_profile/ic_prof.log", fingerprint: true
+              // archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_spec/ic_spec_summary.txt", fingerprint: true
               // NS artefacts
-              archiveArtifacts artifacts: "${REPO}/tests/lib_ns/test_ns_profile/ns_prof.log", fingerprint: true
+              // archiveArtifacts artifacts: "${REPO}/tests/lib_ns/test_ns_profile/ns_prof.log", fingerprint: true
               // VNR artifacts
-              archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/*.png", fingerprint: true
-              archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/vnr_prof.log", fingerprint: true
+              // archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/*.png", fingerprint: true
+              // archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/vnr_prof.log", fingerprint: true
               // Pipelines tests
               archiveArtifacts artifacts: "${REPO}/tests/pipeline/**/results_*.csv", fingerprint: true
               archiveArtifacts artifacts: "${REPO}/tests/pipeline/**/results_*.png", fingerprint: true, allowEmptyArchive: true

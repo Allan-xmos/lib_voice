@@ -3,7 +3,9 @@ include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
 project(app_memory)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../..)
 
-set(APP_HW_TARGET XK-EVK-XU316)
+if(NOT DEFINED APP_HW_TARGET)
+    set(APP_HW_TARGET XK-EVK-XU316)
+endif()
 
 set(COMPILER_FLAGS -Os
                    -g

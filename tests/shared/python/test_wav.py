@@ -49,6 +49,7 @@ def test_wav(
     **run_kwargs : Optional arguments forwarded to run_dut
     """
     assert Path(input_wav_path).exists(), "Input WAV file does not exist"
+    assert Path(xe_path).exists(), "Executable file does not exist"
 
     print(f"Running input wav {input_wav_path} through executable {xe_path}")
 

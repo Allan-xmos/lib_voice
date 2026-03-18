@@ -90,18 +90,21 @@ def test_arch(String archName) {
     runSuite("lib_agc", arch, "-n 2")
   }
 
-  if (archName == 'xs3') {
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("profile_mips", arch, "-n 2") {
+      archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
+    }
+  }
+  if (archName == 'vx4b') {
+    // fails loading xinterpreters on ubuntu 22
+    echo "Skipping profile memory test as no memory prints"
+  } else {
     catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-      runSuite("profile_memory", "", "-n 1") {
+      runSuite("profile_memory", arch, "-n 2") {
         archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
       }
     }
-    catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-      runSuite("profile_mips", "", "-n 2") {
-        archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
-      }
-    }
-  } // end if (archName == 'xs3')
+  }
 }
 
 // Runs one architecture's whole Verification stage (Get View, XTAG reset, tests, pipeline,

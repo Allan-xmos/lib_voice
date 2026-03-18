@@ -28,7 +28,7 @@ def get_binary_path(xe, target="xs3a"):
         assert 0, f"{target} target is unsupported"
 
 
-def run_with_xscope_fileio(xe_path, cwd, target="xs3a", timeout=600):
+def run_with_xscope_fileio(xe_path, cwd, target="xs3a", timeout=6):
     """
     Run a .xe image on hardware via xscope_fileio, capturing device stdout.
 

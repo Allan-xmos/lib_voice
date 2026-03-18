@@ -5,32 +5,32 @@
    :widths: 8 8 8
 
    * - Component
-     - MIPS use (XS3A)
      - MIPS use (VX4B)
+     - MIPS use (XS3A)
    * - ADEC
+     - 1.17
      - 1.53
-     - N/A
    * - AEC_ALT_ARCH_1THREAD
+     - 40.02
      - 42.57
-     - N/A
    * - AEC_ALT_ARCH_2THREADS
+     - 29.11
      - 30.7
-     - N/A
    * - AEC_STD_ARCH_1THREAD
+     - 62.64
      - 62.89
-     - N/A
    * - AEC_STD_ARCH_2THREADS
+     - 41.89
      - 40.85
-     - N/A
    * - AGC
+     - 16.52
      - 21.31
-     - N/A
    * - IC
+     - 12.42
      - 13.21
-     - N/A
    * - NS
+     - 19.42
      - 20.79
-     - N/A
    * - VNR
+     - 1.65
      - 1.84
-     - N/A

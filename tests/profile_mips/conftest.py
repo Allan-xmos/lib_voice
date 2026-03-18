@@ -54,6 +54,19 @@ def write_rst_table(configs: dict, outfile: Path):
             lines.append(f"     - {mips}")
     outfile.write_text("\n".join(lines))
 
+def pytest_sessionstart(session):
+    """Clean up stale worker JSON files at the start of an --update run (master only)."""
+    if hasattr(session.config, "workerinput"):
+        return  # workers skip this
+    try:
+        update = session.config.getoption("--update")
+    except ValueError:
+        return
+    if update:
+        worker_logs = Path(__file__).parent / "worker_logs"
+        for f in worker_logs.glob("*_mips_worker*.json"):
+            f.unlink()
+
 def pytest_generate_tests(metafunc):
     if "target" in metafunc.fixturenames:
         selected_arches = metafunc.config.getoption("arch")
@@ -86,9 +99,16 @@ def pytest_sessionfinish(session, exitstatus):
                 for arch, apps in json.loads(f.read_text()).items():
                     data.setdefault(arch, {}).update(apps)
 
+            # Merge with existing reference JSON so other architectures are preserved
+            ref_json = Path(__file__).parent / "lib_voice_mips.json"
+            if ref_json.exists():
+                existing = json.loads(ref_json.read_text())
+                for arch, apps in existing.items():
+                    if arch not in data:
+                        data[arch] = apps
+
             print(f"MIPS for all apps = {data}")
             # generate updated JSON
-            ref_json = Path(__file__).parent / "lib_voice_mips.json"
             with ref_json.open("w") as fp:
                 json.dump(data, fp, indent=2)
             # generate updated RST

@@ -171,6 +171,9 @@ pipeline {
                       dir("pipeline") {
                         xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
                       }
+                      dir("profile_mips") {
+                        xcoreBuild(buildDir: "build_vx4b", archiveBins: false, toolsVersion: params.TOOLS_VX4_VERSION, cmakeOpts: "-DXCORE_TARGET=XK-EVK-XU416")
+                      }
                       stash name: 'vx4b_build_xcore', includes: '**/bin/**/*.xe'
                     }
                   }
@@ -395,6 +398,13 @@ pipeline {
                               junit "pytest_result.xml"
                               sh "python compare_keywords.py results_Avona_aec_ic_ns_agc_prev_arch_xcore.csv results_Avona_aec_ic_ns_agc_prev_arch_python.csv --pass-threshold=1"
                             }
+                          }
+                        }
+                        dir("profile_mips") {
+                          withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                            sh "pytest -n 2 --junitxml=pytest_result.xml --arch vx4b"
+                            junit "pytest_result.xml"
+                            archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
                           }
                         }
                       }

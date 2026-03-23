@@ -7,17 +7,25 @@
 #include <xcore/parallel.h>
 #include <xcore/assert.h>
 #include <xcore/hwtimer.h>
+#include <xcore/thread.h>
 #include "xmath/xmath.h"
+#include "xscope_io_device.h"
 #include "fileio.h"
 
 #include "pipeline_config.h"
 #include "pipeline_state.h"
 
+DECLARE_JOB(pipeline_stage_1, (chanend_t, chanend_t));
+DECLARE_JOB(pipeline_stage_2, (chanend_t, chanend_t));
+DECLARE_JOB(pipeline_stage_3, (chanend_t, chanend_t));
+DECLARE_JOB(pipeline_stage_4, (chanend_t, chanend_t));
 DECLARE_JOB(tx, (chanend_t, chanend_t, const char*));
-DECLARE_JOB(pipeline_tile0, (chanend_t, chanend_t));
 DECLARE_JOB(rx, (chanend_t, chanend_t, const char*));
 
-extern void pipeline_tile1(chanend_t c_pcm_in_b, chanend_t c_pcm_out_a);
+extern void pipeline_stage_1(chanend_t c_frame_in, chanend_t c_frame_out);
+extern void pipeline_stage_2(chanend_t c_frame_in, chanend_t c_frame_out);
+extern void pipeline_stage_3(chanend_t c_frame_in, chanend_t c_frame_out);
+extern void pipeline_stage_4(chanend_t c_frame_in, chanend_t c_frame_out);
 
 /// tx
 void tx(chanend_t c_pcm_in_a, chanend_t c_frame_num, const char* input_file_name) {
@@ -43,7 +51,8 @@ void tx(chanend_t c_pcm_in_a, chanend_t c_frame_num, const char* input_file_name
 /// rx
 void rx(chanend_t c_pcm_out_b, chanend_t c_frame_num, const char* output_file_name) {
     file_t output_file;
-    int32_t DWORD_ALIGNED pipeline_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
+    // int32_t DWORD_ALIGNED pipeline_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED pipeline_output[AP_FRAME_ADVANCE];
 
     int ret = file_open(&output_file, output_file_name, "wb");
     assert((!ret) && "Failed to open file");
@@ -52,30 +61,43 @@ void rx(chanend_t c_pcm_out_b, chanend_t c_frame_num, const char* output_file_na
     for(int frame=0; frame<frame_count; frame++)
     {
         // Receive output frame over channel
-        chan_in_buf_word(c_pcm_out_b, (uint32_t*)&pipeline_output[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
+        // chan_in_buf_word(c_pcm_out_b, (uint32_t*)&pipeline_output[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
+        chan_in_buf_word(c_pcm_out_b, (uint32_t*)&pipeline_output[0], AP_FRAME_ADVANCE);
 
-        file_write(&output_file, (uint8_t*)pipeline_output, (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE * sizeof(int32_t)));
+        // file_write(&output_file, (uint8_t*)pipeline_output, (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE * sizeof(int32_t)));
+        file_write(&output_file, (uint8_t*)pipeline_output, AP_FRAME_ADVANCE * sizeof(int32_t));
+        file_write(&output_file, (uint8_t*)pipeline_output, AP_FRAME_ADVANCE * sizeof(int32_t));
     }
 
     shutdown_session();
     _Exit(0);
 }
 
-//**** Multi tile pipeline structure ***//
-// file_read -> stage1 -> (tile0_to_tile1)-> stage2 -> stage3 -> stage4 -> (tile1_to_tile0) -> file_write
-void main_tile0(chanend_t c_t0_t1, chanend_t c_t1_t0, const char *input_file_name, const char* output_file_name)
-{
-    channel_t c_pcm_in = chan_alloc();
-    channel_t c_frame_num = chan_alloc();
+int main() {
+    chanend_t xscope_chan = chanend_alloc();
+    channel_t tx_to_st1 = chan_alloc();
+    channel_t tx_to_rx = chan_alloc();
+    channel_t st1_to_st2 = chan_alloc();
+    channel_t st2_to_st3 = chan_alloc();
+    channel_t st3_to_st4 = chan_alloc();
+    channel_t st4_to_rx = chan_alloc();
+    xscope_io_init(xscope_chan);
+
     PAR_JOBS(
-        PJOB(tx, (c_pcm_in.end_a, c_frame_num.end_a, input_file_name)),
-        PJOB(pipeline_tile0, (c_pcm_in.end_b, c_t0_t1)),
-        PJOB(rx, (c_t1_t0, c_frame_num.end_b, output_file_name))
-        );
-}
+        PJOB(tx, (tx_to_st1.end_a, tx_to_rx.end_a, "input.bin")),
+        PJOB(pipeline_stage_1, (tx_to_st1.end_b, st1_to_st2.end_a)),
+        PJOB(pipeline_stage_2, (st1_to_st2.end_b, st2_to_st3.end_a)),
+        PJOB(pipeline_stage_3, (st2_to_st3.end_b, st3_to_st4.end_a)),
+        PJOB(pipeline_stage_4, (st3_to_st4.end_b, st4_to_rx.end_a)),
+        PJOB(rx, (st4_to_rx.end_b, tx_to_rx.end_b, "output.bin"))
+    );
 
-void main_tile1(chanend_t c_t0_t1, chanend_t c_t1_t0)
-{
-    pipeline_tile1(c_t0_t1, c_t1_t0);
-}
 
+    chanend_free(xscope_chan);
+    chan_free(tx_to_st1);
+    chan_free(tx_to_rx);
+    chan_free(st1_to_st2);
+    chan_free(st2_to_st3);
+    chan_free(st3_to_st4);
+    chan_free(st4_to_rx);
+}

@@ -1,6 +1,6 @@
 // This file relates to internal XMOS infrastructure and should be ignored by external users
 
-@Library('xmos_jenkins_shared_library@v0.46.0') _
+@Library('xmos_jenkins_shared_library@v0.52.0') _
 
 def runningOn(machine) {
   println "Stage running on:"
@@ -8,7 +8,7 @@ def runningOn(machine) {
 }
 
 getApproval()
-  
+
 pipeline {
   agent none
 
@@ -19,13 +19,18 @@ pipeline {
       description: 'The XTC tools version'
     )
     string(
+      name: 'TOOLS_VX4_VERSION',
+      defaultValue: '-j --repo arch_vx_slipgate -b develop -a XTC 1184',
+      description: 'The XTC Slipgate tools version'
+    )
+    string(
       name: 'XMOSDOC_VERSION',
-      defaultValue: 'v8.0.1',
+      defaultValue: 'v8.1.0',
       description: 'The xmosdoc version'
     )
     string(
       name: 'INFR_APPS_VERSION',
-      defaultValue: 'v3.3.0',
+      defaultValue: 'v3.5.0',
       description: 'The infr_apps version'
     )
     booleanParam(name: 'FULL_TEST_OVERRIDE',
@@ -66,7 +71,12 @@ pipeline {
                 }
                 dir("${REPO}/examples") {
                   withVenv {
-                    xcoreBuild()
+                    // will use TOOLS_VERSION which is valid for an xs3a build
+                    xcoreBuild(archiveBins: false, buildDir: "build_xs3a")
+                    // setting TOOLS_VERSION to be the vx4b tools
+                    withEnv(["TOOLS_VERSION=${params.TOOLS_VX4_VERSION}"]) {
+                      xcoreBuild(archiveBins: false, buildDir: "build_vx4b", cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416")
+                    }
                   }
                 }
               }
@@ -74,25 +84,11 @@ pipeline {
 
             stage("Repo checks") {
               steps {
-                // Hack to get the changelog checker to install ai_tools before doing cmake
-                script {
-                  dir("${WORKSPACE}/.infr") {
-                    // Check out the infr_apps repo and dependencies
-                    if (!fileExists("infr_apps")) {
-                      sh "git clone --branch '${params.INFR_APPS_VERSION}' git@github.com:xmos/infr_apps"
-                    }
-                    dir("infr_apps") {
-                      if (!fileExists(".venv")) {
-                        createVenv(reqFile: "requirements.txt")
-                      }
-                      withVenv {
-                        sh "pip install -r ${WORKSPACE}/${REPO}/requirements.txt"
-                      }
-                    }
-                  }
-                }
                 warnError("Repo checks failed") {
-                  runRepoChecks("${WORKSPACE}/${REPO}")
+                  runRepoChecks(
+                    repo_dir:"${WORKSPACE}/${REPO}",
+                    reqFile:"${WORKSPACE}/${REPO}/requirements.txt"
+                  )
                 }
               }
             } // Repo checks

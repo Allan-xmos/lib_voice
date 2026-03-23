@@ -25,9 +25,9 @@
     "program": 9892
   },
   "app_memory_vnr": {
-    "total": 67008,
+    "total": 63936,
     "stack": 9132,
-    "program": 57876
+    "program": 54804
   },
   "app_memory_aec_alt_arch": {
     "total": 244632,

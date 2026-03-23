@@ -1,13 +1,22 @@
 set(LIB_NAME lib_voice)
 set(LIB_VERSION 1.0.1)
-set(LIB_DEPENDENT_MODULES "lib_xcore_math(develop)")
+set(LIB_DEPENDENT_MODULES "lib_xcore_math(v3.0.0)")
 
 set(LIB_COMPILER_FLAGS
             -g
             -Os
-            -DHEADROOM_CHECK=0)
+            -DHEADROOM_CHECK=0
+)
 
-if(BUILD_NATIVE)
+if(APP_BUILD_ARCH STREQUAL "xs3a")
+    list(APPEND LIB_COMPILER_FLAGS
+        -Wno-xcore-fptrgroup
+    )
+elseif(APP_BUILD_ARCH STREQUAL "vx4b")
+    list(APPEND LIB_COMPILER_FLAGS
+        -Wno-fptrgroup
+    )
+elseif(BUILD_NATIVE)
     list(APPEND LIB_COMPILER_FLAGS
         -D__xtflm_conf_h_exists__
         -DNN_USE_REF

@@ -8,10 +8,7 @@ void vnr_state_init(vnr_state_t *vnr)
     vnr_input_state_init(&vnr->input_state);
     vnr_feature_state_init(&vnr->feature_state);
     int32_t ret = vnr_inference_init();
-    if(ret) {
-        printf("vnr_inference_init() returned error %ld\n",ret);
-        assert(0);
-    }
+    assert(ret == 0 && "vnr inference initialisation has failed");
 }
 
 void vnr_process_frame(vnr_state_t * vnr, float_s32_t * output, int32_t input[VNR_FRAME_ADVANCE])

@@ -1,6 +1,17 @@
 lib_voice change log
 ====================
 
+UNRELEASED
+----------
+
+  * ADDED: Initial `vx4b` support
+  * CHANGED: `app_pipeline` example is now single-tile 
+  * CHANGED: Updated xmos_ai_tools version to 1.4.3.dev39
+
+  * Changes to dependencies:
+
+    - lib_xcore_math: 2.4.1 -> 3.0.0
+
 1.0.1
 -----
 

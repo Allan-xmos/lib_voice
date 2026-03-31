@@ -1,6 +1,12 @@
 lib_voice change log
 ====================
 
+1.0.1
+-----
+
+  * CHANGED: Corrected project name in CMakeLists.txt
+  * CHANGED: Added prefix to VNR model name
+
 1.0.0
 -----
 

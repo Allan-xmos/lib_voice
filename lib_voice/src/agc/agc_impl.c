@@ -60,12 +60,12 @@ static int32_t apply_soft_clipping(int32_t mant, exponent_t exp)
         return mant;
     }
 
-    // Division by zero is not possible after the absolute value test against AGC_LC_LIMIT_POINT
+    // Division by zero is not possible after the absolute value test against AGC_SOFT_CLIPPING_THRESH
     float_s32_t sample_limit = float_s32_div(AGC_SOFT_CLIPPING_NUMERATOR, sample_abs);
     sample_limit = float_s32_sub(FLOAT_S32_ONE, sample_limit);
 
-    if (float_s32_gt(FLOAT_S32_ZERO, sample)) {
-        sample_limit = float_s32_sub(FLOAT_S32_ZERO, sample_limit);
+    if (0 > mant) {
+        sample_limit.mant = -sample_limit.mant;
     }
 
     return use_exp_float(sample_limit, exp);

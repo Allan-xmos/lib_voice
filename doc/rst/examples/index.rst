@@ -109,7 +109,7 @@ the metadata struct will need to be created to be populated and consumed by the 
 .. literalinclude:: ../../../examples/app_pipeline/src/pipeline.c
     :language: c
     :start-at: /** Stage1 - AEC, DE, ADEC*/
-    :end-at: &md.aec_corr_factor, &md.ref_active_flag, input_y_data, input_x_data);
+    :end-at: &md.aec_corr_factor[0], &md.ref_active_flag, input_y_data, input_x_data);
 
 .. literalinclude:: ../../../examples/app_pipeline/src/pipeline.c
     :language: c

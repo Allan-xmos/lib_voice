@@ -8,7 +8,7 @@
 
 typedef struct {
     float_s32_t max_ref_energy;
-    float_s32_t aec_corr_factor;
+    float_s32_t aec_corr_factor[AP_MAX_Y_CHANNELS];
     int32_t ref_active_flag;
     float_s32_t vnr_pred_flag;
 }pipeline_metadata_t;
@@ -16,7 +16,7 @@ typedef struct {
 typedef struct {
     // Stage1 - AEC, DE, ADEC
     stage1_t DWORD_ALIGNED stage_1_state;
-} pipeline_state_tile0_t;
+} pipeline_state_thread0_t;
 
 typedef struct {
     // IC, VNR
@@ -26,6 +26,6 @@ typedef struct {
     ns_state_t DWORD_ALIGNED ns_state;
     // AGC
     agc_state_t agc_state;
-} pipeline_state_tile1_t;
+} pipeline_state_thread1_t;
 
 #endif

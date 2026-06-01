@@ -60,7 +60,7 @@ target_link_libraries(lib_voice_module_lib_vnr
 )
 target_link_libraries(lib_voice_module_lib_vnr
     PRIVATE
-	    tflite_micro
+	    ai_tools
 )
 target_link_libraries(lib_voice_module_lib_vnr
     PRIVATE

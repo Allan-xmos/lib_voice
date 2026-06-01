@@ -39,6 +39,8 @@ void adec_init(adec_state_t *adec_state, adec_config_t *config){
   adec_state->sf_copy_flag = 0;
   adec_state->convergence_counter = 0;
   adec_state->shadow_flag_counter = 0;
+  adec_state->had_erle_reset = 0;
+  adec_state->peak_p2a_in_aec_period = f64_to_float_s32(0.0);
 }
 
 static void start_de_cycle(adec_state_t *state, adec_output_t *adec_output) {
@@ -69,6 +71,10 @@ void adec_process_frame(
   //Log the biggest peak:ave ratio since AEC reset - gives inidication of convergence
   if (float_s32_gte(adec_in->from_de.peak_to_average_ratio, state->max_peak_to_average_ratio_since_reset)){
     state->max_peak_to_average_ratio_since_reset = adec_in->from_de.peak_to_average_ratio;
+  }
+  //Track peak p2a in current AEC period (persists across shadow events, only reset on delay change)
+  if (float_s32_gte(adec_in->from_de.peak_to_average_ratio, state->peak_p2a_in_aec_period)){
+    state->peak_p2a_in_aec_period = adec_in->from_de.peak_to_average_ratio;
   }
 
   //Work out the trend (slope) of the peak phase power to see if we are diverging..
@@ -164,11 +170,22 @@ void adec_process_frame(
 
           // After a delay change/reset, allow the AEC some time to settle before
           // allowing another DE cycle.
-          if ((state->gated_milliseconds_since_mode_change > ADEC_AEC_DELAY_EST_TIME_MS) &&
-              (state->agm_q24 < 0 || watchdog_triggered) &&
-              (state->shadow_flag_counter >= ADEC_SHADOW_FLAG_COUNTER_LIMIT ||
-            state->convergence_counter >= ADEC_CONVERGENCE_COUNTER_LIMIT)) {
+          // Two-path trigger logic:
+          // Path 1 (fast): agm<0, multiple shadow copies, AND (proven convergence OR clearly unconverged)
+          // Path 2 (slow): deeply negative agm, long convergence period, AND proven convergence
+          unsigned time_guard = (state->gated_milliseconds_since_mode_change > ADEC_AEC_DELAY_EST_TIME_MS);
+          const float_s32_t p2a_threshold_minus_one = f32_to_float_s32(3.0f); // ADEC_PEAK_TO_AVERAGE_GOOD_AEC (4.0) - 1.0
 
+          unsigned path1 = (state->agm_q24 < 0)
+              && (state->shadow_flag_counter >= ADEC_SHADOW_FLAG_COUNTER_LIMIT)
+              && (state->had_erle_reset
+                  || float_s32_gte(p2a_threshold_minus_one, state->peak_p2a_in_aec_period));
+
+          unsigned path2 = (state->agm_q24 < ADEC_AGM_DEEPLY_NEGATIVE)
+              && (state->convergence_counter >= ADEC_CONVERGENCE_COUNTER_LIMIT)
+              && state->had_erle_reset;
+
+          if (time_guard && (path1 || path2 || watchdog_triggered)) {
             if (!state->adec_config.bypass) {
                 // Trigger a DE cycle
                 start_de_cycle(state, adec_output);

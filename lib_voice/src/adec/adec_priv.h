@@ -27,6 +27,8 @@
 
 #define ADEC_CONVERGENCE_COUNTER_LIMIT          (66*5)           //Number of frames to hold off the ADEC while the shadow filter attempts to converge
 #define ADEC_SHADOW_FLAG_COUNTER_LIMIT          3                //Number of times shadow filter needs to be better before calculating new delay
+#define ADEC_ERLE_RESET_CC_GUARD                30               //Minimum convergence_counter before allowing ERLE-based AGM reset (avoids post-shadow false positives)
+#define ADEC_AGM_DEEPLY_NEGATIVE                FLOAT_TO_Q24(-5.0) //Deeply negative AGM threshold for slow-path DE trigger
 
 #define MILLISECONDS_TO_SAMPLES(ms) (ms * (16000 / 1000))
 

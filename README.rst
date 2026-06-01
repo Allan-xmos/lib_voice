@@ -5,7 +5,7 @@ lib_voice: Voice processing library
 ###################################
 
 :vendor: XMOS
-:version: 1.0.1
+:version: 1.1.0
 :scope: General Use
 :description: Voice processing library
 :category: Voice

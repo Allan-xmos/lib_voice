@@ -49,6 +49,8 @@ void reset_stuff_on_AEC_mode_start(adec_state_t *adec_state, unsigned set_toggle
     adec_state->sf_copy_flag = 0;
     adec_state->shadow_flag_counter = 0;
     adec_state->convergence_counter = 0;
+    adec_state->had_erle_reset = 0;
+    adec_state->peak_p2a_in_aec_period = f64_to_float_s32(0.0);
   }
 }
 
@@ -210,11 +212,11 @@ static inline q8_24 multiply_q24_no_saturation(q8_24 a_q24, q8_24 b_q24){
 //This function modifies the agm (AEC Goodness Metric) according to state of ERLE and the peak power slope
 q8_24 calculate_aec_goodness_metric(adec_state_t *state, q8_24 log2erle_q24, float_s32_t peak_power_slope, q8_24 agm_q24){
 
-  //All good if ERLE is high
-  if (log2erle_q24 >= state->erle_good_bits_q24){
-    // debug_printf("*AGM ERLE ALL GOOD\n");
+  //All good if ERLE is high — but only reset if not in immediate post-shadow period
+  if (log2erle_q24 >= state->erle_good_bits_q24 && state->convergence_counter >= ADEC_ERLE_RESET_CC_GUARD){
     state->convergence_counter = 0;
     state->shadow_flag_counter = 0;
+    state->had_erle_reset = 1;
     return ADEC_AGM_ONE;
   }
 

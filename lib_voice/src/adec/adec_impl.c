@@ -112,13 +112,19 @@ void adec_process_frame(
         }
 
         if (adec_in->from_aec.shadow_flag_ch0 == COPY) {
-          state->sf_copy_flag = 1;
+          //py_voice: on the FIRST shadow->main copy (AEC just got its first good filter),
+          //start counting shadow events fresh from this point.
+          if (!state->sf_copy_flag) {
+            state->sf_copy_flag = 1;
+            state->shadow_flag_counter = 0;
+          }
         }
 
         //In normal AEC mode, check to see if we have converged but have left significant tail on the table
         //But only change mode if the delay change is big enough - else reset of AEC not worth it
+        //py_voice in-AEC-mode detect uses aec_mode_delay_esimation_peak_to_average_ratio (5.0), not GOOD_DE (8.0)
         if ((state->gated_milliseconds_since_mode_change > ADEC_AEC_DELAY_EST_TIME_MS) &&
-          (float_s32_gte(adec_in->from_de.peak_to_average_ratio, aec_peak_to_average_good_de_threshold)) &&
+          (float_s32_gte(adec_in->from_de.peak_to_average_ratio, state->aec_peak_to_average_good_aec_threshold)) &&
           (adec_in->from_de.measured_delay_samples > MILLISECONDS_TO_SAMPLES(ADEC_AEC_ESTIMATE_MIN_MS)) &&
           (!state->adec_config.bypass)){
 
@@ -155,25 +161,23 @@ void adec_process_frame(
           //AEC goodness calculation
           state->agm_q24 = calculate_aec_goodness_metric(state, log2erle_q24, peak_power_slope, state->agm_q24);
 
-          //Action if force trigger or if agm dips below zero or watchdog when adec enabled - things are totally ruined so do full delay estimate cycle
-          if(float_s32_gte(aec_peak_to_average_ruined_aec_threshold, adec_in->from_de.peak_to_average_ratio)) {
-#ifdef ENABLE_ADEC_DEBUG_PRINTS
-              printf("less than 2\n");
-#endif
-          }
-            unsigned watchdog_triggered = (
+          //Watchdog: if we have spent a long time in AEC mode with far energy but never reached a
+          //good peak:average ratio (or it has become ruined), tank the goodness. Like py_voice this
+          //does NOT trigger a DE cycle directly - it just forces agm = -1 and lets the trigger logic
+          //below decide (path1 still requires shadow copies / convergence evidence).
+          unsigned watchdog = (
                    (state->gated_milliseconds_since_mode_change > (ADEC_PK_AVE_POOR_WATCHDOG_SECONDS * 1000))
                   && ((float_s32_gte(state->aec_peak_to_average_good_aec_threshold, state->max_peak_to_average_ratio_since_reset)) ||
                     (float_s32_gte(aec_peak_to_average_ruined_aec_threshold, adec_in->from_de.peak_to_average_ratio))
                    )
                           );
+          if (watchdog) {
+            state->agm_q24 = FLOAT_TO_Q24(-1.0);
+          }
 
-          // After a delay change/reset, allow the AEC some time to settle before
-          // allowing another DE cycle.
-          // Two-path trigger logic:
+          // Two-path trigger logic (matches py_voice proc_frame_aec - no extra time guard):
           // Path 1 (fast): agm<0, multiple shadow copies, AND (proven convergence OR clearly unconverged)
           // Path 2 (slow): deeply negative agm, long convergence period, AND proven convergence
-          unsigned time_guard = (state->gated_milliseconds_since_mode_change > ADEC_AEC_DELAY_EST_TIME_MS);
           // py_voice: aec_mode_delay_esimation_peak_to_average_ratio (5.0) - 1.0 = 4.0
           const float_s32_t p2a_threshold_minus_one = f32_to_float_s32(4.0f);
 
@@ -186,7 +190,7 @@ void adec_process_frame(
               && (state->convergence_counter >= ADEC_CONVERGENCE_COUNTER_LIMIT)
               && state->had_erle_reset;
 
-          if (time_guard && (path1 || path2 || watchdog_triggered)) {
+          if (path1 || path2) {
             if (!state->adec_config.bypass) {
                 // Trigger a DE cycle
                 start_de_cycle(state, adec_output);

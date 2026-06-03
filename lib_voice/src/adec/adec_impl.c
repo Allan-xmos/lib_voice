@@ -174,7 +174,8 @@ void adec_process_frame(
           // Path 1 (fast): agm<0, multiple shadow copies, AND (proven convergence OR clearly unconverged)
           // Path 2 (slow): deeply negative agm, long convergence period, AND proven convergence
           unsigned time_guard = (state->gated_milliseconds_since_mode_change > ADEC_AEC_DELAY_EST_TIME_MS);
-          const float_s32_t p2a_threshold_minus_one = f32_to_float_s32(3.0f); // ADEC_PEAK_TO_AVERAGE_GOOD_AEC (4.0) - 1.0
+          // py_voice: aec_mode_delay_esimation_peak_to_average_ratio (5.0) - 1.0 = 4.0
+          const float_s32_t p2a_threshold_minus_one = f32_to_float_s32(4.0f);
 
           unsigned path1 = (state->agm_q24 < 0)
               && (state->shadow_flag_counter >= ADEC_SHADOW_FLAG_COUNTER_LIMIT)

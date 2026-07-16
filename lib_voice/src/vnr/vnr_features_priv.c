@@ -108,8 +108,8 @@ void vnr_priv_mel_compute(float_s32_t *filter_output, const bfp_complex_s32_t *X
         unsigned filter_length = mel_filter_512_24_compact_start_bins[2*(i+1)] - filter_start;
         // Create input spectrum subset BFP structure
         bfp_s32_t spect_subset;
-        bfp_s32_init(&spect_subset, (int32_t *) &squared_mag.data[filter_start], squared_mag.exp, filter_length, 0);
-        spect_subset.hr = squared_mag.hr; // Reuse parent headroom; a subset's hr >= the full vector's, so this is a safe (conservative) bound and avoids a per-filter headroom scan
+        bfp_s32_init(&spect_subset, (int32_t *) &squared_mag.data[filter_start], squared_mag.exp, filter_length, 1);
+        // spect_subset.hr = squared_mag.hr; // Reuse parent headroom; a subset's hr >= the full vector's, so this is a safe (conservative) bound and avoids a per-filter headroom scan
 
         // Create MEL filter BFP structure
         bfp_s32_t filter_subset;

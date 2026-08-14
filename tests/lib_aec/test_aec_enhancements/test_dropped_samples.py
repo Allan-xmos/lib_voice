@@ -25,7 +25,7 @@ import pytest
 @pytest.mark.parametrize("drop_amount", [1, 3, 10])
 @pytest.mark.parametrize("room", ["lab", "board"])
 
-def test_dropped_samples(drop_amount, room):
+def test_dropped_samples(drop_amount, room, target):
     ''' test_dropped_samples - run a  mono pink noise convolved with a modelled impulse response
     remove drop_amount samples after 10 seconds, and check for the length of time taken for 10 dB reconvergence
 
@@ -95,7 +95,7 @@ def test_dropped_samples(drop_amount, room):
 
     #run XC
     print("Run AEC XC")
-    dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_AUTO'], num_y_channels=y_channel_count, num_x_channels=x_channel_count)
+    dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_AUTO'], num_y_channels=y_channel_count, num_x_channels=x_channel_count, target=target)
     output_wav_file, _ = sf.read(dut_output_file)
     error = output_wav_file
     _, leq_error = wtf.leq_smooth(error[:, 0], fs, 0.05)

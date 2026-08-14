@@ -25,7 +25,7 @@ def generate_random_delay_changes(number, spacing, min_s, max_s):
     delays.append((int(this_time_samps), int(this_delay)))
   return delays
 
-def run_test(pipeline_config, info, path_to_regression_files, input_audio_files, far_end_delay_changes, test_length_s=70, run_target="xcore", volume_changes=None):
+def run_test(pipeline_config, info, path_to_regression_files, input_audio_files, far_end_delay_changes, test_length_s=70, run_target="xcore", volume_changes=None, target="xs3a"):
   assert run_target == "xcore", "Only xcore testing is supported"
 
   # tmp_dir = tempfile.mkdtemp(prefix='tmp_', dir='.')
@@ -61,7 +61,7 @@ def run_test(pipeline_config, info, path_to_regression_files, input_audio_files,
     frame_advance = 240
     AEC_MAX_Y_CHANNELS = 2
     output_file = tmp_path / "output.wav"
-    test_wav(test_exe, aec_input_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, tmp_folder=tmp_dir)
+    test_wav(test_exe, aec_input_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, target=target, tmp_folder=tmp_dir)
 
     # Read estimated delay samples for every frame
     with open(tmp_path / delay_output_file_name, 'r') as f:

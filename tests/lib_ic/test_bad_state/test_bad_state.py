@@ -37,7 +37,7 @@ ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_no_a
 ap_conf = config.get_config_dict(ap_config_file)
 cwd = Path(__file__).parent
 
-def run_target(input_data, conf_data):
+def run_target(input_data, conf_data, target):
     output_data = np.empty(0, dtype=np.int32)
 
     with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
@@ -49,16 +49,16 @@ def run_target(input_data, conf_data):
         conf_file = tmp_folder / "conf.bin"
         conf_data.astype(np.int32).tofile(conf_file)
 
-        run_with_xscope_fileio(xe, tmp_folder)
+        run_with_xscope_fileio(xe, tmp_folder, target)
 
         output_file = tmp_folder / "output.bin"
         output_data = np.fromfile(output_file, dtype=np.int32)
 
     return output_data
 
-def run_test(input_data, conf_data, test_name, fs):
+def run_test(input_data, conf_data, test_name, fs, target):
 
-    output_data = run_target(input_data, conf_data)
+    output_data = run_target(input_data, conf_data, target)
     output_data = pvc.int32_to_float(output_data)
 
     sf.write(cwd / f"output_{test_name}.wav", output_data, fs)
@@ -77,7 +77,7 @@ def form_conf_data(config, H_hat, num_words_H):
 @pytest.mark.parametrize("room", ["lab"])
 @pytest.mark.parametrize("speech_level", [0])
 @pytest.mark.parametrize("noise_name", ["006_Pink", "015_Silence"])
-def test_bad_state(room, speech_level, noise_name):
+def test_bad_state(room, speech_level, noise_name, target):
 
     # some constants:
     length_secs = 10
@@ -132,10 +132,10 @@ def test_bad_state(room, speech_level, noise_name):
     input_data = pvc.interleave_channel_frames(input_data, frame_advance)
 
     conf_data_cancel_noise = form_conf_data(2, ideal_noise_cancellation_H, num_words_H)
-    average_fixed_good = run_test(input_data, conf_data_cancel_noise, f"good_{noise_name}", fs)
+    average_fixed_good = run_test(input_data, conf_data_cancel_noise, f"good_{noise_name}", fs, target)
 
     conf_data_cancel_speech = form_conf_data(0, ideal_speech_cancellation_H, num_words_H)
-    average_adapt_bad = run_test(input_data, conf_data_cancel_speech, f"bad_{noise_name}", fs)
+    average_adapt_bad = run_test(input_data, conf_data_cancel_speech, f"bad_{noise_name}", fs, target)
 
     print(f"average_adapt_bad (dB): {average_adapt_bad}")
     print(f"average_fixed_good (dB): {average_fixed_good}")
@@ -144,4 +144,4 @@ def test_bad_state(room, speech_level, noise_name):
 
 
 if __name__ =="__main__":
-    test_bad_state("lab", 0, "006_Pink")
+    test_bad_state("lab", 0, "006_Pink", "xs3a")

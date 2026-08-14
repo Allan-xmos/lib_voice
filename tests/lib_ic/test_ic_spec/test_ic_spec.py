@@ -98,7 +98,7 @@ def process_py(input_data):
     return np.reshape(output_data, output_data.shape[1])
 
 
-def process_c(input_data, xe_name):
+def process_c(input_data, xe_name, target="xs3a"):
     input_data = pvc.float_to_int32(input_data)
 
     assert input_data.ndim == 2
@@ -106,7 +106,7 @@ def process_c(input_data, xe_name):
 
     input_data = pvc.interleave_channel_frames(input_data, frame_advance)
 
-    output_data, _ = run_dut(input_data, xe_name, "xs3a")
+    output_data, _ = run_dut(input_data, xe_name, target)
 
     return pvc.int32_to_float(output_data)
 
@@ -132,13 +132,13 @@ def test_input(request):
     return (test_case, combined_data)
 
 
-def process_audio(model, input_audio, test_name):
+def process_audio(model, input_audio, test_name, target="xs3a"):
     if model == 'py':
         output_file = output_folder / f"out_{test_name}_py.wav"
         output_data = process_py(input_audio)
     elif model == "c":
         output_file = output_folder / f"out_{test_name}_c.wav"
-        output_data = process_c(input_audio, xe_path)
+        output_data = process_c(input_audio, xe_path, target)
     else:
         assert 0, f"model {model} not supported"
 
@@ -250,12 +250,12 @@ def check_delay(record_property, test_case, input_audio, output_audio):
 
 @pytest.mark.parametrize('test_input', test_vectors, indirect=True)
 @pytest.mark.parametrize('model', ["py", "c"])
-def test_all(test_input, model, record_property):
+def test_all(test_input, model, record_property, target):
     test_case, input_audio = test_input
     print("\n{}: {}\n".format(test_case.name, model))
     output_folder.mkdir(exist_ok=True)
 
-    output_audio = process_audio(model, input_audio, test_case.get_test_name())
+    output_audio = process_audio(model, input_audio, test_case.get_test_name(), target)
     suppression_arr = get_suppression_arr(input_audio, output_audio)
 
     record_property('Test name', test_case.get_test_name())

@@ -53,7 +53,7 @@ def conv_impulse_array(x, h, fade_len):
 
 
 @pytest.mark.parametrize("adapt_config", ['AEC_ADAPTION_FORCE_ON', 'AEC_ADAPTION_AUTO'])
-def test_impulse_response_change(adapt_config):
+def test_impulse_response_change(adapt_config, target):
 
     fs = 16000
     N = fs * 20
@@ -112,7 +112,7 @@ def test_impulse_response_change(adapt_config):
 
     #run XC
     print("Run AEC XC")
-    dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict[adapt_config], num_y_channels=y_channel_count, num_x_channels=x_channel_count)
+    dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict[adapt_config], num_y_channels=y_channel_count, num_x_channels=x_channel_count, target=target)
 
     output_wav_file, _ = sf.read(dut_output_file)
     error_xc = output_wav_file[:,0]

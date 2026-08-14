@@ -17,7 +17,7 @@ filter_dir = parser.get("Folders", "filter_dir")
 (Path(__file__).parent / filter_dir).mkdir(exist_ok=True)
 
 @pytest.mark.parametrize("channel_count", [1, 2])
-def test_skype(channel_count):
+def test_skype(channel_count, target):
     ''' test_skype - run a  mono skype signal convolved with a modelled impulse response
     check that the output has some attenuation and AEC filter does not have any discontinuities
 
@@ -72,7 +72,7 @@ def test_skype(channel_count):
     print("Run AEC XC. nFrames = ", nFrames)
     filter_td_file = f"{filter_dir}/{testname}_h_td_xc.npy"
     filter_fd_file = f"{filter_dir}/{testname}_H_fd_xc.npy"
-    dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:channel_count], in_data_32bit[:,channel_count:], testname, adapt=nFrames, h_hat_dump=filter_fd_file, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_FORCE_ON'], num_y_channels=channel_count, num_x_channels=channel_count)
+    dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:channel_count], in_data_32bit[:,channel_count:], testname, adapt=nFrames, h_hat_dump=filter_fd_file, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_FORCE_ON'], num_y_channels=channel_count, num_x_channels=channel_count, target=target)
 
     output_wav_file, _ = sf.read(dut_output_file)
     error_xc = output_wav_file[:,0]

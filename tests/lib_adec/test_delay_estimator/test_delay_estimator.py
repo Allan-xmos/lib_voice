@@ -148,7 +148,7 @@ def write_output(test_name, output, xc_or_py):
     np.savetxt(output_filename, output)
 
 
-def process_audio(input_data, test_name):
+def process_audio(input_data, test_name, target):
     with tempfile.TemporaryDirectory(dir='.', prefix='tmp_') as tmp_folder:
         tmp_path = Path(tmp_folder)
         #write runtime arguments into args.bin
@@ -168,7 +168,7 @@ def process_audio(input_data, test_name):
 
         AEC_MAX_Y_CHANNELS = 2
         output_file = tmp_path / "output.wav"
-        test_wav(xe_path, input_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, tmp_folder=tmp_folder)
+        test_wav(xe_path, input_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, target=target, tmp_folder=tmp_folder)
 
         with open(tmp_path / delay_calc_output_file_name, 'r') as f:
             output = np.array([int(l) for l in f.readlines()], dtype=float)
@@ -356,10 +356,10 @@ def check_correct(record_property, test_case, delay_arr, output):
 
 
 @pytest.mark.parametrize('test_input', test_vectors, indirect=True)
-def test_all(test_input, record_property):
+def test_all(test_input, record_property, target):
     test_case, input_audio = test_input
 
-    output = process_audio(input_audio, test_case.get_test_name())
+    output = process_audio(input_audio, test_case.get_test_name(), target)
     delay_arr = get_delay_arr(test_case, len(output))
 
     record_property('Test name', test_case.get_test_name())

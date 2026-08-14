@@ -116,7 +116,7 @@ def run_dut(input_data, xe, target="xs3a", tmp_folder=None, **run_kwargs):
         print(f"running DUT from pre-created tmp directory {tmp_folder}")
         tmp_path = Path(tmp_folder)
         tmp_path.mkdir(parents=True, exist_ok=True)
-        output_data, target_stdout = _run_dut_inner(input_data, xe_path, tmp_path, target **run_kwargs)
+        output_data, target_stdout = _run_dut_inner(input_data, xe_path, tmp_path, target, **run_kwargs)
         return output_data, target_stdout
 
     with tempfile.TemporaryDirectory(dir=".", suffix=xe_path.stem) as auto_tmp:

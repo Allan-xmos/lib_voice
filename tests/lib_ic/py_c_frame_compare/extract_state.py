@@ -6,12 +6,14 @@
 # and a bit of scripting to extract the ic state and xs3 math types from the source
 
 import subprocess
+from pathlib import Path
 
-xcore_math_types_api_dir = "../../../../lib_xcore_math/lib_xcore_math/api"
-lib_ic_api_dir = "../../../lib_voice/api/ic/"
-lib_vnr_api_dir = "../../../lib_voice/api/vnr/"
-lib_vnr_model_dir = "../../../lib_voice/src/vnr/model"
-lib_vnr_src_dir = "../../../lib_voice/src/vnr/"
+sandbox_dir = Path(__file__).parents[4]
+xcore_math_types_api_dir = sandbox_dir / "lib_xcore_math/lib_xcore_math/api"
+lib_ic_api_dir = sandbox_dir / "lib_voice/lib_voice/api/ic/"
+lib_vnr_api_dir = sandbox_dir / "lib_voice/lib_voice/api/vnr/"
+lib_vnr_model_dir = sandbox_dir / "lib_voice/lib_voice/src/vnr/model"
+lib_vnr_src_dir = sandbox_dir / "lib_voice/lib_voice/src/vnr/"
 ic_state = []
 
 def extract_section(line, pp):
@@ -33,7 +35,7 @@ def extract_section(line, pp):
             ic_state.append(line)
 
 def extract_xcore_math():
-    with open(xcore_math_types_api_dir+"/xmath/types.h") as xs3m:
+    with open(Path(xcore_math_types_api_dir, "xmath/types.h")) as xs3m:
         lines = xs3m.readlines()
         for line in lines:
             if not "#" in line and "C_TYPE" not in line:
@@ -56,7 +58,7 @@ def extract_pre_defs():
     extract_xcore_math()
 
     #Grab just ic_state related lines from the C pre-processed
-    subprocess.call(f"gcc -E ic_test.c -o ic_test.i -I {lib_ic_api_dir} -I {xcore_math_types_api_dir} -I {lib_vnr_api_dir} -I {lib_vnr_src_dir} -I {lib_vnr_model_dir}".split())
+    subprocess.check_output(f"gcc -E ic_test.c -o ic_test.i -I {lib_ic_api_dir} -I {xcore_math_types_api_dir} -I {lib_vnr_api_dir} -I {lib_vnr_src_dir} -I {lib_vnr_model_dir}".split())
 
     with open("ic_test.i") as pp:
         end_of_file = False

@@ -7,6 +7,267 @@ def runningOn(machine) {
   println machine
 }
 
+// Runs a single pytest suite, wrapping the repeated dir/env/junit boilerplate.
+// archOpt is "" or "--arch <name>" for suites that support it. postSteps (if given) runs
+// after junit reporting, still inside the suite's dir()/env context (e.g. for archiveArtifacts
+// or a follow-up python script).
+def runSuite(String suiteDir, String archOpt, String pytestArgs, Closure postSteps = null) {
+  dir(suiteDir) {
+    def cmd = "pytest ${archOpt} ${pytestArgs} --junitxml=pytest_result.xml".replaceAll(/\s+/, ' ').trim()
+    withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+      sh cmd
+      junit "pytest_result.xml"
+      if (postSteps) { postSteps() }
+    }
+  }
+}
+
+// Runs every test suite built for the given architecture ("xs3a", "vx4b" or "native").
+// Must be called from within dir("tests") { withTools(...) { withVenv { ... } } }.
+// Each suite is individually catchError-wrapped so one failure doesn't skip the rest.
+def test_arch(String archName) {
+  if (archName == 'native') {
+    // Only suites with an existing native build/execution path are run natively.
+    catchError(stageResult: 'UNSTABLE', catchInterruptions: false) {
+      runSuite("lib_vnr/vnr_unit_tests", "--arch native", "-n 2")
+    }
+    catchError(stageResult: 'UNSTABLE', catchInterruptions: false) {
+      runSuite("lib_ic/test_calc_vnr_pred", "--arch native", "-n 2")
+    }
+    return
+  }
+
+  def arch = "--arch ${archName}"
+
+  if (archName == 'vx4b') {
+    // fails loading xinterpreters on ubuntu 22
+    echo "Skipping lib_vnr/vnr_unit_tests on vx4b: fails loading xinterpreters on ubuntu 22"
+  } else {
+    catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+      runSuite("lib_vnr/vnr_unit_tests", arch, "-n 2")
+    }
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_ns", arch, "-n 2")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    // py_c_frame_compare/characterise_c_py are xs3a-only Python/CFFI comparisons with their own
+    // prebuild step, already run separately by test_xs3a_only() - excluded here to avoid
+    // collecting their un-prebuilt test modules (ImportError: no module named 'build').
+    runSuite("lib_ic", "${arch} --ignore=py_c_frame_compare --ignore=characterise_c_py", "-n 2") {
+      sh "python test_ic_spec/print_stats.py > ic_spec_summary_${archName}.txt"
+    }
+  }
+
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_adec/de_unit_tests", arch, "-n 2")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    dir("lib_adec/test_delay_estimator") {
+      sh 'mkdir -p ./input_wavs/'
+      sh 'mkdir -p ./output_files/'
+    }
+    runSuite("lib_adec/test_delay_estimator", arch, "-n 2") {
+      sh "python print_stats.py"
+    }
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_adec/test_adec_startup", arch, "-n 2")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_adec/test_adec", arch, "-n 2")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_aec/test_aec_schedule", arch, "-n 1")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_aec/test_aec_enhancements", arch, "-n 2")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_aec/aec_unit_tests", arch, "-n 2")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_agc/test_process_frame", arch, "-n 2")
+  }
+}
+
+// Runs the xs3a-only suites that don't have vx4b/native builds (profiling, pure-python
+// comparisons, and the bespoke multi-step AEC spec pipeline).
+// Must be called from within dir("tests") { ... } - this node's workspace never ran an
+// XCommon CMake configure, so lib_xcore_math (needed by the build_*.py scripts below via
+// sandbox-relative paths) hasn't been fetched into the sandbox yet.
+def test_xs3a_only() {
+  sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("profile_memory", "", "-n 1") {
+      archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
+    }
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("profile_mips", "", "-n 2") {
+      archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
+    }
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    dir("lib_vnr/test_vnr_cffi") {
+      sh "python build_vnr_cffi.py"
+    }
+    runSuite("lib_vnr/test_vnr_cffi", "", "-n 4")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    dir("lib_ic/py_c_frame_compare") {
+      sh "python build_ic_frame_proc.py"
+    }
+    runSuite("lib_ic/py_c_frame_compare", "", "-s")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_ic/characterise_c_py", "", "-s")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    dir("stage_b") {
+      sh "python build_c_code.py"
+    }
+    // -n 2: both tests now write to pytest's per-test tmp_path, safe to run concurrently
+    runSuite("stage_b", "", "-n 2")
+  }
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    dir("lib_aec/test_aec_spec") {
+      if (env.FULL_TEST == "0") {
+        sh 'mv excluded_tests_quick.txt excluded_tests.txt'
+      }
+      sh "python generate_audio.py"
+      sh "pytest -n 2 --junitxml=results_process.xml test_process_audio.py"
+      catchError(catchInterruptions: false) {
+        sh "pytest --junitxml=results_check.xml test_check_output.py"
+      }
+      sh "python parse_results.py"
+      sh "pytest --junitxml=results_final.xml test_evaluate_results.py"
+      junit "results_final.xml"
+    }
+  }
+}
+
+// Runs one architecture's whole Verification stage (Get View, XTAG reset, tests, pipeline,
+// artifact archiving, cleanup) - shared by vx4b/native/xs3a instead of 3 near-identical
+// declarative stage blocks. `cfg` fields: agentLabel, toolsVersion, archName,
+// unstashNames, hwTarget (null skips XTAG reset), extraTests (closure,
+// optional), benchmarkPipeline (bool), archiveAlways/
+// archiveFailure (closures, optional).
+def runVerification(Map cfg) {
+  if (env.GH_LABEL_DOC_ONLY.toBoolean()) {
+    return
+  }
+  node(cfg.agentLabel) {
+    try {
+      stage('Get View') {
+        runningOn(env.NODE_NAME)
+        sh "git clone --depth 1 --branch main git@github.com:xmos/amazon_wwe.git"
+        sh "git clone --depth 1 --branch master git@github.com:xmos/sensory_sdk.git"
+        dir("${env.REPO}") {
+          checkout scm
+          dir("tests") {
+            withTools(cfg.toolsVersion) {
+              createVenv(reqFile: "requirements_test.txt")
+            }
+            cfg.unstashNames.each { unstash it }
+          }
+        }
+      } // Get View
+
+      if (cfg.hwTarget) {
+        stage('Reset XTAGs') {
+          dir("${env.REPO}/tests") {
+            sh 'rm -f ~/.xtag/acquired' // Hacky but ensure it always works even when previous failed run left lock file present
+            withTools(cfg.toolsVersion) {
+              withVenv {
+                sh "xtagctl reset_all ${cfg.hwTarget}"
+              }
+            }
+          }
+        }
+      }
+
+      stage('tests') {
+        dir("${env.REPO}/tests") {
+          withTools(cfg.toolsVersion) {
+            withVenv {
+              test_arch(cfg.archName)
+              if (cfg.extraTests) {
+                cfg.extraTests()
+              }
+            }
+          }
+        }
+      } // tests
+      if (cfg.archName != 'native') {
+        stage('Pipeline tests') {
+          catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+            dir("${env.REPO}/tests/pipeline") {
+              withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
+                withEnv(["PIPELINE_FULL_RUN=${env.PIPELINE_FULL_RUN}", "SENSORY_PATH=${env.WORKSPACE}/sensory_sdk/", "AMAZON_WWE_PATH=${env.WORKSPACE}/amazon_wwe/"]) {
+                  withTools(cfg.toolsVersion) {
+                    withVenv {
+                      echo "PIPELINE_FULL_RUN set as " + env.PIPELINE_FULL_RUN
+                      // NOTE: "--arch ${cfg.archName} python" (space-separated) is required, not
+                      // "--arch=${cfg.archName} python" - with "=", argparse's nargs="+" only
+                      // consumes "${cfg.archName}" and "python" becomes a bogus positional pytest
+                      // path argument ("ERROR: file or directory not found: python").
+                      sh "pytest -n 4 --arch ${cfg.archName} python --junitxml=pytest_result.xml -vv"
+                      junit "pytest_result.xml"
+                      sh "python compare_keywords.py results_Avona_aec_ic_ns_agc_prev_arch_${cfg.archName}.csv results_Avona_aec_ic_ns_agc_prev_arch_python.csv --pass-threshold=1"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } // Pipeline tests
+
+        stage('Benchmark Pipeline tests results') {
+          if (env.PIPELINE_FULL_RUN == "1") {
+            dir("${env.REPO}/tests/pipeline") {
+              withTools(cfg.toolsVersion) {
+                withVenv {
+                  copyArtifacts filter: '**/results_*.csv', fingerprintArtifacts: true, projectName: '../lib_audio_pipelines/master', selector: lastSuccessful()
+                  runPython("python plot_results.py lib_audio_pipelines/tests/pipelines/results_lib_ap_prev_arch_xcore.csv results_Avona_prev_arch_${cfg.archName}.csv --single-plot --ww-column='0_2 1_2' --figname=results_benchmark_prev_arch")
+                  runPython("python plot_results.py lib_audio_pipelines/tests/pipelines/results_lib_ap_alt_arch_xcore.csv results_Avona_alt_arch_${cfg.archName}.csv --single-plot --ww-column='0_2 1_2' --figname=results_benchmark_alt_arch")
+                }
+              }
+            }
+          }
+        }
+      }
+    } finally {
+      // Mirrors declarative post{always{}}/post{failure{}}: always archive, and additionally
+      // archive failure-only debug artifacts if this build's result looks unhealthy. Since
+      // parallel branches share one build result, a failure in a sibling branch can also trigger
+      // this - an accepted, harmless over-approximation for a debug-artifact convenience feature.
+      if (cfg.archiveAlways) {
+        cfg.archiveAlways()
+      }
+      if (cfg.archiveFailure && currentBuild.currentResult in ['FAILURE', 'UNSTABLE']) {
+        cfg.archiveFailure()
+      }
+      xcoreCleanSandbox()
+    }
+  }
+}
+
+// Shared archiveAlways/archiveFailure closures for runVerification's vx4b/xs3a branches.
+// Filenames/dirs are arch-suffixed (ic_spec_summary_<arch>.txt, keyword_input_<p_arch>_<arch>/...,
+// results_..._<arch>.csv) so both branches can archive from these same patterns without collisions.
+def archiveResultsAlways() {
+  archiveArtifacts artifacts: "${env.REPO}/tests/lib_ic/test_ic_spec/ic_spec_summary_*.txt", fingerprint: true
+  archiveArtifacts artifacts: "${env.REPO}/tests/pipeline/**/results_*.csv", fingerprint: true
+  archiveArtifacts artifacts: "${env.REPO}/tests/pipeline/**/results_*.png", fingerprint: true, allowEmptyArchive: true
+  archiveArtifacts artifacts: "${env.REPO}/tests/pipeline/keyword_input_*/*.npy", fingerprint: true, allowEmptyArchive: true
+}
+
+def archiveResultsFailure() {
+  // archive wavs on failure only
+  archiveArtifacts artifacts: "${env.REPO}/tests/pipeline/keyword_input_*/*.wav", fingerprint: true, allowEmptyArchive: true
+}
+
 getApproval()
 
 pipeline {
@@ -145,23 +406,9 @@ pipeline {
                   withVenv {
                     withEnv(["TOOLS_VERSION=${params.TOOLS_VX4_VERSION}"]) {
                       dir("tests") {
-                        dir("lib_aec/aec_unit_tests") {
-                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416 -DTEST_SPEEDUP_FACTOR=8")
-                        }
-                        dir("lib_aec/test_aec_schedule") {
-                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416")
-                        }
-                        dir("lib_ns/ns_unit_tests") {
-                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416")
-                        }
-                        dir("lib_agc/test_process_frame") {
-                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416 -DTEST_SPEEDUP_FACTOR=8")
-                        }
-                        dir("lib_vnr/vnr_unit_tests") {
-                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416")
-                        }
-                        dir("pipeline") {
-                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416")
+                        script {
+                          def speedupOpt = (env.FULL_TEST == "1") ? "" : "-DTEST_SPEEDUP_FACTOR=4"
+                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "${speedupOpt} -DAPP_HW_TARGET=XK-EVK-XU416")
                         }
                         stash name: 'vx4b_build_xcore', includes: '**/bin/**/*.xe'
                       }
@@ -207,12 +454,8 @@ pipeline {
                       withVenv {
                         dir("tests") {
                           script {
-                            if (env.FULL_TEST == "1") {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partA")
-                            }
-                            else {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partA")
-                            }
+                            def speedupOpt = (env.FULL_TEST == "1") ? "" : "-DTEST_SPEEDUP_FACTOR=4"
+                            xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "${speedupOpt} -DTEST_BUILD_PART=partA")
                           }
                           stash name: 'xcommon_cmake_build_xcore_partA', includes: '**/bin/**/*.xe'
                         }
@@ -227,8 +470,8 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         dir("tests") {
-                          // xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
-                          // stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe'
+                          xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
+                          stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe'
                         }
                       }
                     }
@@ -240,12 +483,12 @@ pipeline {
                 sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
                 // Do custom cmake, xcore build, from the tests/custom_cmake_build directory
                 dir("${REPO}/tests/custom_cmake_build") {
-                  // withTools(params.TOOLS_VERSION) {
-                  //   withVenv {
-                  //     sh 'cmake -B build --toolchain=../../../xmos_cmake_toolchain/xs3a.cmake'
-                  //     sh 'make -C build -j$(nproc)'
-                  //  }
-                  // }
+                  withTools(params.TOOLS_VERSION) {
+                    withVenv {
+                      sh 'cmake -B build --toolchain=../../../xmos_cmake_toolchain/xs3a.cmake'
+                      sh 'make -C build -j$(nproc)'
+                   }
+                  }
                 }
               }
             }
@@ -284,12 +527,8 @@ pipeline {
                       withVenv {
                         dir("tests") {
                           script {
-                            if (env.FULL_TEST == "1") {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_BUILD_PART=partB")
-                            }
-                            else {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "-DTEST_SPEEDUP_FACTOR=4 -DTEST_BUILD_PART=partB")
-                            }
+                            def speedupOpt = (env.FULL_TEST == "1") ? "" : "-DTEST_SPEEDUP_FACTOR=4"
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "${speedupOpt} -DTEST_BUILD_PART=partB")
                           }
                           stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
                         }
@@ -309,483 +548,45 @@ pipeline {
     } // Build and Docs
 
     stage("Testing") {
-      parallel {
-        stage('vx4b Verification') {
-          when {
-            expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
-          }
-          agent {
-            label 'vx4'
-          }
-          stages{
-            stage('Get View') {
-              steps {
-                runningOn(env.NODE_NAME)
-
-                sh "git clone --depth 1 --branch main git@github.com:xmos/amazon_wwe.git"
-                sh "git clone --depth 1 --branch master git@github.com:xmos/sensory_sdk.git"
-
-                dir("${REPO}") {
-                  checkout scm
-                  dir("tests") {
-                    withTools(params.TOOLS_VX4_VERSION) {
-                      createVenv(reqFile: "requirements_test.txt")
-                    }
-                    unstash 'vx4b_build_xcore'
-                  }
-                }
-              }
-            } // Get View
-
-            stage('Reset XTAGs'){
-              steps{
-                dir("${REPO}/tests") {
-                  sh 'rm -f ~/.xtag/acquired' // Hacky but ensure it always works even when previous failed run left lock file present
-                  withTools(params.TOOLS_VX4_VERSION) {
-                    withVenv{
-                      sh "xtagctl reset_all XK-EVK-XU416"
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests") {
-                    withTools(params.TOOLS_VX4_VERSION) {
-                      withVenv {
-                        dir("lib_aec/aec_unit_tests") {
-                          sh "pytest --arch vx4b --junitxml=pytest_result.xml"
-                          junit "pytest_result.xml"
-                        }
-                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          dir("lib_aec/test_aec_schedule") {
-                            sh "pytest --arch vx4b --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                        }
-                        dir("lib_ns/ns_unit_tests"){
-                          sh "pytest --arch vx4b --junitxml=pytest_result.xml"
-                          junit "pytest_result.xml"
-                        }
-                        dir("lib_agc/test_process_frame") {
-                          sh "pytest --arch vx4b --junitxml=pytest_result.xml"
-                          junit "pytest_result.xml"
-                        }
-                        dir("lib_vnr/vnr_unit_tests") {
-                          // fails loading xinterpreters on ubuntu 22
-                          // sh "pytest --arch vx4b --junitxml=pytest_result.xml"
-                          // junit "pytest_result.xml"
-                        }
-                        dir("pipeline") {
-                          withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                            withEnv(["PIPELINE_FULL_RUN=${PIPELINE_FULL_RUN}", "SENSORY_PATH=${env.WORKSPACE}/sensory_sdk/", "AMAZON_WWE_PATH=${env.WORKSPACE}/amazon_wwe/"]) {
-                              echo "PIPELINE_FULL_RUN set as " + env.PIPELINE_FULL_RUN
-
-                              sh "pytest -n 2 --junitxml=pytest_result.xml -vv --arch vx4b"
-                              junit "pytest_result.xml"
-                              sh "python compare_keywords.py results_Avona_aec_ic_ns_agc_prev_arch_xcore.csv results_Avona_aec_ic_ns_agc_prev_arch_python.csv --pass-threshold=1"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            } // tests
-          } // stages
-          post {
-            cleanup {
-              xcoreCleanSandbox()
-            }
-          }
+      agent none
+      steps {
+        script {
+          parallel(
+            'vx4b Verification': {
+              runVerification([
+                agentLabel: 'vx4',
+                toolsVersion: params.TOOLS_VX4_VERSION,
+                archName: 'vx4b',
+                unstashNames: ['vx4b_build_xcore'],
+                hwTarget: 'XK-EVK-XU416',
+                archiveAlways: { archiveResultsAlways() },
+                archiveFailure: { archiveResultsFailure() },
+              ])
+            },
+            'native Verification': {
+              runVerification([
+                agentLabel: 'x86_64&&linux',
+                toolsVersion: params.TOOLS_VERSION,
+                archName: 'native',
+                unstashNames: ['xcommon_cmake_build_native'],
+                hwTarget: null,
+              ])
+            },
+            'xs3a Verification': {
+              runVerification([
+                agentLabel: 'xcore.ai',
+                toolsVersion: params.TOOLS_VERSION,
+                archName: 'xs3a',
+                unstashNames: ['xcommon_cmake_build_xcore_partA', 'xcommon_cmake_build_xcore_partB'],
+                hwTarget: 'XCORE-AI-EXPLORER',
+                extraTests: { test_xs3a_only() },
+                archiveAlways: { archiveResultsAlways() },
+                archiveFailure: { archiveResultsFailure() },
+              ])
+            },
+          )
         }
-
-        stage('xs3a Verification') {
-          when {
-            expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
-          }
-          agent {
-            label 'xcore.ai'
-          }
-          stages{
-            stage('Get View') {
-              steps {
-                runningOn(env.NODE_NAME)
-
-                sh "git clone --depth 1 --branch main git@github.com:xmos/amazon_wwe.git"
-                sh "git clone --depth 1 --branch master git@github.com:xmos/sensory_sdk.git"
-
-                dir("${REPO}") {
-                  checkout scm
-                  dir("tests") {
-                    createVenv(reqFile: "requirements_test.txt")
-                  }
-                }
-              }
-            }
-            stage('Make/get bins and libs'){
-              steps {
-                dir("${REPO}/tests") {
-                  withTools(params.TOOLS_VERSION) {
-                    withVenv {
-
-                      // sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
-
-                      // // Build x86 versions locally as we had problems with moving bins and libs over from previous build due to brew
-                      // dir("custom_cmake_build") {
-                      //   sh "cmake --version"
-                      //   sh 'cmake -B build'
-                      //   sh 'make -C build -j$(nproc)'
-                      // }
-                      // // We do this again on the NUCs for verification later, but this just checks we have no build error
-                      // dir("lib_ic/py_c_frame_compare") {
-                      //   sh "python build_ic_frame_proc.py"
-                      // }
-                      // // We do this again on the NUCs for verification later, but this just checks we have no build error
-                      // dir("lib_vnr/test_vnr_cffi") {
-                      //   sh "python build_vnr_cffi.py"
-                      // }
-                      // dir("stage_b") {
-                      //   sh "python build_c_code.py"
-                      // }
-                      unstash 'xcommon_cmake_build_xcore_partA'
-                      unstash 'xcommon_cmake_build_xcore_partB'
-                      // unstash 'xcommon_cmake_build_native'
-                    }
-                  }
-                }
-              }
-            }
-            stage('Reset XTAGs'){
-              steps{
-                dir("${REPO}/tests") {
-                  sh 'rm -f ~/.xtag/acquired' // Hacky but ensure it always works even when previous failed run left lock file present
-                  withTools(params.TOOLS_VERSION) {
-                    withVenv{
-                      sh "xtagctl reset_all XCORE-AI-EXPLORER"
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('MIPS are memory resource usage tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-                  dir("${REPO}/tests") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        // dir("profile_memory") {
-                        //   sh "pytest -n 1 --junitxml=pytest_result.xml"
-                        //   junit "pytest_result.xml"
-                        //   archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
-                        // }
-                        // withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                        //   dir("profile_mips") {
-                        //     sh "pytest -n 2 --junitxml=pytest_result.xml"
-                        //     junit "pytest_result.xml"
-                        //     archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
-                        //   }
-                        // }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('VNR tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests/lib_vnr") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          dir("vnr_unit_tests") {
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          // dir("test_vnr_cffi") {
-                          //   sh "python build_vnr_cffi.py"
-                          //   sh "pytest -n 4 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("test_vnr_profile") {
-                          //   sh "pytest -s --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('NS tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests/lib_ns") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          // dir("test_ns_profile"){
-                          //   sh "pytest -n 1 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("compare_c_py"){
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          dir("ns_unit_tests"){
-                            sh "pytest -n 1 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('IC tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests/lib_ic") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          // dir("ic_unit_tests"){
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("py_c_frame_compare"){
-                          //   sh "python build_ic_frame_proc.py"
-                          //   sh "pytest -s --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("test_ic_profile"){
-                          //   sh "pytest -s --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("test_ic_spec"){
-                          //   // This test compares the model and C implementation over a range of scenarious for:
-                          //   // convergence_time, db_suppression, maximum noise added to input (to test for stability)
-                          //   // and expected group delay. It will fail if these are not met.
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          //   sh "python print_stats.py > ic_spec_summary.txt"
-                          //   // This script generates a number of polar plots of attenuation vs null point angle vs freq
-                          //   // It currently only uses the python model to do this. It takes about 40 mins for all plots
-                          //   // and generates a series of IC_performance_xxxHz.svg files which could be archived
-                          //   //sh "python plot_ic.py"
-                          // }
-                          // dir("characterise_c_py"){
-                          //   // This test compares the suppression performance across angles between model and C implementation
-                          //   // and fails if they differ significantly. It requires that the C implementation run with fixed mu
-                          //   sh "pytest -s --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          //   // This script sweeps the y_delay value to find what the optimum suppression is across RT60 and angle.
-                          //   // It's more of a model develpment tool than testing the implementation so not run. It take a few minutes.
-                          //   //sh "python sweep_ic_delay.py"
-                          // }
-                          // dir("test_calc_vnr_pred"){
-                          //   // This is a unit test for ic_calc_vnr_pred function.
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("test_bad_state"){
-                          //   sh "pytest -s --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('Stage B tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests/stage_b") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          // sh "pytest -n 1 --junitxml=pytest_result.xml"
-                          // junit "pytest_result.xml"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('ADEC tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests/lib_adec") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          // dir("de_unit_tests") {
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("test_delay_estimator") {
-                          //   sh 'mkdir -p ./input_wavs/'
-                          //   sh 'mkdir -p ./output_files/'
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          //   sh "python print_stats.py"
-                          // }
-                          // dir("test_adec_startup") {
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("test_adec") {
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          // dir("test_adec_profile") {
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          //   // Testing bit exactness of the AEC scheduling
-                          //   sh "diff output_1_2_2_10_5.wav output_2_2_2_10_5.wav"
-                          // }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('AEC tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests/lib_aec") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                          // dir("test_aec_enhancements") {
-                          //   sh "pytest -n 2 --junitxml=pytest_result.xml"
-                          //   junit "pytest_result.xml"
-                          // }
-                          dir("aec_unit_tests") {
-                            sh "pytest -n 2 --junitxml=pytest_result.xml"
-                            junit "pytest_result.xml"
-                          }
-                          // dir("test_aec_spec") {
-                          //   script {
-                          //     if (env.FULL_TEST == "0") {
-                          //       sh 'mv excluded_tests_quick.txt excluded_tests.txt'
-                          //     }
-                          //   }
-                          //   sh "python generate_audio.py"
-                          //   sh "pytest -n 2 --junitxml=results_process.xml test_process_audio.py"
-                          //   catchError {
-                          //     sh "pytest --junitxml=results_check.xml test_check_output.py"
-                          //   }
-                          //   sh "python parse_results.py"
-                          //   sh "pytest --junitxml=results_final.xml test_evaluate_results.py"
-                          //   junit "results_final.xml"
-                          // }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            stage('AGC tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests/lib_agc/test_process_frame") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        sh "pytest -n 2 --junitxml=pytest_result.xml"
-                        junit "pytest_result.xml"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            stage('Pipeline tests') {
-              steps {
-                catchError(stageResult: 'FAILURE', catchInterruptions: false){
-                  dir("${REPO}/tests/pipeline") {
-                    withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-                      withEnv(["PIPELINE_FULL_RUN=${PIPELINE_FULL_RUN}", "SENSORY_PATH=${env.WORKSPACE}/sensory_sdk/", "AMAZON_WWE_PATH=${env.WORKSPACE}/amazon_wwe/"]) {
-                        withTools(params.TOOLS_VERSION) {
-                          withVenv {
-                            echo "PIPELINE_FULL_RUN set as " + env.PIPELINE_FULL_RUN
-
-                            // Note we have 2 xcore targets and we can run x86 threads too. But in case we have only xcore jobs in the config, limit to 4 so we don't timeout waiting for xtags
-                            sh "pytest -n 4 --junitxml=pytest_result.xml -vv"
-                            junit "pytest_result.xml"
-                            sh "python compare_keywords.py results_Avona_aec_ic_ns_agc_prev_arch_xcore.csv results_Avona_aec_ic_ns_agc_prev_arch_python.csv --pass-threshold=1"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            stage('Benchmark Pipeline tests results') {
-              when {
-                expression { env.PIPELINE_FULL_RUN == "1" }
-              }
-              steps {
-                dir("${REPO}/tests/pipeline") {
-                  withTools(params.TOOLS_VERSION) {
-                    withVenv {
-                      copyArtifacts filter: '**/results_*.csv', fingerprintArtifacts: true, projectName: '../lib_audio_pipelines/master', selector: lastSuccessful()
-                      runPython("python plot_results.py lib_audio_pipelines/tests/pipelines/results_lib_ap_prev_arch_xcore.csv results_Avona_prev_arch_xcore.csv --single-plot --ww-column='0_2 1_2' --figname=results_benchmark_prev_arch")
-                      runPython("python plot_results.py lib_audio_pipelines/tests/pipelines/results_lib_ap_alt_arch_xcore.csv results_Avona_alt_arch_xcore.csv --single-plot --ww-column='0_2 1_2' --figname=results_benchmark_alt_arch")
-                    }
-                  }
-                }
-              }
-            }
-          }// stages
-          post {
-            always {
-              // AEC aretfacts
-              // archiveArtifacts artifacts: "${REPO}/tests/lib_adec/test_adec_profile/**/adec_prof*.log", fingerprint: true
-              // IC artefacts
-              // archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_profile/ic_prof.log", fingerprint: true
-              // archiveArtifacts artifacts: "${REPO}/tests/lib_ic/test_ic_spec/ic_spec_summary.txt", fingerprint: true
-              // NS artefacts
-              // archiveArtifacts artifacts: "${REPO}/tests/lib_ns/test_ns_profile/ns_prof.log", fingerprint: true
-              // VNR artifacts
-              // archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/*.png", fingerprint: true
-              // archiveArtifacts artifacts: "${REPO}/tests/lib_vnr/test_vnr_profile/vnr_prof.log", fingerprint: true
-              // Pipelines tests
-              archiveArtifacts artifacts: "${REPO}/tests/pipeline/**/results_*.csv", fingerprint: true
-              archiveArtifacts artifacts: "${REPO}/tests/pipeline/**/results_*.png", fingerprint: true, allowEmptyArchive: true
-              archiveArtifacts artifacts: "${REPO}/tests/pipeline/keyword_input_*/*.npy", fingerprint: true, allowEmptyArchive: true
-            }
-            failure {
-              // archive wavs on failure only
-              archiveArtifacts artifacts: "${REPO}/tests/pipeline/keyword_input_*/*.wav", fingerprint: true
-            }
-            cleanup {
-              xcoreCleanSandbox()
-            }
-          }
-        } // xs3a Verification
-      } // parallel
+      }
     } // Testing
 
     stage('🚀 Release') {

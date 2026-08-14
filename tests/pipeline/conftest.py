@@ -5,6 +5,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from arch_option import add_arch_option
+
 hydra_audio_base_dir  = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio')).expanduser()
 pipeline_input_dir = Path(__file__).parent / "pipeline_input"
 pipeline_output_base_dir = "pipeline_output"
@@ -12,10 +14,12 @@ keyword_input_base_dir = "keyword_input"
 bin_dir = Path(__file__).parent / "bin"
 results_log_file = Path(__file__).parent / "results.csv"
 
+# One .xe per pipeline_arch (topology). Which hw board it is run on (xs3a/vx4b) or
+# whether it is run natively/in python is selected separately via the `arch` fixture.
 pipeline_bins = {
-                "prev_arch" :    {"xcore" : bin_dir / "std_arch" / "test_pipeline_std_arch.xe"},
-                "alt_arch"  :    {"xcore" : bin_dir / "alt_arch" / "test_pipeline_alt_arch.xe"},
-                "aec_ic_ns_agc_prev_arch" : {"xcore" : bin_dir / "aec_ic_ns_agc" / "test_pipeline_aec_ic_ns_agc.xe"}
+                "prev_arch" :    bin_dir / "std_arch" / "test_pipeline_std_arch.xe",
+                "alt_arch"  :    bin_dir / "alt_arch" / "test_pipeline_alt_arch.xe",
+                "aec_ic_ns_agc_prev_arch" : bin_dir / "aec_ic_ns_agc" / "test_pipeline_aec_ic_ns_agc.xe"
                 }
 xtag_aquire_timeout_s = int(8.5 * 60 * 1.2 * 2) # Add a generous timeout for xtag acquisition here. Max input wav is 8m21s so double & add 20%
                                                 # The time to run the multithreaded example on xcore is approximately the wav length
@@ -55,17 +59,15 @@ def convert_input_wav(input_file, output_file):
         assert False, f"Error: input wav format not supported - chans:{chans}"
     return output_file
 
-# This is a list of tuples we will build consisting of test_wav and target
+# This is a list of tuples we will build consisting of test_wav and pipeline_arch
 all_tests_list = []
 # Select whether we run previous or al pipeline architecture. Default = alt hence first in list
 full_pipeline_run = 1
-# Select whether we run each test on xcore or using the x86 compiled example app or using python. Only AEC+IC pipeline exists for python right now.
-targets = ["xcore", "python"]
-architectures = []# These are populated below depending on full_pipeline_run
+pipeline_arch = []# These are populated below depending on full_pipeline_run
 
 """ before session.main() is called. """
 def pytest_sessionstart(session):
-    global hydra_audio_base_dir, full_pipeline_run, architectures, all_tests_list
+    global hydra_audio_base_dir, full_pipeline_run, pipeline_arch, all_tests_list
     try:
         hydra_audio_base_dir = Path(os.environ['hydra_audio_PATH']).expanduser()
     except:
@@ -90,11 +92,14 @@ def pytest_sessionstart(session):
     # alt-arch: Alt-arch config, full pipeline
     # aec_ic_ns_agc_prev_arch: Standard config, no ADEC pipeline
     if full_pipeline_run:
-        architectures = ["prev_arch", "alt_arch", "aec_ic_ns_agc_prev_arch"]
+        pipeline_arch = ["prev_arch", "alt_arch", "aec_ic_ns_agc_prev_arch"]
     else:
-        architectures = ["alt_arch", "aec_ic_ns_agc_prev_arch"]
+        pipeline_arch = ["alt_arch", "aec_ic_ns_agc_prev_arch"]
 
     input_wav_files = hydra_audio_path.glob("*wav")
+
+    # arch: hw/system architecture the pipeline is run under (xs3a/vx4b/native/python)
+    selected_arch = session.config.getoption("arch")
 
     #create pipeline input and sensory input directories
     pipeline_input_dir.mkdir(exist_ok=True)
@@ -102,16 +107,15 @@ def pytest_sessionstart(session):
         #We sometimes get weird files appearing in dir starting with "._InHouse_X..." so ignore
         if '._InHouse' in input_wav_file.stem:
             continue
-        for target in targets:
-            for arch in architectures:
-                test_wav_file = pipeline_input_dir / input_wav_file.name
-                convert_input_wav(str(input_wav_file), str(test_wav_file))
-                all_tests_list.append([input_wav_file, arch, target])
+        for p_arch in pipeline_arch:
+            test_wav_file = pipeline_input_dir / input_wav_file.name
+            convert_input_wav(str(input_wav_file), str(test_wav_file))
+            all_tests_list.append([input_wav_file, p_arch])
 
-    for target in targets:
-        for arch in architectures:
-            (Path(__file__).parent / f"{pipeline_output_base_dir}_{arch}_{target}").mkdir(exist_ok=True)
-            (Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}").mkdir(exist_ok=True)
+    for arch in selected_arch:
+        for p_arch in pipeline_arch:
+            (Path(__file__).parent / f"{pipeline_output_base_dir}_{p_arch}_{arch}").mkdir(exist_ok=True)
+            (Path(__file__).parent / f"{keyword_input_base_dir}_{p_arch}_{arch}").mkdir(exist_ok=True)
 
     for test in all_tests_list:
         wav_file = test[0]
@@ -122,38 +126,33 @@ def pytest_sessionstart(session):
     open(results_log_file, "w").close()
 
 def pytest_sessionfinish(session):
+    selected_arch = session.config.getoption("arch")
     #read log file
     with open(results_log_file, "r") as lf:
         log = lf.readlines()
-        #split into two, target specific, sorted files
-        for arch in architectures:
-            for target in targets:
-                target_log = []
+        #split into per pipeline_arch/arch, sorted files
+        for p_arch in pipeline_arch:
+            for arch in selected_arch:
+                arch_log = []
                 for line in log:
                     fields = line.split(",")
-                    if target == fields[2] and arch == fields[1]:
-                        target_stripped_line = line.replace(target+",", "").replace(arch+",", "")
-                        target_log.append(target_stripped_line)
-                target_log = sorted(target_log)
-                target_specific_log_file = Path(__file__).parent / f"{results_log_file.stem}_Avona_{arch}_{target}.csv"
-                with open(target_specific_log_file, "w") as tlf:
+                    if arch == fields[2] and p_arch == fields[1]:
+                        stripped_line = line.replace(arch+",", "").replace(p_arch+",", "")
+                        arch_log.append(stripped_line)
+                arch_log = sorted(arch_log)
+                arch_specific_log_file = Path(__file__).parent / f"{results_log_file.stem}_Avona_{p_arch}_{arch}.csv"
+                with open(arch_specific_log_file, "w") as tlf:
                     tlf.write("Input,Sensory_rpi-31000,Sensory_v6_1mb,Amazon_WR_250k.en-US\n")
-                    tlf.writelines(target_log)
+                    tlf.writelines(arch_log)
 
 def pytest_addoption(parser):
-  parser.addoption(
-    "--arch",
-    nargs = "+",
-    default = ["xs3a"],
-    help = "One or more architectures to run on (e.g. --arch xs3a sim)",
-    choices = ["xs3a", "vx4b"],
-  )
+    add_arch_option(parser, choices=["xs3a", "vx4b", "native", "python"], default=["xs3a", "python"])
 
 def pytest_generate_tests(metafunc):
-    ids = [item[0].name + ", " + item[1] + ", " + item[2] for item in all_tests_list]
+    ids = [item[0].name + ", " + item[1] for item in all_tests_list]
     metafunc.parametrize("test", all_tests_list, ids=ids)
-    if "target_arch" in metafunc.fixturenames:
-        selected_arches = metafunc.config.getoption("arch")
-        if isinstance(selected_arches, str):
-            selected_arches = [selected_arches]
-        metafunc.parametrize("target_arch", selected_arches)
+    if "arch" in metafunc.fixturenames:
+        selected_arch = metafunc.config.getoption("arch")
+        if isinstance(selected_arch, str):
+            selected_arch = [selected_arch]
+        metafunc.parametrize("arch", selected_arch)

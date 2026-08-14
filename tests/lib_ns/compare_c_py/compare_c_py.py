@@ -25,14 +25,11 @@ def generate_test_audio(max_freq, db=-20, samples=SAMPLE_COUNT):
     noise = get_band_limited_noise(0, max_freq, samples=samples, db=db, sample_rate=SAMPLE_RATE)
     return noise
 
-def process_xe(input_data, ns_xe, run_native = False):
-
-    local_exe = ns_xe
-    if not run_native: local_exe = local_exe.with_suffix(".xe")
+def process_xe(input_data, ns_xe, target="xs3a"):
 
     input_data = pvc.float_to_int32(input_data)
 
-    output_data, _ = run_dut(input_data, local_exe)
+    output_data, _ = run_dut(input_data, ns_xe, target=target)
 
     return pvc.int32_to_float(output_data)
 
@@ -62,7 +59,7 @@ def get_attenuation(in_data, out_data):
     return attenuation
 
 
-def get_attenuation_c_py(test_id, noise_band, noise_db):
+def get_attenuation_c_py(test_id, noise_band, noise_db, target="xs3a"):
     input_file = "input.wav"
 
     output_file_c = "output_c.wav"
@@ -73,7 +70,7 @@ def get_attenuation_c_py(test_id, noise_band, noise_db):
     input_data = generate_test_audio(noise_band, db=noise_db)
     sf.write(audio_dir / input_file, input_data, SAMPLE_RATE)
 
-    out_c = process_xe(input_data, c_ns_xe_path)
+    out_c = process_xe(input_data, c_ns_xe_path, target=target)
     sf.write(audio_dir / output_file_c, out_c, SAMPLE_RATE)
     out_py = process_py(input_data)
     sf.write(audio_dir / output_file_py, out_py, SAMPLE_RATE)

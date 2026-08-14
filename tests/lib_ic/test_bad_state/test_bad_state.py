@@ -127,15 +127,19 @@ def test_bad_state(room, speech_level, noise_name, target):
     inx = mic_sig.shape[1] // frame_advance * frame_advance
     mic_sig = mic_sig[:, :inx]
 
-    sf.write(cwd / f"input_{noise_name}.wav", mic_sig.T, fs)
+    # embed every distinguishing parametrize axis so concurrent (xdist) test items never
+    # write the same output_*.wav filename
+    test_id = f"{room}_{speech_level}_{noise_name}_{target}"
+
+    sf.write(cwd / f"input_{test_id}.wav", mic_sig.T, fs)
     input_data = pvc.float_to_int32(mic_sig)
     input_data = pvc.interleave_channel_frames(input_data, frame_advance)
 
     conf_data_cancel_noise = form_conf_data(2, ideal_noise_cancellation_H, num_words_H)
-    average_fixed_good = run_test(input_data, conf_data_cancel_noise, f"good_{noise_name}", fs, target)
+    average_fixed_good = run_test(input_data, conf_data_cancel_noise, f"good_{test_id}", fs, target)
 
     conf_data_cancel_speech = form_conf_data(0, ideal_speech_cancellation_H, num_words_H)
-    average_adapt_bad = run_test(input_data, conf_data_cancel_speech, f"bad_{noise_name}", fs, target)
+    average_adapt_bad = run_test(input_data, conf_data_cancel_speech, f"bad_{test_id}", fs, target)
 
     print(f"average_adapt_bad (dB): {average_adapt_bad}")
     print(f"average_fixed_good (dB): {average_fixed_good}")

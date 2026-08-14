@@ -34,8 +34,8 @@ void ic_delay_y_input(ic_state_t *state,
 // Sets up IC for processing a new frame
 void ic_frame_init(
         ic_state_t *state,
-        int32_t y_data[IC_FRAME_LENGTH+2],
-        int32_t x_data[IC_FRAME_LENGTH+2]);
+        int32_t y_data[IC_FRAME_ADVANCE],
+        int32_t x_data[IC_FRAME_ADVANCE]);
 
 // Calculate average energy in time domain
 void ic_update_td_ema_energy(

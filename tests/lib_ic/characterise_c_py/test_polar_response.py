@@ -10,13 +10,14 @@ NOISE_BAND = 8000
 NOISE_LEVEL = -20
 
 
-def test_compare_polar_reponse():
+def test_compare_polar_reponse(target):
     angles, results = get_polar_response("atten_pvc",
                                          ANGLE_ROI,
                                          ANGLE_STEP_SIZE,
                                          NOISE_BAND,
                                          NOISE_LEVEL,
-                                         RT60)
+                                         RT60,
+                                         target)
     for (i, atten_py, atten_c) in zip(angles, results[0], results[1]):
         print(f"Angle: {i}, PY {atten_py}, C {atten_c}")
         assert abs(atten_py - atten_c) < 1, "Angle: {}, PY {}, C {}".format(i, atten_py, atten_c)

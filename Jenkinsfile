@@ -34,6 +34,25 @@ def test_arch(String archName) {
     catchError(stageResult: 'UNSTABLE', catchInterruptions: false) {
       runSuite("lib_ic/test_calc_vnr_pred", "--arch native", "-n 2")
     }
+    catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+      dir("lib_vnr/test_vnr_cffi") {
+        sh "python build_vnr_cffi.py"
+      }
+      runSuite("lib_vnr/test_vnr_cffi", "--arch native", "-n 4")
+    }
+    catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+      dir("lib_ic/test_ic_cffi") {
+        sh "python build_ic_cffi.py"
+      }
+      runSuite("lib_ic/test_ic_cffi", "--arch native", "-s")
+    }
+    catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+      dir("stage_b") {
+        sh "python build_stage_b_cffi.py"
+      }
+      // -n 2: both tests now write to pytest's per-test tmp_path, safe to run concurrently
+      runSuite("stage_b", "--arch native", "-n 2")
+    }
     return
   }
 
@@ -51,10 +70,7 @@ def test_arch(String archName) {
     runSuite("lib_ns", arch, "-n 2")
   }
   catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    // py_c_frame_compare/characterise_c_py are xs3a-only Python/CFFI comparisons with their own
-    // prebuild step, already run separately by test_xs3a_only() - excluded here to avoid
-    // collecting their un-prebuilt test modules (ImportError: no module named 'build').
-    runSuite("lib_ic", "${arch} --ignore=py_c_frame_compare --ignore=characterise_c_py", "-n 2") {
+    runSuite("lib_ic", arch, "-n 2") {
       sh "python test_ic_spec/print_stats.py > ic_spec_summary_${archName}.txt"
     }
   }
@@ -108,28 +124,7 @@ def test_xs3a_only() {
       archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
     }
   }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    dir("lib_vnr/test_vnr_cffi") {
-      sh "python build_vnr_cffi.py"
-    }
-    runSuite("lib_vnr/test_vnr_cffi", "", "-n 4")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    dir("lib_ic/py_c_frame_compare") {
-      sh "python build_ic_frame_proc.py"
-    }
-    runSuite("lib_ic/py_c_frame_compare", "", "-s")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("lib_ic/characterise_c_py", "", "-s")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    dir("stage_b") {
-      sh "python build_c_code.py"
-    }
-    // -n 2: both tests now write to pytest's per-test tmp_path, safe to run concurrently
-    runSuite("stage_b", "", "-n 2")
-  }
+
   catchError(stageResult: 'FAILURE', catchInterruptions: false) {
     dir("lib_aec/test_aec_spec") {
       if (env.FULL_TEST == "0") {
@@ -563,7 +558,7 @@ pipeline {
                 archiveFailure: { archiveResultsFailure() },
               ])
             },
-            'native Verification': {
+            'native and CFFI Verification': {
               runVerification([
                 agentLabel: 'x86_64&&linux',
                 toolsVersion: params.TOOLS_VERSION,

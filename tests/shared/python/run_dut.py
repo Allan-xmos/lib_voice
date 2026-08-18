@@ -48,6 +48,8 @@ def run_with_xscope_fileio(xe_path, cwd, target="xs3a", timeout=600):
     """
     target_stdout = []
 
+    assert Path(xe_path).exists(), f"Executable {xe_path} does not exist"
+
     hw_target = "XCORE-AI-EXPLORER" if target == "xs3a" else "XK-EVK-XU416"
     with xtagctl.acquire(hw_target, timeout=timeout) as adapter_id:
         print(f"Running on {adapter_id}")

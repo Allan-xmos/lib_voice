@@ -20,11 +20,11 @@ import soundfile as sf
 
 import soundfile as sf
 
-import wav_test_functions as wtf
+from py_voice.core import utils as wtf
 import run_xc
 import configparser
 parser = configparser.ConfigParser()
-parser.read("parameters.cfg")
+parser.read(Path(__file__).parent / "parameters.cfg")
 filter_dir = parser.get("Folders", "filter_dir")
 (Path(__file__).parent / filter_dir).mkdir(exist_ok=True)
 

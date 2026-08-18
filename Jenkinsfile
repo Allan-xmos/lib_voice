@@ -27,6 +27,7 @@ def runSuite(String suiteDir, String archOpt, String pytestArgs, Closure postSte
 // Each suite is individually catchError-wrapped so one failure doesn't skip the rest.
 def test_arch(String archName) {
   if (archName == 'native') {
+    sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
     // Only suites with an existing native build/execution path are run natively.
     catchError(stageResult: 'UNSTABLE', catchInterruptions: false) {
       runSuite("lib_vnr/vnr_unit_tests", "--arch native", "-n 2")
@@ -76,77 +77,37 @@ def test_arch(String archName) {
   }
 
   catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("lib_adec/de_unit_tests", arch, "-n 2")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    dir("lib_adec/test_delay_estimator") {
-      sh 'mkdir -p ./input_wavs/'
-      sh 'mkdir -p ./output_files/'
-    }
-    runSuite("lib_adec/test_delay_estimator", arch, "-n 2") {
-      sh "python print_stats.py"
-    }
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("lib_adec/test_adec_startup", arch, "-n 2")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("lib_adec/test_adec", arch, "-n 2")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("lib_aec/test_aec_schedule", arch, "-n 1")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("lib_aec/test_aec_enhancements", arch, "-n 2")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("lib_aec/aec_unit_tests", arch, "-n 2")
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("lib_agc/test_process_frame", arch, "-n 2")
-  }
-}
-
-// Runs the xs3a-only suites that don't have vx4b/native builds (profiling, pure-python
-// comparisons, and the bespoke multi-step AEC spec pipeline).
-// Must be called from within dir("tests") { ... } - this node's workspace never ran an
-// XCommon CMake configure, so lib_xcore_math (needed by the build_*.py scripts below via
-// sandbox-relative paths) hasn't been fetched into the sandbox yet.
-def test_xs3a_only() {
-  sh "cmake -B build_xcommon_cmake" // to fetch lib_xcore_math
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("profile_memory", "", "-n 1") {
-      archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
-    }
-  }
-  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    runSuite("profile_mips", "", "-n 2") {
-      archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
+    runSuite("lib_adec", arch, "-n 2") {
+      sh "python test_delay_estimator/print_stats.py"
     }
   }
 
   catchError(stageResult: 'FAILURE', catchInterruptions: false) {
-    dir("lib_aec/test_aec_spec") {
-      if (env.FULL_TEST == "0") {
-        sh 'mv excluded_tests_quick.txt excluded_tests.txt'
-      }
-      sh "python generate_audio.py"
-      sh "pytest -n 2 --junitxml=results_process.xml test_process_audio.py"
-      catchError(catchInterruptions: false) {
-        sh "pytest --junitxml=results_check.xml test_check_output.py"
-      }
-      sh "python parse_results.py"
-      sh "pytest --junitxml=results_final.xml test_evaluate_results.py"
-      junit "results_final.xml"
-    }
+    runSuite("lib_aec", arch, "-n 2")
   }
+
+  catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+    runSuite("lib_agc", arch, "-n 2")
+  }
+
+  if (archName == 'xs3') {
+    catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+      runSuite("profile_memory", "", "-n 1") {
+        archiveArtifacts artifacts: "lib_voice_memory.json", fingerprint: true, onlyIfSuccessful: true
+      }
+    }
+    catchError(stageResult: 'FAILURE', catchInterruptions: false) {
+      runSuite("profile_mips", "", "-n 2") {
+        archiveArtifacts artifacts: "lib_voice_mips.json", fingerprint: true, onlyIfSuccessful: true
+      }
+    }
+  } // end if (archName == 'xs3')
 }
 
 // Runs one architecture's whole Verification stage (Get View, XTAG reset, tests, pipeline,
 // artifact archiving, cleanup) - shared by vx4b/native/xs3a instead of 3 near-identical
 // declarative stage blocks. `cfg` fields: agentLabel, toolsVersion, archName,
-// unstashNames, hwTarget (null skips XTAG reset), extraTests (closure,
-// optional), benchmarkPipeline (bool), archiveAlways/
+// unstashNames, hwTarget (null skips XTAG reset), archiveAlways/
 // archiveFailure (closures, optional).
 def runVerification(Map cfg) {
   if (env.GH_LABEL_DOC_ONLY.toBoolean()) {
@@ -187,9 +148,6 @@ def runVerification(Map cfg) {
           withTools(cfg.toolsVersion) {
             withVenv {
               test_arch(cfg.archName)
-              if (cfg.extraTests) {
-                cfg.extraTests()
-              }
             }
           }
         }
@@ -237,13 +195,16 @@ def runVerification(Map cfg) {
       // archive failure-only debug artifacts if this build's result looks unhealthy. Since
       // parallel branches share one build result, a failure in a sibling branch can also trigger
       // this - an accepted, harmless over-approximation for a debug-artifact convenience feature.
-      if (cfg.archiveAlways) {
-        cfg.archiveAlways()
+      try {
+        if (cfg.archiveAlways) {
+          cfg.archiveAlways()
+        }
+        if (cfg.archiveFailure && currentBuild.currentResult in ['FAILURE', 'UNSTABLE']) {
+          cfg.archiveFailure()
+        }
+      } finally {
+        xcoreCleanSandbox()
       }
-      if (cfg.archiveFailure && currentBuild.currentResult in ['FAILURE', 'UNSTABLE']) {
-        cfg.archiveFailure()
-      }
-      xcoreCleanSandbox()
     }
   }
 }
@@ -252,7 +213,7 @@ def runVerification(Map cfg) {
 // Filenames/dirs are arch-suffixed (ic_spec_summary_<arch>.txt, keyword_input_<p_arch>_<arch>/...,
 // results_..._<arch>.csv) so both branches can archive from these same patterns without collisions.
 def archiveResultsAlways() {
-  archiveArtifacts artifacts: "${env.REPO}/tests/lib_ic/test_ic_spec/ic_spec_summary_*.txt", fingerprint: true
+  archiveArtifacts artifacts: "${env.REPO}/tests/lib_ic/ic_spec_summary_*.txt", fingerprint: true
   archiveArtifacts artifacts: "${env.REPO}/tests/pipeline/**/results_*.csv", fingerprint: true
   archiveArtifacts artifacts: "${env.REPO}/tests/pipeline/**/results_*.png", fingerprint: true, allowEmptyArchive: true
   archiveArtifacts artifacts: "${env.REPO}/tests/pipeline/keyword_input_*/*.npy", fingerprint: true, allowEmptyArchive: true
@@ -574,7 +535,6 @@ pipeline {
                 archName: 'xs3a',
                 unstashNames: ['xcommon_cmake_build_xcore_partA', 'xcommon_cmake_build_xcore_partB'],
                 hwTarget: 'XCORE-AI-EXPLORER',
-                extraTests: { test_xs3a_only() },
                 archiveAlways: { archiveResultsAlways() },
                 archiveFailure: { archiveResultsFailure() },
               ])

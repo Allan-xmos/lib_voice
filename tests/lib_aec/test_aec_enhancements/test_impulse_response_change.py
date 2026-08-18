@@ -22,7 +22,7 @@ import numpy as np
 import scipy.signal as spsig
 import soundfile as sf
 
-import wav_test_functions as wtf
+from py_voice.core import utils as wtf
 import run_xc
 
 import pytest

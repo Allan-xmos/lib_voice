@@ -3,6 +3,7 @@
 from builtins import str
 from builtins import range
 import os.path
+from pathlib import Path
 import configparser
 import numpy as np
 import scipy.io.wavfile
@@ -10,6 +11,11 @@ import scipy.signal.windows
 # export PYTHONPATH=$PYTHONPATH:audio_test_tools/python
 from audio_generation import (get_filenames, get_magnitude,
                               get_suppressed_magnitude, db)
+
+# Config files live alongside this module - resolve them here rather than relying on the
+# process cwd, so this suite also works when pytest is invoked from a parent directory
+# (e.g. `pytest lib_aec`).
+HERE = Path(__file__).parent
 
 
 def files_exist(*args):
@@ -19,9 +25,9 @@ def files_exist(*args):
     return True
 
 
-def read_config(testname, filename='test_config.cfg'):
+def read_config(testname, filename=None):
     parser = configparser.ConfigParser()
-    parser.read(filename)
+    parser.read(filename if filename is not None else HERE / 'test_config.cfg')
     cfg = {}
     cfg['settle_time'] = parser.getint(testname, "settle_time")
     cfg['start_fft'] = parser.getint(testname, "start_fft")
@@ -43,9 +49,9 @@ def read_wav(filename):
     return data.astype(float) / np.iinfo(data.dtype).max
 
 
-def get_excluded_tests():
+def get_excluded_tests(filename=None):
     excluded_tests = []
-    with open('excluded_tests.txt', 'r') as f:
+    with open(filename if filename is not None else HERE / 'excluded_tests.txt', 'r') as f:
         for line in f.readlines():
             line = line.strip()
             excluded_tests.append(line)
@@ -103,9 +109,9 @@ def get_section(testid, sections):
     return best_section
 
 
-def get_criteria(testid, filename="criteria.cfg"):
+def get_criteria(testid, filename=None):
     parser = configparser.ConfigParser()
-    parser.read(filename)
+    parser.read(filename if filename is not None else HERE / 'criteria.cfg')
     criteria = {}
     section = get_section(testid, parser.sections())
     for key, val in parser.items(section):

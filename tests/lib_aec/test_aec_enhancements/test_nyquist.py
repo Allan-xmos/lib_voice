@@ -12,7 +12,7 @@ import scipy.signal as spsig
 import soundfile as sf
 from pathlib import Path
 
-import wav_test_functions as wtf
+from py_voice.core import utils as wtf
 import run_xc
 
 hydra_audio_path = os.environ.get('hydra_audio_PATH', '~/hydra_audio')

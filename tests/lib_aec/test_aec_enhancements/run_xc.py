@@ -9,7 +9,7 @@ from test_wav import test_wav
 import soundfile as sf
 
 parser = configparser.ConfigParser()
-parser.read("parameters.cfg")
+parser.read(Path(__file__).parent / "parameters.cfg")
 aec_xe = Path(__file__).parent / "bin" / "test_aec_enhancements.xe"
 in_dir = parser.get("Folders", "in_dir")
 (Path(__file__).parent / in_dir).mkdir(exist_ok=True)

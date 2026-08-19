@@ -32,7 +32,6 @@ if (NOT BUILD_NATIVE)
             -Os
             -g
             # -mcmodel=large
-            # -Wno-xcore-fptrgroup
             -DTEST_WAV_XSCOPE=1)
 
     set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})

@@ -14,18 +14,15 @@ import os
 import shutil
 from pathlib import Path
 
-HERE = Path(__file__).parent
-
 _parser = configparser.ConfigParser()
-_parser.read(HERE / "parameters.cfg")
-_audio_dir = str(HERE / _parser.get("Folders", "in_dir"))
+_parser.read(Path(__file__).parent / "parameters.cfg")
+_audio_dir = str(Path(__file__).parent / _parser.get("Folders", "in_dir"))
 
 
 def pytest_configure(config):
-    # FULL_TEST=0 selects the reduced excluded-tests list (mirrors the old Jenkinsfile step that
-    # did `mv excluded_tests_quick.txt excluded_tests.txt` before invoking pytest).
-    if os.environ.get("FULL_TEST") == "0":
-        shutil.copy2(HERE / "excluded_tests_quick.txt", HERE / "excluded_tests.txt")
+    if hasattr(config, "workerinput"):
+        # don't generate the audio files in a pytest-xdist worker process, only in the main process
+        return
 
     import generate_audio
     generate_audio.generate_simple_tests(audio_dir=_audio_dir)

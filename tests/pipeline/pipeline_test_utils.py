@@ -16,8 +16,8 @@ import wav_pipeline
 
 def process_xcore(xe_file, input_file, output_file, arch="xs3a"):
     frame_advance = 240
-    AP_MAX_Y_CHANNELS = 2
-    stdout = test_wav(xe_file, input_file, output_file, frame_advance, AP_MAX_Y_CHANNELS, frame_advance, target=arch, timeout=xtag_aquire_timeout_s)
+    output_channels = 1
+    stdout = test_wav(xe_file, input_file, output_file, frame_advance, output_channels, frame_advance, target=arch, timeout=xtag_aquire_timeout_s)
     return stdout
 
 def process_python(input_file, output_file, pipeline_arch):
@@ -48,7 +48,7 @@ def process_file(input_file, pipeline_arch, arch="xs3a"):
 
     if arch == "python":
         stdout = process_python(input_file, output_file, pipeline_arch)
-    elif arch in ("xs3a", "vx4b", "native"):
+    elif arch in ("xs3a", "vx4b"):
         pipeline_bin = pipeline_bins[pipeline_arch]
         stdout = process_xcore(pipeline_bin, input_file, output_file, arch)
     else:

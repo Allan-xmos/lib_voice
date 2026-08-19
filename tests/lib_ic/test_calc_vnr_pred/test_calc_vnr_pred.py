@@ -11,9 +11,6 @@ xe = Path(__file__).parent / "bin" / "test_ic_calc_vnr_pred.xe"
 ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_no_adapt_control.json"
 ap_conf = config.get_config_dict(ap_config_file)
 
-# preserves this suite's pre-existing behaviour of always running both native and xs3a by default
-ARCH_DEFAULT = ["native", "xs3a"]
-
 def test_calc_vnr_pred(target):
     np.random.seed(12345)
     ap_conf["ic"]["adaption_config"] = "ADAPTION_AUTO"

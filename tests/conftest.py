@@ -5,9 +5,9 @@
 unity_pytest_collector.py) - registered exactly ONCE here so suites of either kind can be
 collected/run together from any directory level (top-level, a `lib_*` dir, or a single suite).
 
-`--arch` is registered with no argparse-level default (`default=None`) so a suite whose test
-module sets `ARCH_DEFAULT = [...]` (e.g. `lib_ic/test_calc_vnr_pred`) gets its own fallback
-instead of the plain `["xs3a"]` one - see `arch_option.generate_target_tests`.
+`--arch` is registered with no argparse-level default (`default=None`) so `resolve_arches` callers
+(e.g. `lib_ic/conftest.py`'s native-only-dir skip) can tell "omitted entirely" apart from an
+explicit `--arch` value and apply their own fallback - see `arch_option.resolve_arches`.
 
 `pipeline` is the only suite still keeping its own local pytest.ini (own unrelated arch/topology
 matrix), which keeps it out of this file's conftest chain (rootdir/confcutdir stops at the closer

@@ -128,13 +128,7 @@ void pipeline_stage_2(chanend_t c_frame_in, chanend_t c_frame_out) {
         // Transferring metadata
         chan_out_buf_byte(c_frame_out, (uint8_t*)&md, sizeof(pipeline_metadata_t));
 
-        // Copy IC output to the other channel
-        // for(int v = 0; v < AP_FRAME_ADVANCE; v++){
-        //     frame[1][v] = frame[0][v];
-        // }
-
-        // Transferring output frame
-        // chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
+        // Transferring output frame (1 ch now)
         chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0][0], AP_FRAME_ADVANCE);
     }
 }
@@ -144,22 +138,17 @@ void pipeline_stage_3(chanend_t c_frame_in, chanend_t c_frame_out) {
     // Pipeline metadata
     pipeline_metadata_t md;
     // Initialise NS
-    ns_state_t DWORD_ALIGNED ns_state[AP_MAX_Y_CHANNELS];
-    for(int ch = 0; ch < AP_MAX_Y_CHANNELS; ch++){
-        ns_init(&ns_state[ch]);
-    }
+    ns_state_t DWORD_ALIGNED ns_state;
+    ns_init(&ns_state);
 
-    // int32_t DWORD_ALIGNED frame [AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
     int32_t DWORD_ALIGNED frame [AP_FRAME_ADVANCE];
     while(1){
         // Receive and bypass metadata
         chan_in_buf_byte(c_frame_in, (uint8_t*)&md, sizeof(pipeline_metadata_t));
         // Receive input frame
-        // chan_in_buf_word(c_frame_in, (uint32_t*)&frame[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
         chan_in_buf_word(c_frame_in, (uint32_t*)&frame[0], AP_FRAME_ADVANCE);
 #if DISABLE_STAGE_3
         chan_out_buf_byte(c_frame_out, (uint8_t*)&md, sizeof(pipeline_metadata_t));
-        // chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
         chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0], AP_FRAME_ADVANCE);
         continue;
 #endif
@@ -167,15 +156,9 @@ void pipeline_stage_3(chanend_t c_frame_in, chanend_t c_frame_out) {
         chan_out_buf_byte(c_frame_out, (uint8_t*)&md, sizeof(pipeline_metadata_t));
 
         /** NS*/
-        int ch = 0;
-        // for(int ch = 0; ch < AP_MAX_Y_CHANNELS; ch++){
-            // The frame buffer will be used for both input and output here
-            // ns_process_frame(&ns_state[ch], frame[ch], frame[ch]);
-            ns_process_frame(&ns_state[ch], frame, frame);
-        // }
+        ns_process_frame(&ns_state, frame, frame);
 
         // Transmit output frame
-        // chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
         chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0], AP_FRAME_ADVANCE);
     }
 }
@@ -191,13 +174,11 @@ void pipeline_stage_4(chanend_t c_frame_in, chanend_t c_frame_out) {
     agc_conf_asr.adapt = 0;
 #endif
 
-    agc_state_t agc_state[AP_MAX_Y_CHANNELS];
-    agc_init(&agc_state[0], &agc_conf_asr);
-    agc_init(&agc_state[1], &agc_conf_asr);
+    agc_state_t agc_state;
+    agc_init(&agc_state, &agc_conf_asr);
 
     agc_meta_data_t agc_md = agc_meta_data_init();
 
-    // int32_t frame[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
     int32_t frame[AP_FRAME_ADVANCE];
     while(1) {
         // Receive metadata
@@ -207,25 +188,17 @@ void pipeline_stage_4(chanend_t c_frame_in, chanend_t c_frame_out) {
         agc_md.ref_active_flag = md.ref_active_flag;
 
         // Receive input frame
-        // chan_in_buf_word(c_frame_in, (uint32_t*)&frame[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
         chan_in_buf_word(c_frame_in, (uint32_t*)&frame[0], AP_FRAME_ADVANCE);
 #if DISABLE_STAGE_4
-        // chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
         chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0], AP_FRAME_ADVANCE);
         continue;
 #endif
 
         /** AGC*/
-        int ch = 0;
-        // for(int ch=0; ch<AP_MAX_Y_CHANNELS; ch++) {
-            agc_md.aec_corr_factor = md.aec_corr_factor[ch];
-            // Memory optimisation: Reuse input memory for AGC output
-            // agc_process_frame(&agc_state[ch], frame[ch], frame[ch], &agc_md);
-            agc_process_frame(&agc_state[ch], frame, frame, &agc_md);
-        // }
+        agc_md.aec_corr_factor = md.aec_corr_factor[0];
+        agc_process_frame(&agc_state, frame, frame, &agc_md);
 
         // Transmit output frame
-        // chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
         chan_out_buf_word(c_frame_out, (uint32_t*)&frame[0], AP_FRAME_ADVANCE);
     }
 }

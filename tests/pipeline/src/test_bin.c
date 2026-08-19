@@ -51,7 +51,6 @@ void tx(chanend_t c_pcm_in_a, chanend_t c_frame_num, const char* input_file_name
 /// rx
 void rx(chanend_t c_pcm_out_b, chanend_t c_frame_num, const char* output_file_name) {
     file_t output_file;
-    // int32_t DWORD_ALIGNED pipeline_output[AP_MAX_Y_CHANNELS][AP_FRAME_ADVANCE];
     int32_t DWORD_ALIGNED pipeline_output[AP_FRAME_ADVANCE];
 
     int ret = file_open(&output_file, output_file_name, "wb");
@@ -61,11 +60,8 @@ void rx(chanend_t c_pcm_out_b, chanend_t c_frame_num, const char* output_file_na
     for(int frame=0; frame<frame_count; frame++)
     {
         // Receive output frame over channel
-        // chan_in_buf_word(c_pcm_out_b, (uint32_t*)&pipeline_output[0][0], (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE));
         chan_in_buf_word(c_pcm_out_b, (uint32_t*)&pipeline_output[0], AP_FRAME_ADVANCE);
 
-        // file_write(&output_file, (uint8_t*)pipeline_output, (AP_MAX_Y_CHANNELS * AP_FRAME_ADVANCE * sizeof(int32_t)));
-        file_write(&output_file, (uint8_t*)pipeline_output, AP_FRAME_ADVANCE * sizeof(int32_t));
         file_write(&output_file, (uint8_t*)pipeline_output, AP_FRAME_ADVANCE * sizeof(int32_t));
     }
 

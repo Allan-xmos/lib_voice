@@ -14,49 +14,68 @@ int pseudo_rand(int* state)
   return *state;
 }
 
-
 int8_t  pseudo_rand_int8(unsigned *r){
-    pseudo_rand((int*)r);
+    int tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     return (int8_t)*r;
 }
 
 uint8_t pseudo_rand_uint8(unsigned *r){
-    pseudo_rand((int*)r);
+    int tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     return (uint8_t)*r;
 }
 
 int16_t  pseudo_rand_int16(unsigned *r){
-    pseudo_rand((int*)r);
+    int tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     return (int16_t)*r;
 }
 
 uint16_t pseudo_rand_uint16(unsigned *r){
-    pseudo_rand((int*)r);
+    int tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     return (uint16_t)*r;
 }
 
 int32_t  pseudo_rand_int32(unsigned *r){
-    pseudo_rand((int*)r);
+    int tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     return (int32_t)*r;
 }
 
 uint32_t pseudo_rand_uint32(unsigned *r){
-    pseudo_rand((int*)r);
+    int tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     return (uint32_t)*r;
 }
 
 int64_t  pseudo_rand_int64(unsigned *r){
-    pseudo_rand((int*)r);
+    int tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     int64_t a = (int64_t)*r;
-    pseudo_rand((int*)r);
+    tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     int64_t b = (int64_t)*r;
     return (int64_t)(a + (b<<32));
 }
 
 uint64_t pseudo_rand_uint64(unsigned *r){
-    pseudo_rand((int*)r);
+    int tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     int64_t a = (int64_t)*r;
-    pseudo_rand((int*)r);
+    tmp = (int)*r;
+    pseudo_rand(&tmp);
+    *r = (unsigned)tmp;
     int64_t b = (int64_t)*r;
     return (uint64_t)(a + (b<<32));
 }
@@ -91,7 +110,9 @@ void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size){
     unsigned b = 0;
 
     while(size >= sizeof(unsigned)){
-        pseudo_rand((int*)r);
+        int itmp = (int)*r;
+        pseudo_rand(&itmp);
+        *r = (unsigned)itmp;
 
         char* rch = (char*) r;
 
@@ -100,8 +121,10 @@ void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size){
 
         size -= sizeof(unsigned);
     }
-    
-    pseudo_rand((int*)r);
+
+    int itmp = (int)*r;
+    pseudo_rand(&itmp);
+    *r = (unsigned)itmp;
     unsigned tmp = *r;
     while(size){
         buffer[b++] = (char) (tmp & 0xFF);

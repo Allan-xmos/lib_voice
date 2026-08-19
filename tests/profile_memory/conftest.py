@@ -49,7 +49,7 @@ def write_rst_table(configs: dict, outfile: Path):
         "   * - Component",
     ]
     for arch in archs:
-        lines.append(f"     - Memory use ({arch.upper()})")
+        lines.append(f"     - Memory use (bytes, {arch.upper()})")
     for app in all_apps:
         m = re.search(r"app_memory_([^\s]+)", app)
         assert m, "Cannot parse app name. Should start with app_memory_"

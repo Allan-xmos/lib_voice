@@ -5,7 +5,7 @@
    :widths: 8 8
 
    * - Component
-     - Memory use (XS3A)
+     - Memory use (bytes, XS3A)
    * - ADEC
      - 8160
    * - AEC_ALT_ARCH

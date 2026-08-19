@@ -17,7 +17,7 @@ from py_voice.config import config
 from py_voice.core import leq_smooth
 
 import py_vs_c_utils as pvc
-from run_dut import run_with_xscope_fileio
+from run_dut import run_dut
 
 # some mess to get the list of IRs
 hydra_audio_path = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio')).expanduser()
@@ -38,21 +38,15 @@ ap_conf = config.get_config_dict(ap_config_file)
 cwd = Path(__file__).parent
 
 def run_target(input_data, conf_data, target):
-    output_data = np.empty(0, dtype=np.int32)
-
     with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
         tmp_folder = Path(tmp_folder)
 
-        input_file = tmp_folder / "input.bin"
-        input_data.astype(np.int32).tofile(input_file)
-
+        # conf.bin is an extra input file main.c reads alongside input.bin; run_dut only
+        # handles input.bin/output.bin, so it must be written before run_dut is invoked.
         conf_file = tmp_folder / "conf.bin"
         conf_data.astype(np.int32).tofile(conf_file)
 
-        run_with_xscope_fileio(xe, tmp_folder, target)
-
-        output_file = tmp_folder / "output.bin"
-        output_data = np.fromfile(output_file, dtype=np.int32)
+        output_data, _ = run_dut(input_data, xe, target, tmp_folder=tmp_folder)
 
     return output_data
 

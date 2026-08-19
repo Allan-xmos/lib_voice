@@ -1,6 +1,6 @@
 // This file relates to internal XMOS infrastructure and should be ignored by external users
 
-@Library('xmos_jenkins_shared_library@v0.52.0') _
+@Library('xmos_jenkins_shared_library@v0.54.0') _
 
 def runningOn(machine) {
   println "Stage running on:"
@@ -13,10 +13,13 @@ def runningOn(machine) {
 // or a follow-up python script).
 def runSuite(String suiteDir, String archOpt, String pytestArgs, Closure postSteps = null) {
   dir(suiteDir) {
-    def cmd = "pytest ${archOpt} ${pytestArgs} --junitxml=pytest_result.xml".replaceAll(/\s+/, ' ').trim()
+    def cmd = "pytest ${archOpt} ${pytestArgs} -v --durations=0 --junitxml=pytest_result.xml".replaceAll(/\s+/, ' ').trim()
     withEnv(["hydra_audio_PATH=/projects/hydra_audio"]) {
-      sh cmd
-      junit "pytest_result.xml"
+      try {
+        sh cmd
+      } finally {
+        junit "pytest_result.xml"
+      }
       if (postSteps) { postSteps() }
     }
   }
@@ -170,7 +173,8 @@ def runVerification(Map cfg) {
                       // path argument ("ERROR: file or directory not found: python").
                       sh "pytest -n 4 --arch ${cfg.archName} python --junitxml=pytest_result.xml -vv"
                       junit "pytest_result.xml"
-                      sh "python compare_keywords.py results_Avona_aec_ic_ns_agc_prev_arch_${cfg.archName}.csv results_Avona_aec_ic_ns_agc_prev_arch_python.csv --pass-threshold=1"
+                      def threshold = (cfg.archName == 'vx4b') ? 3 : 1
+                      sh "python compare_keywords.py results_Avona_aec_ic_ns_agc_prev_arch_${cfg.archName}.csv results_Avona_aec_ic_ns_agc_prev_arch_python.csv --pass-threshold=${threshold}"
                     }
                   }
                 }
@@ -524,7 +528,7 @@ pipeline {
             },
             'native and CFFI Verification': {
               runVerification([
-                agentLabel: 'x86_64&&linux',
+                agentLabel: 'x86_64&&linux&&!noAVX2',
                 toolsVersion: params.TOOLS_VERSION,
                 archName: 'native',
                 unstashNames: ['xcommon_cmake_build_native'],

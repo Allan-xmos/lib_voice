@@ -411,7 +411,6 @@ void compare_filter_fp(
     double *overall_Error = params->overall_Error;
     double *overall_Error_shadow = params->overall_Error_shadow;
     double *overall_Input = params->overall_Y;
-    double *sum_X_energy = params->sum_X_energy;
 
     //# check if shadow or reference filter will be used and flag accordingly
     for(int ch=0; ch<params->y_channels; ch++) {
@@ -824,7 +823,7 @@ void test_compare_filters_and_calc_mu() {
         for(int ych=0; ych<num_y_channels; ych++) {
             //compare shadow_flag
             if(params_fp->shadow_flag[ych] != aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[ych]) {
-                printf("iter %d. shadow_flag (ref %d, dut %ld) error\n", iter, params_fp->shadow_flag[ych], aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[ych]);
+                printf("iter %d. shadow_flag (ref %d, dut %d) error\n", iter, params_fp->shadow_flag[ych], aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[ych]);
                 assert(0);
             }
 
@@ -880,10 +879,10 @@ void test_compare_filters_and_calc_mu() {
 
             //compare mu_coh_timer
             if(params_fp->mu_coh_timer[ych] != aec_state.main_state.shared_state->coh_mu_state[ych].mu_coh_timer) {
-                printf("iter %d. mu_coh_timer mismatch. (ref %d, dut %ld)\n",iter, params_fp->mu_coh_timer[ych], aec_state.main_state.shared_state->coh_mu_state[ych].mu_coh_timer); assert(0);}
+                printf("iter %d. mu_coh_timer mismatch. (ref %d, dut %d)\n",iter, params_fp->mu_coh_timer[ych], aec_state.main_state.shared_state->coh_mu_state[ych].mu_coh_timer); assert(0);}
 
             //compare mu_shad_count
-            if(params_fp->mu_shad_count[ych] != aec_state.main_state.shared_state->coh_mu_state[ych].mu_shad_count) {printf("iter %d. mu_shad_count mismatch. (ref %d, dut %ld\n",iter, params_fp->mu_shad_count[ych], aec_state.main_state.shared_state->coh_mu_state[ych].mu_shad_count); assert(0);}
+            if(params_fp->mu_shad_count[ych] != aec_state.main_state.shared_state->coh_mu_state[ych].mu_shad_count) {printf("iter %d. mu_shad_count mismatch. (ref %d, dut %d\n",iter, params_fp->mu_shad_count[ych], aec_state.main_state.shared_state->coh_mu_state[ych].mu_shad_count); assert(0);}
 
             //compare coh_mu
             for(int xch=0; xch<num_x_channels; xch++) {

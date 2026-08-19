@@ -12,7 +12,7 @@ void test_init()
 {
     int32_t ret = vnr_inference_init();
     if(ret) {
-        printf("vnr_inference_init() returned error %ld\n",ret);
+        printf("vnr_inference_init() returned error %d\n",ret);
         assert(0);
     }
 }

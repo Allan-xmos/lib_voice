@@ -85,7 +85,7 @@ void test_apply_leakage() {
                         if((diff > 0.0005*(ref_fp < 0.0 ? -ref_fp : ref_fp) + pow(10, -8)) && mant_mag > 0x000003ff)
                         {
                             printf("%s fail: iter %d, ych %d, ph %d, bin %d\n",c==0 ? "Re" : "Im", iter, ych, ph, i);
-                            printf("ref: %f dut: %f mant: %ld\n", ref_fp, dut_fp, mant);
+                            printf("ref: %f dut: %f mant: %d\n", ref_fp, dut_fp, mant);
 
                             assert(0);
                         }

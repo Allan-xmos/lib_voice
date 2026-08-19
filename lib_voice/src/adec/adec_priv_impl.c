@@ -64,14 +64,14 @@ void set_delay_params_from_signed_delay(int32_t measured_delay, int32_t *mic_del
     if (*mic_delay_samples >= ADEC_DE_DELAY_SAMPS){
         int32_t actual_delay = ADEC_DE_DELAY_SAMPS - 1; //-1 because we cannot support the actual maximum delay in the buffer (it wraps to zero)
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
-        printf("**Warning - too large a delay requested (%ld), setting to %ld\n", *mic_delay_samples, actual_delay);
+        printf("**Warning - too large a delay requested (%d), setting to %d\n", *mic_delay_samples, actual_delay);
 #endif
         *mic_delay_samples = actual_delay;
     }
     else if(*mic_delay_samples <= -(ADEC_DE_DELAY_SAMPS)) {
         int32_t actual_delay = -(ADEC_DE_DELAY_SAMPS - 1); //-1 because we cannot support the actual maximum delay in the buffer (it wraps to zero)
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
-        printf("**Warning - too large a delay requested (%ld), setting to %ld\n", *mic_delay_samples, actual_delay);
+        printf("**Warning - too large a delay requested (%d), setting to %d\n", *mic_delay_samples, actual_delay);
 #endif
         *mic_delay_samples = actual_delay;
     }

@@ -96,7 +96,7 @@ void test_update_sigma_XX() {
                 if(diff > max_diff) max_diff = diff;
                 double dut_float = ldexp(sigma_ptr->data[i], sigma_ptr->exp);
                 if(diff > (1 << 10)) {
-                    printf("Fail. Iter %d, ch %d, bin %d, ref %f, dut (%ld, %d), %f\n",iter, ch, i, sigma_XX_fp[ch][i], sigma_ptr->data[i], sigma_ptr->exp, dut_float);
+                    printf("Fail. Iter %d, ch %d, bin %d, ref %f, dut (%d, %d), %f\n",iter, ch, i, sigma_XX_fp[ch][i], sigma_ptr->data[i], sigma_ptr->exp, dut_float);
                 }
                 TEST_ASSERT_INT32_WITHIN_MESSAGE(1<<10, expected, sigma_ptr->data[i], "sigma_xx broke");
             }

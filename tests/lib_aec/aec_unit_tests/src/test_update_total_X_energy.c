@@ -173,7 +173,7 @@ void test_update_total_X_energy() {
                 if(diff_double > 0.0002*(ref_double < 0.0 ? -ref_double : ref_double) + pow(10, -8))
                 {
                     printf("Main filter: iter %d. ch: %d, bin: %d, diff %f outside pass limits. ref %f, dut %f\n", iter, ch, i, diff_double, ref_double, dut_double);
-                    printf("Main filter: ch %d, bin %d: ref (%f), dut (0x%x, %d)\n",ch, i, ref_double, X_energy_ptr->data[i], X_energy_ptr->exp);
+                    printf("Main filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_ptr->data[i], X_energy_ptr->exp);
                     assert(0);
                 }
                 ref_double = X_energy_shadow_fp[ch][i];
@@ -185,7 +185,7 @@ void test_update_total_X_energy() {
                 if(diff_double > 0.002*(ref_double < 0.0 ? -ref_double : ref_double) + pow(10, -8))
                 {
                     printf("Shadow filter: iter %d, ch: %d, bin: %d, diff %f outside pass limits. ref %f, dut %f\n", iter, ch, i, diff_double, ref_double, dut_double);
-                    printf("Shadow filter: ch %d, bin %d: ref (%f), dut (0x%x, %d)\n",ch, i, ref_double, X_energy_shadow_ptr->data[i], X_energy_shadow_ptr->exp);
+                    printf("Shadow filter: ch %d, bin %d: ref (%f), dut (0x%lx, %d)\n",ch, i, ref_double, X_energy_shadow_ptr->data[i], X_energy_shadow_ptr->exp);
                     assert(0);
                 }
             }

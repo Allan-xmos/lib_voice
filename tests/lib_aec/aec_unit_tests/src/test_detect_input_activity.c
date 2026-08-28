@@ -27,7 +27,7 @@ void test_detect_input_activity() {
     double ref_active_threshold = pow(10, active_threshold_dB/20.0);
     float_s32_t dut_active_threshold = f64_to_float_s32(ref_active_threshold);
 
-    uint32_t seed = 43554;
+    unsigned seed = 43554;
 
     // Test: all values 0.activity should be 0
     for(int ch=0; ch<CHANNELS; ch++) {

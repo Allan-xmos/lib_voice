@@ -123,7 +123,7 @@ void test_bfp_complex_s32_l2_unify_exponent() {
             }
         }
     }
-    printf("max_diff = %d\n",max_diff);
+    printf("max_diff = %ld\n",max_diff);
 }
 
 void test_bfp_s32_l2_unify_exponent() {
@@ -224,5 +224,5 @@ void test_bfp_s32_l2_unify_exponent() {
             }
         }
     }
-    printf("max_diff = %d\n",max_diff);
+    printf("max_diff = %ld\n",max_diff);
 }

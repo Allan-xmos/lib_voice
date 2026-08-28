@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 from characterise_c_py import rt60_type, angle_type, get_attenuation_c_py
 
 
-def get_polar_response(test_id, angle_roi, step_size, noise_band, noise_db, rt60):
+def get_polar_response(test_id, angle_roi, step_size, noise_band, noise_db, rt60, target="xs3a"):
     angles = list(range(0, 1 + angle_roi, step_size))
     results_py = []
     results_c = []
 
     for angle in angles:
-        attn_c, attn_py = get_attenuation_c_py(test_id, noise_band, noise_db, angle, rt60)
+        attn_c, attn_py = get_attenuation_c_py(test_id, noise_band, noise_db, angle, rt60, target)
         results_py.append(attn_py[-2])
         results_c.append(attn_c[-2])
 

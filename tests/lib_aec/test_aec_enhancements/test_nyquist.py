@@ -12,7 +12,7 @@ import scipy.signal as spsig
 import soundfile as sf
 from pathlib import Path
 
-import wav_test_functions as wtf
+from py_voice.core import utils as wtf
 import run_xc
 
 hydra_audio_path = os.environ.get('hydra_audio_PATH', '~/hydra_audio')
@@ -23,7 +23,7 @@ def calc_max_attenuation(output):
     print("Max attenuation is %f dB"%(max_atten))
     return max_atten
 
-def test_nyquist():
+def test_nyquist(target):
     ''' test_nyquist - run mono white noise convolved with a modelled impulse response
     If the Nyquist is present in the AEC, the maximum attenuation should be greater than 60dB for python and 80dB for XC
 
@@ -70,7 +70,7 @@ def test_nyquist():
     in_data_32bit = (np.asarray(in_data * np.iinfo(np.int32).max, dtype=np.int32)).T
 
     print("Run AEC XC")
-    dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_FORCE_ON'], num_y_channels=y_channel_count, num_x_channels=x_channel_count)
+    dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_FORCE_ON'], num_y_channels=y_channel_count, num_x_channels=x_channel_count, target=target)
     output_wav_file, _ = sf.read(dut_output_file)
     error_xc = output_wav_file[:,0]
     _, leq_error_xc = wtf.leq_smooth(error_xc, fs, 0.05)

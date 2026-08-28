@@ -66,4 +66,16 @@ int main(int argc, char **argv) {
     test_bad_state("conf.bin", "input.bin", "output.bin");
     return 0;
 }
+#else
+int main(void) {
+#if TEST_WAV_XSCOPE
+    chanend_t xscope_chan = chanend_alloc();
+    xscope_io_init(xscope_chan);
+#endif
+    test_bad_state("conf.bin", "input.bin", "output.bin");
+#if TEST_WAV_XSCOPE
+    chanend_free(xscope_chan);
+#endif
+    return 0;
+}
 #endif

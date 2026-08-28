@@ -24,14 +24,15 @@ from pathlib import Path
 
 ap_config_file = Path(__file__).parents[1] / "shared" / "config" / "ic_conf_no_adapt_control.json"
 tflite_model = os.path.join(package_dir, "../../lib_voice/src/vnr/model/trained_model.tflite")
-input_file = "input.wav"
-output_file = "output.wav"
 
 frames_print = 15
 
 @pytest.fixture()
-def test_config():
-    ap_conf = config.get_config_dict(ap_config_file)
+def ap_conf():
+    return config.get_config_dict(ap_config_file)
+
+@pytest.fixture()
+def test_config(ap_conf, tmp_path):
     global hydra_audio_base_dir
     try:
         hydra_audio_base_dir = os.environ['hydra_audio_PATH']
@@ -39,10 +40,11 @@ def test_config():
         print(f'Warning: hydra_audio_PATH environment variable not set. Using local path {hydra_audio_base_dir}')
     hydra_audio_path = os.path.join(hydra_audio_base_dir, "xvf3510_no_processing_xmos_test_suite")
     test_track = os.path.join(hydra_audio_path, "InHouse_XVF3510v080_v1.2_20190423_Loc1_Noise2_60dB__Take1.wav")
+    input_file = tmp_path / "input.wav"
     cmd = f"sox {test_track} -c 2 {input_file} trim 120 30"
     subprocess.run(cmd.split())
 
-    return ap_conf
+    return ap_conf, input_file
 
 
 class stage_b_comparison:
@@ -86,11 +88,12 @@ class stage_b_comparison:
 
         return output_py, pvc.int32_to_float(output_c)
 
-def test_frame_compare(test_config):
+def test_frame_compare(test_config, tmp_path):
 
-    test_config["ic"]["adaption_config"] = 'ADAPTION_AUTO'
-    test_config["ic"]["vnr_model"] = "../../lib_voice/src/vnr/model/trained_model.tflite"
-    sbc = stage_b_comparison(test_config)
+    ap_conf, input_file = test_config
+    ap_conf["ic"]["adaption_config"] = 'ADAPTION_AUTO'
+    ap_conf["ic"]["vnr_model"] = "../../lib_voice/src/vnr/model/trained_model.tflite"
+    sbc = stage_b_comparison(ap_conf)
 
     frame_advance = sbc.frame_advance
     proc_frame_length = sbc.proc_frame_length
@@ -114,10 +117,11 @@ def test_frame_compare(test_config):
         output_wav_data[1, frame_start: frame_start + frame_advance] = output_c
 
     #Write a copy of the output for post analysis if needed
+    output_file = tmp_path / "output.wav"
     scipy.io.wavfile.write(output_file, input_rate, pvc.float_to_int32(output_wav_data.T))
 
-    pvc.basic_line_graph("py_vs_c_mu", mu_log)
-    pvc.basic_line_graph("py_vs_c_vnr", vnr_log)
+    pvc.basic_line_graph(str(tmp_path / "py_vs_c_mu"), mu_log)
+    pvc.basic_line_graph(str(tmp_path / "py_vs_c_vnr"), vnr_log)
 
 
     arith_closeness, geo_closeness, c_delay, peak2ave = pvc.pcm_closeness_metric(output_file)
@@ -138,9 +142,9 @@ def get_ad_conf(int):
     return ad_conf
 
 #Check equivalence of adaption controller
-def test_adaption_controller(test_config):
+def test_adaption_controller(ap_conf):
 
-    ic_obj = ic.ic(test_config)
+    ic_obj = ic.ic(ap_conf)
     ic_vnr_test_lib.test_init()
 
     vnr_vect = np.random.random(10000)

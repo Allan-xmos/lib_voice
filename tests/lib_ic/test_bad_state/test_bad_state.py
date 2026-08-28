@@ -17,7 +17,7 @@ from py_voice.config import config
 from py_voice.core import leq_smooth
 
 import py_vs_c_utils as pvc
-from run_dut import run_with_xscope_fileio
+from run_dut import run_dut
 
 # some mess to get the list of IRs
 hydra_audio_path = Path(os.environ.get('hydra_audio_PATH', '~/hydra_audio')).expanduser()
@@ -37,28 +37,22 @@ ap_config_file = Path(__file__).parents[2] / "shared" / "config" / "ic_conf_no_a
 ap_conf = config.get_config_dict(ap_config_file)
 cwd = Path(__file__).parent
 
-def run_target(input_data, conf_data):
-    output_data = np.empty(0, dtype=np.int32)
-
+def run_target(input_data, conf_data, target):
     with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
         tmp_folder = Path(tmp_folder)
 
-        input_file = tmp_folder / "input.bin"
-        input_data.astype(np.int32).tofile(input_file)
-
+        # conf.bin is an extra input file main.c reads alongside input.bin; run_dut only
+        # handles input.bin/output.bin, so it must be written before run_dut is invoked.
         conf_file = tmp_folder / "conf.bin"
         conf_data.astype(np.int32).tofile(conf_file)
 
-        run_with_xscope_fileio(xe, tmp_folder)
-
-        output_file = tmp_folder / "output.bin"
-        output_data = np.fromfile(output_file, dtype=np.int32)
+        output_data, _ = run_dut(input_data, xe, target, tmp_folder=tmp_folder)
 
     return output_data
 
-def run_test(input_data, conf_data, test_name, fs):
+def run_test(input_data, conf_data, test_name, fs, target):
 
-    output_data = run_target(input_data, conf_data)
+    output_data = run_target(input_data, conf_data, target)
     output_data = pvc.int32_to_float(output_data)
 
     sf.write(cwd / f"output_{test_name}.wav", output_data, fs)
@@ -77,7 +71,7 @@ def form_conf_data(config, H_hat, num_words_H):
 @pytest.mark.parametrize("room", ["lab"])
 @pytest.mark.parametrize("speech_level", [0])
 @pytest.mark.parametrize("noise_name", ["006_Pink", "015_Silence"])
-def test_bad_state(room, speech_level, noise_name):
+def test_bad_state(room, speech_level, noise_name, target):
 
     # some constants:
     length_secs = 10
@@ -127,15 +121,19 @@ def test_bad_state(room, speech_level, noise_name):
     inx = mic_sig.shape[1] // frame_advance * frame_advance
     mic_sig = mic_sig[:, :inx]
 
-    sf.write(cwd / f"input_{noise_name}.wav", mic_sig.T, fs)
+    # embed every distinguishing parametrize axis so concurrent (xdist) test items never
+    # write the same output_*.wav filename
+    test_id = f"{room}_{speech_level}_{noise_name}_{target}"
+
+    sf.write(cwd / f"input_{test_id}.wav", mic_sig.T, fs)
     input_data = pvc.float_to_int32(mic_sig)
     input_data = pvc.interleave_channel_frames(input_data, frame_advance)
 
     conf_data_cancel_noise = form_conf_data(2, ideal_noise_cancellation_H, num_words_H)
-    average_fixed_good = run_test(input_data, conf_data_cancel_noise, f"good_{noise_name}", fs)
+    average_fixed_good = run_test(input_data, conf_data_cancel_noise, f"good_{test_id}", fs, target)
 
     conf_data_cancel_speech = form_conf_data(0, ideal_speech_cancellation_H, num_words_H)
-    average_adapt_bad = run_test(input_data, conf_data_cancel_speech, f"bad_{noise_name}", fs)
+    average_adapt_bad = run_test(input_data, conf_data_cancel_speech, f"bad_{test_id}", fs, target)
 
     print(f"average_adapt_bad (dB): {average_adapt_bad}")
     print(f"average_fixed_good (dB): {average_fixed_good}")
@@ -144,4 +142,4 @@ def test_bad_state(room, speech_level, noise_name):
 
 
 if __name__ =="__main__":
-    test_bad_state("lab", 0, "006_Pink")
+    test_bad_state("lab", 0, "006_Pink", "xs3a")

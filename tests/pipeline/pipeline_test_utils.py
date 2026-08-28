@@ -14,66 +14,56 @@ from test_wav import test_wav
 sys.path.append(str(Path(__file__).parent / "py_pipeline"))
 import wav_pipeline
 
-def process_xcore(xe_file, input_file, output_file):
+def process_xcore(xe_file, input_file, output_file, arch="xs3a"):
     frame_advance = 240
-    AP_MAX_Y_CHANNELS = 2
-    stdout = test_wav(xe_file, input_file, output_file, frame_advance, AP_MAX_Y_CHANNELS, frame_advance, timeout=xtag_aquire_timeout_s)
-    '''
-    with tempfile.TemporaryDirectory(dir=".") as tmp_folder:
-        tmp_folder = Path(tmp_folder)
-        shutil.copyfile(input_file, tmp_folder / "input.wav")
-
-        #Make sure we can wait for 2 processing occurances to finish
-        stdout = run_with_xscope_fileio(xe_file, tmp_folder, xtag_aquire_timeout_s)
-
-        shutil.copyfile(tmp_folder / "output.wav", output_file)
-    '''
+    output_channels = 1
+    stdout = test_wav(xe_file, input_file, output_file, frame_advance, output_channels, frame_advance, target=arch, timeout=xtag_aquire_timeout_s)
     return stdout
 
-def process_python(input_file, output_file, arch):
+def process_python(input_file, output_file, pipeline_arch):
     # currently this test only runs python pipelines without ADEC, and skips those with.
     config_file = Path(__file__).parent / "py_pipeline/config/prev_arch.json"
-    if arch == 'aec_ic_ns_agc_prev_arch':
+    if pipeline_arch == 'aec_ic_ns_agc_prev_arch':
         wav_pipeline.test_file(input_file, output_file, config_file)
-    elif arch == 'alt_arch':
+    elif pipeline_arch == 'alt_arch':
         # alt arch not originally supported in python pipeline, so skip for now
         pytest.skip("alt arch python not tested")
-    elif arch == 'prev_arch':
+    elif pipeline_arch == 'prev_arch':
         # prev arch not originally supported in python pipeline, so skip for now
         pytest.skip("prev arch python not tested")
     else:
-        raise ValueError(f"Unknown architecture for python processing: {arch}")
-        if arch == 'aec_ic_prev_arch':
+        raise ValueError(f"Unknown architecture for python processing: {pipeline_arch}")
+        if pipeline_arch == 'aec_ic_prev_arch':
             wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True, disable_agc=True)
-        elif arch == 'aec_ic_ns_prev_arch':
+        elif pipeline_arch == 'aec_ic_ns_prev_arch':
             wav_pipeline.test_file(input_file, output_file, config_file, disable_agc=True)
-        elif arch == 'aec_ic_agc_prev_arch':
+        elif pipeline_arch == 'aec_ic_agc_prev_arch':
             wav_pipeline.test_file(input_file, output_file, config_file, disable_ns=True)
     stdo = ""
     return stdo
 
-def process_file(input_file, arch, target="xcore"):
+def process_file(input_file, pipeline_arch, arch="xs3a"):
     wav_name = input_file.name
-    output_file = Path(__file__).parent / f"{pipeline_output_base_dir}_{arch}_{target}" / wav_name
+    output_file = Path(__file__).parent / f"{pipeline_output_base_dir}_{pipeline_arch}_{arch}" / wav_name
 
-    if target == "xcore":
-        pipeline_bin = pipeline_bins[arch][target]
-        stdout = process_xcore(pipeline_bin, input_file, output_file)
-    elif target == "python":
-        stdout = process_python(input_file, output_file, arch)
+    if arch == "python":
+        stdout = process_python(input_file, output_file, pipeline_arch)
+    elif arch in ("xs3a", "vx4b"):
+        pipeline_bin = pipeline_bins[pipeline_arch]
+        stdout = process_xcore(pipeline_bin, input_file, output_file, arch)
     else:
-        assert False, "Invalid target"
+        assert False, f"Invalid arch {arch}"
 
     return output_file, stdout
 
 
-def convert_keyword_wav(input_file, arch, target):
-    keyword_file = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / input_file.name
+def convert_keyword_wav(input_file, pipeline_arch, arch):
+    keyword_file = Path(__file__).parent / f"{keyword_input_base_dir}_{pipeline_arch}_{arch}" / input_file.name
     # Strip off comms channel leaving just ASR. Sensory needs a 16b wav file
     subprocess.run(f"sox {input_file} -b 16 {keyword_file} remix 1".split())
     return keyword_file
 
-def log_vnr(stdo, input_file, arch, target): # Read VNR predicitions from stdo and store in .npy files of the same name as input files
+def log_vnr(stdo, input_file, pipeline_arch, arch): # Read VNR predicitions from stdo and store in .npy files of the same name as input files
     xcore_stdo = stdo
 
     vnr_output_pred = np.empty(0, dtype=np.float64)
@@ -103,15 +93,15 @@ def log_vnr(stdo, input_file, arch, target): # Read VNR predicitions from stdo a
 
     if(len(vnr_input_pred) > 0):
         filename = f"vnr_input_pred_{input_file.stem}.npy"
-        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / filename
+        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{pipeline_arch}_{arch}" / filename
         np.save(filename, vnr_input_pred)
 
     if(len(vnr_output_pred) > 0):
         filename = f"vnr_output_pred_{input_file.stem}.npy"
-        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / filename
+        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{pipeline_arch}_{arch}" / filename
         np.save(filename, vnr_output_pred)
 
     if(len(mu_log) > 0):
         filename = f"mu_{input_file.stem}.npy"
-        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{arch}_{target}" / filename
+        filename = Path(__file__).parent / f"{keyword_input_base_dir}_{pipeline_arch}_{arch}" / filename
         np.save(filename, mu_log)

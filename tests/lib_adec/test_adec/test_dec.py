@@ -7,9 +7,9 @@ test_name = 'test_wav_delay_estimator_controller'
 
 #See conftest.py for the list of tests that is generated into test_config
 
-def test_wav_delay_estimator_controller(test_config):
+def test_wav_delay_estimator_controller(test_config, target):
     #Run test runs a single instance
-    report = run_test(test_config['pipeline_config'], test_config['info'], test_config['path_to_regression_files'], test_config['input_audio_files'], test_config['far_end_delay_changes'], test_length_s=test_config['test_length_s'], run_target=test_config['run_target'], volume_changes=test_config['volume_changes'])
+    report = run_test(test_config['pipeline_config'], test_config['info'], test_config['path_to_regression_files'], test_config['input_audio_files'], test_config['far_end_delay_changes'], test_length_s=test_config['test_length_s'], run_target=test_config['run_target'], volume_changes=test_config['volume_changes'], target=target)
 
     assert_message = "{} | {} | far_end_changes: {} | len:{} | run_target:{} **".format(test_config['info'], test_config['input_audio_files'], test_config['far_end_delay_changes'], test_config['test_length_s'], test_config['run_target'])
 

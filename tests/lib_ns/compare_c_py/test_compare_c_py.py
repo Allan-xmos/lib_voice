@@ -7,11 +7,11 @@ import numpy as np
 
 @pytest.mark.parametrize("noise_band", [4000, 8000])
 @pytest.mark.parametrize("noise_db", [-60, -20, -6])
-def test_ns_attenuation(noise_band, noise_db):
-    test_name = f"ns_attn_test_{noise_band}_{noise_db}"
+def test_ns_attenuation(noise_band, noise_db, target):
+    test_name = f"ns_attn_test_{noise_band}_{noise_db}_{target}"
     print(f"--- {test_name} ---")
 
-    attenuation_c, attenuation_py = get_attenuation_c_py(test_name, int(noise_band), int(noise_db))
+    attenuation_c, attenuation_py = get_attenuation_c_py(test_name, int(noise_band), int(noise_db), target=target)
 
     c_res = np.array(attenuation_c)
     py_res = np.array(attenuation_py)

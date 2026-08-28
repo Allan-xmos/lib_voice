@@ -9,7 +9,7 @@ from test_wav import test_wav
 import soundfile as sf
 
 parser = configparser.ConfigParser()
-parser.read("parameters.cfg")
+parser.read(Path(__file__).parent / "parameters.cfg")
 aec_xe = Path(__file__).parent / "bin" / "test_aec_enhancements.xe"
 in_dir = parser.get("Folders", "in_dir")
 (Path(__file__).parent / in_dir).mkdir(exist_ok=True)
@@ -23,7 +23,7 @@ runtime_args_file = "args.bin"
 AEC_MAX_Y_CHANNELS = int(parser.get("Config", "y_channel_count"))
 AEC_MAX_X_CHANNELS = int(parser.get("Config", "x_channel_count"))
 
-def run_aec_xc(y_data, x_data, testname, adapt=-1, h_hat_dump=None, adapt_mode=adapt_mode_dict['AEC_ADAPTION_AUTO'], num_y_channels=AEC_MAX_Y_CHANNELS, num_x_channels=AEC_MAX_X_CHANNELS):
+def run_aec_xc(y_data, x_data, testname, adapt=-1, h_hat_dump=None, adapt_mode=adapt_mode_dict['AEC_ADAPTION_AUTO'], num_y_channels=AEC_MAX_Y_CHANNELS, num_x_channels=AEC_MAX_X_CHANNELS, target="xs3a"):
     input_file = Path(__file__).parent / in_dir / f"input_{testname}.wav"
     output_file = Path(__file__).parent / out_dir / f"output_{testname}.wav"
     #input wav file always has (AEC_MAX_Y_CHANNELS + AEC_MAX_X_CHANNELS) channels, as per the build time aec configuration. Changing AEC config at runtime shouldn't affect input packing
@@ -57,7 +57,7 @@ def run_aec_xc(y_data, x_data, testname, adapt=-1, h_hat_dump=None, adapt_mode=a
             fargs.write(f"stop_adapting {adapt}\n".encode('utf-8'))
             fargs.write(f"adaption_mode {adapt_mode}\n".encode('utf-8'))
 
-        test_wav(aec_xe, input_file, output_file, 240, AEC_MAX_Y_CHANNELS, 240, tmp_folder=tmp_folder)
+        test_wav(aec_xe, input_file, output_file, 240, AEC_MAX_Y_CHANNELS, 240, target=target, tmp_folder=tmp_folder)
 
         if h_hat_dump is not None:
             shutil.copy2(tmp_path / dut_H_hat_file, h_hat_dump)

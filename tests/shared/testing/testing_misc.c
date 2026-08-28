@@ -6,6 +6,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #ifdef __xcore__
@@ -18,13 +19,23 @@ unsigned get_seed(
     const unsigned len)
 {
   unsigned seed = 0;
-  int left = len;
+  unsigned left = len;
 
-  while(left > 0){
-    unsigned v = ((unsigned*)str)[0];
+
+  // don't read past the end of the buffer
+  while(left >= 4){
+    unsigned v;
+    memcpy(&v, str, sizeof(v));
     seed = seed ^ v;
     left -= 4;
     str = &str[4];
+  }
+
+  // read the remaining bytes (if any) and xor them into the seed
+  if(left > 0){
+    unsigned v = 0;
+    memcpy(&v, str, left);
+    seed = seed ^ v;
   }
 
   return seed;

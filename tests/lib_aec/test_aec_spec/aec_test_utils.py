@@ -3,11 +3,11 @@
 from builtins import str
 from builtins import range
 import os.path
+from pathlib import Path
 import configparser
 import numpy as np
 import scipy.io.wavfile
 import scipy.signal.windows
-# export PYTHONPATH=$PYTHONPATH:audio_test_tools/python
 from audio_generation import (get_filenames, get_magnitude,
                               get_suppressed_magnitude, db)
 
@@ -19,9 +19,9 @@ def files_exist(*args):
     return True
 
 
-def read_config(testname, filename='test_config.cfg'):
+def read_config(testname):
     parser = configparser.ConfigParser()
-    parser.read(filename)
+    parser.read(Path(__file__).parent / "test_config.cfg")
     cfg = {}
     cfg['settle_time'] = parser.getint(testname, "settle_time")
     cfg['start_fft'] = parser.getint(testname, "start_fft")
@@ -45,7 +45,12 @@ def read_wav(filename):
 
 def get_excluded_tests():
     excluded_tests = []
-    with open('excluded_tests.txt', 'r') as f:
+    if os.environ.get("FULL_TEST") == "0":
+        filename = Path(__file__).parent / "excluded_tests_quick.txt"
+    else:
+        filename = Path(__file__).parent / "excluded_tests.txt"
+
+    with open(filename, 'r') as f:
         for line in f.readlines():
             line = line.strip()
             excluded_tests.append(line)
@@ -103,9 +108,9 @@ def get_section(testid, sections):
     return best_section
 
 
-def get_criteria(testid, filename="criteria.cfg"):
+def get_criteria(testid):
     parser = configparser.ConfigParser()
-    parser.read(filename)
+    parser.read(Path(__file__).parent / 'criteria.cfg')
     criteria = {}
     section = get_section(testid, parser.sections())
     for key, val in parser.items(section):

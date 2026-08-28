@@ -221,4 +221,16 @@ int main(int argc, char **argv) {
     //aec_task(argv[1], argv[2]);
     return 0;
 }
+#else
+int main(void) {
+#if TEST_WAV_XSCOPE
+    chanend_t xscope_chan = chanend_alloc();
+    xscope_io_init(xscope_chan);
+#endif
+    pipeline_wrapper("input.bin", "output.bin");
+#if TEST_WAV_XSCOPE
+    chanend_free(xscope_chan);
+#endif
+    return 0;
+}
 #endif

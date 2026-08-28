@@ -2,10 +2,10 @@
 
 .. list-table:: Memory usage (in bytes)
    :header-rows: 1
-   :widths: 8 8 
+   :widths: 8 8
 
    * - Component
-     - Memory use (bytes)
+     - Memory use (bytes, XS3A)
    * - ADEC
      - 8160
    * - AEC_ALT_ARCH

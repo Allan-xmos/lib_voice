@@ -40,3 +40,5 @@ test/**/*.png
 .DS_Store
 
 **/*.swp
+tests/lib_aec/test_aec_spec/audio_in
+tests/profile_memory/worker_logs

@@ -80,7 +80,7 @@ def process_py(input_data):
     output_data, _ = ic_obj.process_array(input_data)
     return np.reshape(output_data, output_data.shape[1])
 
-def process_c(input_data):
+def process_c(input_data, target="xs3a"):
 
     assert input_data.ndim == 2
     assert input_data.shape[0] == 2
@@ -89,7 +89,7 @@ def process_c(input_data):
 
     input_data = pvc.interleave_channel_frames(input_data, FRAME_ADVANCE)
 
-    output_data, _ = run_dut(input_data, IC_XE, "xs3a")
+    output_data, _ = run_dut(input_data, IC_XE, target)
 
     return pvc.int32_to_float(output_data)
 
@@ -114,7 +114,7 @@ def get_attenuation(in_data, out_data):
 
     return attenuation
 
-def get_attenuation_c_py(test_id, noise_band, noise_db, angle, rt60):
+def get_attenuation_c_py(test_id, noise_band, noise_db, angle, rt60, target="xs3a"):
     audio_dir.mkdir(exist_ok=True)
     test_name = f"{test_id}_{angle}"
     input_file = audio_dir / f"in_{test_name}.wav"
@@ -127,7 +127,7 @@ def get_attenuation_c_py(test_id, noise_band, noise_db, angle, rt60):
 
     out_py = process_py(input_data)
     sf.write(output_file_py, out_py, SAMPLE_RATE)
-    out_c = process_c(input_data)
+    out_c = process_c(input_data, target)
     sf.write(output_file_c, out_c, SAMPLE_RATE)
 
     attenuation_py = get_attenuation(input_data, out_py)

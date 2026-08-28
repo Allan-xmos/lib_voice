@@ -41,7 +41,7 @@ def analyse_cancellation(data, de_end_frame):
     assert cancel_dB > 3
 
 
-def test_adec_startup(input_vectors):
+def test_adec_startup(input_vectors, target):
     test_file = input_vectors[0]
 
     with tempfile.TemporaryDirectory(prefix='tmp_', dir='.') as tmp_dir:
@@ -55,7 +55,7 @@ def test_adec_startup(input_vectors):
         frame_advance = 240
         AEC_MAX_Y_CHANNELS = 2
         output_file = tmp_path / "output.wav"
-        xcore_stdo = test_wav(xcore_binary, test_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, tmp_folder=tmp_dir)
+        xcore_stdo = test_wav(xcore_binary, test_file, output_file, frame_advance, AEC_MAX_Y_CHANNELS, frame_advance, target=target, tmp_folder=tmp_dir)
 
         out_data, _ = sf.read(output_file)
         out_data = pvc.float_to_int32(out_data)

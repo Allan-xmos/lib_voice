@@ -49,7 +49,3 @@ def dut_runner(request, target):
 @pytest.fixture
 def rng():
     return np.random.default_rng(1243)
-
-def pytest_generate_tests(metafunc):
-    if "target" in metafunc.fixturenames:
-        metafunc.parametrize("target", ['native', 'xs3a'])

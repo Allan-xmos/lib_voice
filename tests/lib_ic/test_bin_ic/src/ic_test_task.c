@@ -72,19 +72,19 @@ void ic_task(const char *input_file_name, const char *output_file_name) {
 
 
 #if !X86_BUILD
-void main_tile1(chanend_t c_cross_tile)
-{
-    //Do nothing
-}
-
 #define IN_WAV_FILE_NAME    "input.bin"
 #define OUT_WAV_FILE_NAME   "output.bin"
-void main_tile0(chanend_t c_cross_tile, chanend_t xscope_chan)
+int main(void)
 {
 #if TEST_WAV_XSCOPE
+    chanend_t xscope_chan = chanend_alloc();
     xscope_io_init(xscope_chan);
 #endif
     ic_task(IN_WAV_FILE_NAME, OUT_WAV_FILE_NAME);
+#if TEST_WAV_XSCOPE
+    chanend_free(xscope_chan);
+#endif
+    return 0;
 }
 #else //Linux build
 int main(int argc, char **argv) {

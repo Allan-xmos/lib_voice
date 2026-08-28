@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
 project(test_ic_calc_vnr_pred)
 
-set(APP_HW_TARGET XK-EVK-XU316)
+if(NOT DEFINED APP_HW_TARGET)
+    set(APP_HW_TARGET XK-EVK-XU316)
+endif()
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../)
 set(CONFIG_XSCOPE_PATH ${XMOS_SANDBOX_DIR}/lib_voice/tests/shared/file_utils)
 
@@ -18,11 +20,6 @@ file(GLOB APP_C_SRCS
     ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_vnr/vnr_unit_tests/src/main.c
     ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
 
-file(RELATIVE_PATH APP_XC_SRCS
-    ${CMAKE_CURRENT_LIST_DIR}
-    ${XMOS_SANDBOX_DIR}/lib_voice/tests/lib_vnr/vnr_unit_tests/src/main.xc
-    )
-
 set(APP_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/src
     ${CMAKE_CURRENT_LIST_DIR}/../../shared/file_utils/src)
@@ -34,8 +31,7 @@ if (NOT BUILD_NATIVE)
             -report
             -Os
             -g
-            -mcmodel=large
-            -Wno-xcore-fptrgroup
+            # -mcmodel=large
             -DTEST_WAV_XSCOPE=1)
 
     set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})

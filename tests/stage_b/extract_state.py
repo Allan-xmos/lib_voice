@@ -6,13 +6,16 @@
 # and a bit of scripting to extract the ic state and xs3 math types from the source
 
 import subprocess
+from pathlib import Path
 
-xcore_math_types_api_dir = "../../../lib_xcore_math/lib_xcore_math/api"
-lib_ic_api_dir = "../../lib_voice/api/ic/"
-lib_ic_src_dir = "../../lib_voice/src/ic"
-lib_vnr_api_dir = "../../lib_voice/api/vnr/"
-lib_vnr_model_dir = "../../lib_voice/src/vnr/model"
-lib_vnr_src_dir = "../../lib_voice/src/vnr/"
+sandbox_dir = Path(__file__).parents[3]
+xcore_math_types_api_dir = sandbox_dir / "lib_xcore_math/lib_xcore_math/api"
+lib_ic_api_dir = sandbox_dir / "lib_voice/lib_voice/api/ic/"
+lib_ic_src_dir = sandbox_dir / "lib_voice/lib_voice/src/ic"
+lib_vnr_api_dir = sandbox_dir / "lib_voice/lib_voice/api/vnr/"
+lib_vnr_model_dir = sandbox_dir / "lib_voice/lib_voice/src/vnr/model"
+lib_vnr_src_dir = sandbox_dir / "lib_voice/lib_voice/src/vnr/"
+
 state = []
 
 def extract_section(line, pp, filenames):
@@ -33,7 +36,7 @@ def extract_xcore_math():
     #This is a really quick and dirty way to get things to play nicely. CFFI should do this for us but doesn't
     #Note enums do not go down well so we replace that with int late
     skip_lines_containing = ["#", "C_TYPE", "enum", "BFP_FLAG_DYNAMIC", "bfp_flags_e;"]
-    with open(xcore_math_types_api_dir+"/xmath/types.h") as xs3m:
+    with open(Path(xcore_math_types_api_dir, "xmath/types.h")) as xs3m:
         lines = xs3m.readlines()
         for line in lines:
             line_ok = True
@@ -58,7 +61,7 @@ def extract_pre_defs():
     extract_xcore_math()
 
     #Grab just ic_state related lines from the C pre-processed
-    subprocess.call(f"gcc -E ic_vnr_test.c -o ic_vnr_test.i -I {lib_ic_api_dir} -I {lib_ic_src_dir} -I {xcore_math_types_api_dir} -I {lib_vnr_api_dir} -I {lib_vnr_model_dir} -I {lib_vnr_src_dir}".split())
+    subprocess.check_output(f"gcc -E ic_vnr_test.c -o ic_vnr_test.i -I {lib_ic_api_dir} -I {lib_ic_src_dir} -I {xcore_math_types_api_dir} -I {lib_vnr_api_dir} -I {lib_vnr_model_dir} -I {lib_vnr_src_dir}".split())
 
     with open("ic_vnr_test.i") as pp:
         end_of_file = False

@@ -120,7 +120,7 @@ void adec_process_frame(
           // # delay_estimate_s tells us how late the near is, so negate before setting far
           state->last_measured_delay += adec_in->from_de.measured_delay_samples;
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
-          printf("AEC MODE - Measured delay estimate: %d (raw %d)\n", state->last_measured_delay, adec_in->from_de.measured_delay_samples); //+ve means MIC delay
+          printf("AEC MODE - Measured delay estimate: %ld (raw %ld)\n", state->last_measured_delay, adec_in->from_de.measured_delay_samples); //+ve means MIC delay
 #endif
           set_delay_params_from_signed_delay(state->last_measured_delay, &adec_output->requested_mic_delay_samples, &adec_output->requested_delay_samples_debug);
           adec_output->reset_aec_flag = 1;
@@ -187,7 +187,7 @@ void adec_process_frame(
           // # positive delay_estimate means reference is late
           state->last_measured_delay = adec_in->from_de.measured_delay_samples - ADEC_DE_DELAY_SAMPS;
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
-          printf("DE MODE - Measured delay estimate: %d (raw %d)\n", state->last_measured_delay, adec_in->from_de.measured_delay_samples); //+ve means MIC delay
+          printf("DE MODE - Measured delay estimate: %ld (raw %ld)\n", state->last_measured_delay, adec_in->from_de.measured_delay_samples); //+ve means MIC delay
 #endif
           set_delay_params_from_signed_delay(state->last_measured_delay, &adec_output->requested_mic_delay_samples, &adec_output->requested_delay_samples_debug);
           state->mode = ADEC_NORMAL_AEC_MODE;

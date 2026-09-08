@@ -247,10 +247,10 @@ void aec_calc_T(
 
 /** @brief Update filter
  *
- * This function updates the adaptive filter spectrum (`H_hat'). It calculates the delta update that is applied to the filter by scaling the X FIFO with the T values computed in `aec_compute_T()` and applies the delta update to `H_hat`.
+ * This function updates the adaptive filter spectrum (`h_hat'). It calculates the delta update that is applied to the filter by scaling the X FIFO with the T values computed in `aec_compute_T()` and applies the delta update to `h_hat`.
  * A gradient constraint FFT is then applied to constrain the length of each phase of the filter to avoid wrapping when calculating `y_hat`
  *
- * @param[inout] state AEC state structure. `state->H_hat[y_ch]` is updated
+ * @param[inout] state AEC state structure. `state->h_hat[y_ch]` is updated
  * @param[in] y_ch mic channel index
  *
  * @ingroup aec_func
@@ -294,12 +294,40 @@ void aec_l2_calc_Error_and_Y_hat(
         int32_t bypass_enabled);
 
 /**
+ * @brief Calculate Error and Y_hat for a time domain filter over a range of bins.
+ *
+ * @ingroup aec_low_level_func
+ */
+void aec_l2_calc_Error_and_Y_hat_td(
+        bfp_complex_s32_t *Error,
+        bfp_complex_s32_t *Y_hat,
+        const bfp_complex_s32_t *Y,
+        const bfp_complex_s32_t *X_fifo,
+        const bfp_s32_t *h_hat,
+        unsigned num_x_channels,
+        unsigned num_phases,
+        unsigned start_offset,
+        unsigned length,
+        int32_t bypass_enabled);
+
+/**
  * @brief Adapt one phase of the adaptive filter
  *
  * @ingroup aec_low_level_func
  */
 void aec_l2_adapt_plus_fft_gc(
         bfp_complex_s32_t *H_hat_ph,
+        const bfp_complex_s32_t *X_fifo_ph,
+        const bfp_complex_s32_t *T_ph
+        );
+
+/**
+ * @brief Adapt one phase of the time domain adaptive filter
+ *
+ * @ingroup aec_low_level_func
+ */
+void aec_l2_adapt_plus_ifft(
+        bfp_s32_t *h_hat_ph,
         const bfp_complex_s32_t *X_fifo_ph,
         const bfp_complex_s32_t *T_ph
         );
@@ -350,9 +378,14 @@ void aec_priv_reset_filter(
         unsigned num_x_channels,
         unsigned num_phases);
 
+void aec_priv_reset_filter_td(
+        bfp_s32_t *h_hat,
+        unsigned num_x_channels,
+        unsigned num_phases);
+
 void aec_priv_copy_filter(
-        bfp_complex_s32_t *H_hat_dst,
-        const bfp_complex_s32_t *H_hat_src,
+        bfp_s32_t *h_hat_dst,
+        const bfp_s32_t *h_hat_src,
         unsigned num_x_channels,
         unsigned num_dst_phases,
         unsigned num_src_phases);
@@ -360,6 +393,10 @@ void aec_priv_copy_filter(
 void aec_priv_bfp_complex_s32_copy(
         bfp_complex_s32_t *dst,
         const bfp_complex_s32_t *src);
+
+void aec_priv_bfp_s32_copy(
+        bfp_s32_t *dst,
+        const bfp_s32_t *src);
 
 void aec_priv_bfp_s32_reset(bfp_s32_t *a);
 
@@ -410,6 +447,16 @@ void aec_priv_calc_Error_and_Y_hat(
         unsigned num_phases,
         int32_t bypass_enabled);
 
+void aec_priv_calc_Error_and_Y_hat_td(
+        bfp_complex_s32_t *Error,
+        bfp_complex_s32_t *Y_hat,
+        const bfp_complex_s32_t *Y,
+        const bfp_complex_s32_t *X_fifo,
+        const bfp_s32_t *h_hat,
+        unsigned num_x_channels,
+        unsigned num_phases,
+        int32_t bypass_enabled);
+
 void aec_priv_calc_coherence(
         coherence_mu_params_t *coh_mu_state,
         const bfp_s32_t *y,
@@ -448,6 +495,13 @@ void aec_priv_calc_inv_X_energy(
 
 void aec_priv_filter_adapt(
         bfp_complex_s32_t *H_hat,
+        const bfp_complex_s32_t *X_fifo,
+        const bfp_complex_s32_t *T,
+        unsigned num_x_channels,
+        unsigned num_phases);
+
+void aec_priv_filter_adapt_td(
+        bfp_s32_t *h_hat,
         const bfp_complex_s32_t *X_fifo,
         const bfp_complex_s32_t *T,
         unsigned num_x_channels,

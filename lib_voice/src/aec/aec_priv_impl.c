@@ -210,7 +210,7 @@ void aec_priv_bfp_complex_s32_copy(
         const bfp_complex_s32_t *src)
 {
     //This assumes that both dst and src are same length
-    memcpy(dst->data, src->data, dst->length*sizeof(complex_s32_t));
+    vpu_memcpy(dst->data, src->data, dst->length*sizeof(complex_s32_t));
     dst->exp = src->exp;
     dst->hr = src->hr;
 }
@@ -220,7 +220,7 @@ void aec_priv_bfp_s32_copy(
         const bfp_s32_t *src)
 {
     //This assumes that both dst and src are same length
-    memcpy(dst->data, src->data, dst->length*sizeof(int32_t));
+    vpu_memcpy(dst->data, src->data, dst->length*sizeof(int32_t));
     dst->exp = src->exp;
     dst->hr = src->hr;
 }
@@ -689,7 +689,7 @@ void aec_priv_update_X_fifo_and_calc_sigmaXX(
     }
     X_fifo[0] = last_phase;
     //Update X as newest phase
-    memcpy(X_fifo[0].data, X->data, X->length*sizeof(complex_s32_t));
+    vpu_memcpy(X_fifo[0].data, X->data, X->length*sizeof(complex_s32_t));
     X_fifo[0].exp = X->exp;
     X_fifo[0].hr = X->hr;
     X_fifo[0].length = X->length;
@@ -862,7 +862,7 @@ void aec_priv_create_output(
 
     //copy error to output
     if(output->data != NULL) {
-        memcpy(output->data, &error->data[AEC_FRAME_ADVANCE], AEC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(output->data, &error->data[AEC_FRAME_ADVANCE], AEC_FRAME_ADVANCE*sizeof(int32_t));
         output->length = AEC_FRAME_ADVANCE;
         output->exp = error->exp;
         output->hr = error->hr;
@@ -880,7 +880,7 @@ void aec_priv_create_output(
     }
 
     //update overlap
-    memcpy(overlap->data, &error->data[2*AEC_FRAME_ADVANCE], (AEC_UNUSED_TAPS_PER_PHASE*2)*sizeof(int32_t));
+    vpu_memcpy(overlap->data, &error->data[2*AEC_FRAME_ADVANCE], (AEC_UNUSED_TAPS_PER_PHASE*2)*sizeof(int32_t));
     overlap->hr = error->hr;
     overlap->exp = error->exp;
 }

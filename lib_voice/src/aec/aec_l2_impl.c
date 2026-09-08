@@ -24,7 +24,7 @@ void aec_l2_calc_Error_and_Y_hat(
         return;
     }
     if(bypass_enabled) { //Copy Y into Error. Set Y_hat to 0
-        memcpy(Error->data, &Y->data[start_offset], length*sizeof(complex_s32_t));
+        vpu_memcpy(Error->data, &Y->data[start_offset], length*sizeof(complex_s32_t));
         Error->exp = Y->exp;
         Error->hr = Y->hr;
 
@@ -159,7 +159,7 @@ void aec_l2_calc_Error_and_Y_hat_td(
         return;
     }
     if(bypass_enabled) { //Copy Y into Error. Set Y_hat to 0
-        memcpy(Error->data, &Y->data[start_offset], length*sizeof(complex_s32_t));
+        vpu_memcpy(Error->data, &Y->data[start_offset], length*sizeof(complex_s32_t));
         Error->exp = Y->exp;
         Error->hr = Y->hr;
 

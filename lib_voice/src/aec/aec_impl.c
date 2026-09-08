@@ -35,9 +35,9 @@ void aec_frame_init(
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         /* Create 512 samples frame */
         // Copy previous y samples
-        memcpy(main_state->shared_state->y[ch].data, main_state->shared_state->prev_y[ch].data, (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
+        vpu_memcpy(main_state->shared_state->y[ch].data, main_state->shared_state->prev_y[ch].data, (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
         // Copy current y samples
-        memcpy(&main_state->shared_state->y[ch].data[AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE], &y_data[ch][0], (AEC_FRAME_ADVANCE)*sizeof(int32_t));
+        vpu_memcpy(&main_state->shared_state->y[ch].data[AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE], &y_data[ch][0], (AEC_FRAME_ADVANCE)*sizeof(int32_t));
         // Update exp just in case
         main_state->shared_state->y[ch].exp = AEC_INPUT_EXP;
         // Update headroom
@@ -45,9 +45,9 @@ void aec_frame_init(
 
         /* Update previous samples */
         // Copy the last 32 samples to the beginning
-        memcpy(main_state->shared_state->prev_y[ch].data, &main_state->shared_state->prev_y[ch].data[AEC_FRAME_ADVANCE], (AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))*sizeof(int32_t));
+        vpu_memcpy(main_state->shared_state->prev_y[ch].data, &main_state->shared_state->prev_y[ch].data[AEC_FRAME_ADVANCE], (AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))*sizeof(int32_t));
         // Copy current frame to previous
-        memcpy(&main_state->shared_state->prev_y[ch].data[(AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))], &y_data[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(&main_state->shared_state->prev_y[ch].data[(AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))], &y_data[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t));
         // Update headroom
         bfp_s32_headroom(&main_state->shared_state->prev_y[ch]);
         // Update exp just in case
@@ -57,9 +57,9 @@ void aec_frame_init(
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         /* Create 512 samples frame */
         // Copy previous x samples
-        memcpy(main_state->shared_state->x[ch].data, main_state->shared_state->prev_x[ch].data, (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
+        vpu_memcpy(main_state->shared_state->x[ch].data, main_state->shared_state->prev_x[ch].data, (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
         // Copy current x samples
-        memcpy(&main_state->shared_state->x[ch].data[AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE], &x_data[ch][0], (AEC_FRAME_ADVANCE)*sizeof(int32_t));
+        vpu_memcpy(&main_state->shared_state->x[ch].data[AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE], &x_data[ch][0], (AEC_FRAME_ADVANCE)*sizeof(int32_t));
         // Update exp just in case
         main_state->shared_state->x[ch].exp = AEC_INPUT_EXP;
         // Update headroom
@@ -67,9 +67,9 @@ void aec_frame_init(
 
         /* Update previous samples */
         // Copy the last 32 samples to the beginning
-        memcpy(main_state->shared_state->prev_x[ch].data, &main_state->shared_state->prev_x[ch].data[AEC_FRAME_ADVANCE], (AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))*sizeof(int32_t));
+        vpu_memcpy(main_state->shared_state->prev_x[ch].data, &main_state->shared_state->prev_x[ch].data[AEC_FRAME_ADVANCE], (AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))*sizeof(int32_t));
         // Copy current frame to previous
-        memcpy(&main_state->shared_state->prev_x[ch].data[(AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))], &x_data[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(&main_state->shared_state->prev_x[ch].data[(AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))], &x_data[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t));
         // Update exp just in case
         main_state->shared_state->prev_x[ch].exp = AEC_INPUT_EXP;
         // Update headroom
@@ -139,7 +139,7 @@ void aec_forward_fft(
     bfp_complex_s32_t *temp = bfp_fft_forward_mono(input);
     temp->hr = bfp_complex_s32_headroom(temp); // TODO Workaround till https://github.com/xmos/lib_xcore_math/issues/96 is fixed
 
-    memcpy(output, temp, sizeof(bfp_complex_s32_t));
+    *output = *temp;
     bfp_fft_unpack_mono(output);
     input->length = len;
 }
@@ -196,7 +196,7 @@ void aec_inverse_fft(
     uint32_t len = input->length;
     bfp_fft_pack_mono(input);
     bfp_s32_t *temp = bfp_fft_inverse_mono(input);
-    memcpy(output, temp, sizeof(bfp_s32_t));
+    *output = *temp;
 
     input->length = len;
 }

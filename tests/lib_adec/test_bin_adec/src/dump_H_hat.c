@@ -31,8 +31,9 @@ void aec_dump_H_hat(aec_filter_state_t *state, file_t *file_handle){
                 file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
                 sprintf(strbuf, "np.asarray([");
                 file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
+                //h_hat stores its taps permuted, so undo the permutation to dump the impulse response in time order
                 for(int i=0; i<state->h_hat[ych][xch*state->num_phases + ph].length; i++) {
-                    sprintf(strbuf, "%.12f, ", ldexp( state->h_hat[ych][xch*state->num_phases + ph].data[i], state->h_hat[ych][xch*state->num_phases + ph].exp));
+                    sprintf(strbuf, "%.12f, ", ldexp( state->h_hat[ych][xch*state->num_phases + ph].data[aec_h_hat_tap_index(i)], state->h_hat[ych][xch*state->num_phases + ph].exp));
                     file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
                 }
                 sprintf(strbuf, "])\n");

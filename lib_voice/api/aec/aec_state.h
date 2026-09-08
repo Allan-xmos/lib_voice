@@ -294,7 +294,15 @@ typedef struct {
      * h_hat<SUB>y0x1</SUB> and h_hat[0][20] to h_hat[0][29] points to 10 phases of h_hat<SUB>y0x2</SUB>.
      *
      * Each filter phase data which is pointed to by h_hat[i][j].data is stored as an AEC_FRAME_ADVANCE length real 32bit
-     * array.*/
+     * array.
+     *
+     * The taps within a phase are not in time order. They are permuted into the bit-reversed index order the FFT
+     * works in, which lets both of the per-phase transforms the AEC does every frame - the inverse transform of the
+     * delta update and the forward transform used for Y_hat - skip their index bit-reversal pass. The permutation
+     * happens to leave exactly the AEC_FRAME_ADVANCE taps of the filter, so it costs no extra memory, and the taps it
+     * leaves no room for are exactly the ones the gradient constraint zeroes. Use aec_h_hat_tap_index() to map a tap's
+     * position in the impulse response to its position in the stored phase; anything order independent, such as the
+     * per-phase energy the delay estimator uses, can read the stored data directly.*/
     bfp_s32_t h_hat[AEC_MAX_Y_CHANNELS][AEC_LIB_MAX_PHASES];
 
     /** BFP array pointing to all phases of reference input spectrum across all x channels. Here, the reference input

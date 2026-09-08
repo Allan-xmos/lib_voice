@@ -66,6 +66,83 @@ void aec_l2_adapt_plus_fft_gc(
 //AEC level 2, time domain filter variants
 //The AEC adaptive filter is stored in the time domain to save memory. h_hat is transformed to the frequency domain
 //on the fly, one phase at a time, during the Error and Y_hat calculation.
+//
+//The taps are held in bit-reversed index order so that neither of those per-phase transforms has to run an index
+//bit-reversal pass - see the h_hat bit-reversed storage layout notes in aec_priv.h for how that order is laid out.
+
+//The gather and scatter below move a whole complex element - a pair of taps - at a time, so that the compiler emits
+//double word loads and stores rather than pairs of single word ones. That needs 8 byte alignment, which holds for
+//every buffer they are used on: aec_state_t declares both AEC memory pools DWORD_ALIGNED and every allocation ahead
+//of h_hat in them is a whole number of double words, and the FFT scratch buffers here are declared DWORD_ALIGNED.
+//A strided move like this is the one thing vpu_memcpy() cannot do, so double words are as wide as it goes.
+typedef int64_t h_hat_tap_pair_t;
+
+//Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
+//constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front.
+static void h_hat_bitrev_gather(
+        h_hat_tap_pair_t *dst,
+        const h_hat_tap_pair_t *src)
+{
+    for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
+        for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
+            *dst++ = *src;
+            src += 2; //skip the odd slot, which holds taps AEC_PROC_FRAME_LENGTH/2 onwards
+        }
+        src += 2; //and skip the even slot holding the taps between AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2
+    }
+}
+
+//Expand the taps h_hat stores into a full bit-reversed index time domain vector ready to be transformed in place.
+//Every slot h_hat has no storage for is a tap the gradient constraint zeroes, and is written as zero here, so this
+//writes the whole vector and needs no separate zeroing pass.
+static void h_hat_bitrev_scatter(
+        h_hat_tap_pair_t *dst,
+        const h_hat_tap_pair_t *src)
+{
+    for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
+        for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
+            *dst++ = *src++; //a stored pair of taps
+            *dst++ = 0;      //the odd slot: taps AEC_PROC_FRAME_LENGTH/2 onwards
+        }
+        *dst++ = 0; //the dropped even slot: taps between AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2
+        *dst++ = 0; //and its odd partner
+    }
+}
+
+unsigned aec_h_hat_tap_index(unsigned n)
+{
+    //Tap n is the (n&1)'th half of complex time domain element n/2, which the transform expects to find in the slot
+    //whose index bit-reverses to n/2. Dropping every AEC_H_HAT_BITREV_GROUP'th slot from the stored phase shifts
+    //that slot down by the number of dropped slots below it.
+    const unsigned slot = n_bitrev(n >> 1, u32_ceil_log2(AEC_H_HAT_BITREV_SLOTS));
+    return 2*(slot - (slot / AEC_H_HAT_BITREV_GROUP)) + (n & 1);
+}
+
+//Transform one bit-reversed time domain filter phase into its AEC_FD_FRAME_LENGTH spectrum, using `scratch` as the
+//in-place transform buffer. This mirrors bfp_fft_forward_mono() with the fft_index_bit_reversal() call dropped, since
+//h_hat is already stored in the index order the decimation-in-time forward transform wants.
+static void h_hat_forward_fft(
+        bfp_complex_s32_t *H_hat_ph,
+        const bfp_s32_t *h_hat_ph,
+        int32_t *scratch)
+{
+    h_hat_bitrev_scatter((h_hat_tap_pair_t*)scratch, (const h_hat_tap_pair_t*)h_hat_ph->data);
+
+    //fft_dit_forward() requires 2 bits of headroom. Measure it over the stored taps rather than the expanded vector -
+    //the same answer for a third of the reads, since the taps the scatter zeroed cannot reduce it.
+    headroom_t hr = vect_s32_headroom(h_hat_ph->data, AEC_FRAME_ADVANCE);
+    right_shift_t shr = 2 - (right_shift_t)hr;
+    vect_s32_shl(scratch, scratch, AEC_PROC_FRAME_LENGTH, -shr);
+
+    bfp_complex_s32_init(H_hat_ph, (complex_s32_t*)scratch, h_hat_ph->exp + shr, AEC_PROC_FRAME_LENGTH/2, 0);
+    H_hat_ph->hr = hr + shr;
+
+    fft_dit_forward(H_hat_ph->data, AEC_PROC_FRAME_LENGTH/2, &H_hat_ph->hr, &H_hat_ph->exp);
+    fft_mono_adjust(H_hat_ph->data, AEC_PROC_FRAME_LENGTH, 0);
+    bfp_complex_s32_headroom(H_hat_ph);
+    bfp_fft_unpack_mono(H_hat_ph);
+}
+
 void aec_l2_calc_Error_and_Y_hat_td(
         bfp_complex_s32_t *Error,
         bfp_complex_s32_t *Y_hat,
@@ -91,20 +168,14 @@ void aec_l2_calc_Error_and_Y_hat_td(
         Y_hat->hr = AEC_ZEROVAL_HR;
     }
     else {
-        //Scratch to hold one time-domain filter phase zero padded to AEC_PROC_FRAME_LENGTH and, after the in-place
-        //FFT, its AEC_FD_FRAME_LENGTH spectrum. The full spectrum is always computed so outputs are bitexact
-        //irrespective of the start_offset/length this function is called with.
+        //Scratch to hold one filter phase expanded from its bit-reversed storage into a full AEC_PROC_FRAME_LENGTH
+        //time domain vector and, after the in-place FFT, its AEC_FD_FRAME_LENGTH spectrum. The full spectrum is
+        //always computed so outputs are bitexact irrespective of the start_offset/length this function is called with.
         int32_t DWORD_ALIGNED h_fft_scratch[AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
         uint32_t phases = num_x_channels * num_phases;
         for(unsigned ph=0; ph<phases; ph++) {
-            //zero pad the AEC_FRAME_ADVANCE length time-domain phase to AEC_PROC_FRAME_LENGTH
-            memcpy(h_fft_scratch, h_hat[ph].data, AEC_FRAME_ADVANCE*sizeof(int32_t));
-            memset(&h_fft_scratch[AEC_FRAME_ADVANCE], 0, (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
-            bfp_s32_t h_td;
-            bfp_s32_init(&h_td, h_fft_scratch, h_hat[ph].exp, AEC_PROC_FRAME_LENGTH, 1);
-
             bfp_complex_s32_t H_hat_ph;
-            aec_forward_fft(&H_hat_ph, &h_td);
+            h_hat_forward_fft(&H_hat_ph, &h_hat[ph], h_fft_scratch);
 
             bfp_complex_s32_t X_chunk, H_hat_chunk;
             bfp_complex_s32_init(&X_chunk, &X_fifo[ph].data[start_offset], X_fifo[ph].exp, length, 0);
@@ -121,8 +192,8 @@ void aec_l2_calc_Error_and_Y_hat_td(
     }
 }
 
-//Time domain filter adaption. The gradient constraint is applied simply by keeping the first AEC_FRAME_ADVANCE
-//samples of the inverse FFT of T*conj(X) (the rest would wrap in the circular convolution).
+//Time domain filter adaption. The gradient constraint is applied simply by keeping only the taps of the inverse FFT
+//of T*conj(X) that h_hat has storage for (the rest would wrap in the circular convolution).
 void aec_l2_adapt_plus_ifft(
         bfp_s32_t *h_hat_ph,
         const bfp_complex_s32_t *X_fifo_ph,
@@ -135,14 +206,24 @@ void aec_l2_adapt_plus_ifft(
     //prod = T * conj(X)
     bfp_complex_s32_conj_mul(&prod, T_ph, X_fifo_ph);
 
-    //delta_h = ifft(prod), computed in place over the delta_scratch buffer
-    bfp_s32_t delta_h;
-    aec_inverse_fft(&delta_h, &prod);
+    //delta_h = ifft(prod), computed in place over the delta_scratch buffer. This mirrors bfp_fft_inverse_mono() with
+    //the fft_index_bit_reversal() call replaced by the use of the decimation-in-frequency inverse transform, which
+    //leaves its time domain output in the bit-reversed index order h_hat is stored in.
+    bfp_fft_pack_mono(&prod);
+    //fft_dif_inverse() requires 2 bits of headroom
+    bfp_complex_s32_use_exponent(&prod, prod.exp - prod.hr + 2);
+    fft_mono_adjust(prod.data, AEC_PROC_FRAME_LENGTH, 1);
+    //prod now describes the real time domain delta rather than a spectrum, so its exponent and headroom are updated
+    //in place while its length is left alone - the gather below is what gives the result its length.
+    fft_dif_inverse(prod.data, AEC_PROC_FRAME_LENGTH/2, &prod.hr, &prod.exp);
 
-    //add the first AEC_FRAME_ADVANCE samples of delta_h to the time-domain filter phase
+    //Compact the delta down to the taps h_hat stores, in place at the front of delta_scratch. Everything dropped
+    //here is a tap the gradient constraint zeroes.
+    h_hat_bitrev_gather((h_hat_tap_pair_t*)delta_scratch, (const h_hat_tap_pair_t*)delta_scratch);
+
     bfp_s32_t delta_h_chunk;
-    bfp_s32_init(&delta_h_chunk, delta_h.data, delta_h.exp, AEC_FRAME_ADVANCE, 0);
-    delta_h_chunk.hr = delta_h.hr;
+    bfp_s32_init(&delta_h_chunk, (int32_t*)delta_scratch, prod.exp, AEC_FRAME_ADVANCE, 0);
+    delta_h_chunk.hr = prod.hr; //a subset of the delta can only have more headroom, so this is a safe lower bound
     bfp_s32_add(h_hat_ph, h_hat_ph, &delta_h_chunk);
 }
 

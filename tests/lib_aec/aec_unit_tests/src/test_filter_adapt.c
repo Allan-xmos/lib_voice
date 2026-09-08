@@ -78,15 +78,17 @@ void test_aec_filter_adapt() {
         state_ptr->shared_state->config_params.aec_core_conf.bypass = pseudo_rand_uint32(&seed) % 2;
         unsigned test_l2_api = pseudo_rand_uint32(&seed) % 2;
         aec_frame_init(&aec_state.main_state, &aec_state.shadow_state, &new_frame[0], &new_frame[AEC_MAX_Y_CHANNELS]);
-        //Generate h_hat (time domain, AEC_FRAME_ADVANCE real samples per phase)
+        //Generate h_hat (time domain, AEC_FRAME_ADVANCE real samples per phase). h_hat_fp holds the taps in time
+        //order, so the DUT's taps have to be written through aec_h_hat_tap_index() - the DUT stores them permuted.
         for(int ch=0; ch<num_y_channels; ch++) {
             for(int ph=0; ph<num_x_channels*state_ptr->num_phases; ph++) {
                 state_ptr->h_hat[ch][ph].exp = pseudo_rand_int(&seed, -31, 32);
                 state_ptr->h_hat[ch][ph].hr = pseudo_rand_uint32(&seed) % 5;
                 for(int i=0; i<AEC_FRAME_ADVANCE; i++) {
-                    state_ptr->h_hat[ch][ph].data[i] = pseudo_rand_int32(&seed) >> state_ptr->h_hat[ch][ph].hr;
+                    int32_t tap = pseudo_rand_int32(&seed) >> state_ptr->h_hat[ch][ph].hr;
+                    state_ptr->h_hat[ch][ph].data[aec_h_hat_tap_index(i)] = tap;
 
-                    h_hat_fp[ch][ph][i] = ldexp(state_ptr->h_hat[ch][ph].data[i], state_ptr->h_hat[ch][ph].exp);
+                    h_hat_fp[ch][ph][i] = ldexp(tap, state_ptr->h_hat[ch][ph].exp);
                 }
             }
         }
@@ -169,11 +171,15 @@ void test_aec_filter_adapt() {
                 }
             }
         }
-        //Compare outputs
+        //Compare outputs. Undo the DUT's tap permutation so the comparison is against h_hat_fp in time order.
         for(int ch=0; ch<num_y_channels; ch++) {
             for(int p=0; p<num_x_channels*state_ptr->num_phases; p++) {
+                int32_t h_hat_td[AEC_FRAME_ADVANCE];
+                for(int i=0; i<AEC_FRAME_ADVANCE; i++) {
+                    h_hat_td[i] = state_ptr->h_hat[ch][p].data[aec_h_hat_tap_index(i)];
+                }
                 unsigned diff = vector_int32_maxdiff(
-                        (int32_t*)&state_ptr->h_hat[ch][p].data[0],
+                        h_hat_td,
                         state_ptr->h_hat[ch][p].exp,
                         (double*)&h_hat_fp[ch][p][0],
                         0,

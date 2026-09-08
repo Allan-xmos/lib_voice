@@ -108,7 +108,8 @@ void test_calc_Error_and_Y_hat() {
         }
         //Generate h_hat (time domain, AEC_FRAME_ADVANCE real samples per phase). The reference frequency-domain
         //filter is obtained by FFTing the zero-padded time-domain filter, matching the transform the DUT does
-        //internally during the Error and Y_hat calculation.
+        //internally during the Error and Y_hat calculation. h_td holds the taps in time order, so the DUT's taps
+        //have to be written through aec_h_hat_tap_index() - the DUT stores them permuted.
         for(int ch=0; ch<num_y_channels; ch++) {
             for(int ph=0; ph<num_x_channels*state_ptr->num_phases; ph++) {
                 state_ptr->h_hat[ch][ph].exp = pseudo_rand_int(&seed, -31, 32);
@@ -119,8 +120,9 @@ void test_calc_Error_and_Y_hat() {
                     h_td[i].im = 0.0;
                 }
                 for(int i=0; i<AEC_FRAME_ADVANCE; i++) {
-                    state_ptr->h_hat[ch][ph].data[i] = pseudo_rand_int32(&seed) >> state_ptr->h_hat[ch][ph].hr;
-                    h_td[i].re = ldexp(state_ptr->h_hat[ch][ph].data[i], state_ptr->h_hat[ch][ph].exp);
+                    int32_t tap = pseudo_rand_int32(&seed) >> state_ptr->h_hat[ch][ph].hr;
+                    state_ptr->h_hat[ch][ph].data[aec_h_hat_tap_index(i)] = tap;
+                    h_td[i].re = ldexp(tap, state_ptr->h_hat[ch][ph].exp);
                 }
                 bit_reverse(h_td, AEC_PROC_FRAME_LENGTH);
                 forward_fft(h_td, AEC_PROC_FRAME_LENGTH, sine_lut);

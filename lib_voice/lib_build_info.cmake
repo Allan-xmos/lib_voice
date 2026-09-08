@@ -5,6 +5,22 @@ set(LIB_DEPENDENT_MODULES
     "ai_tools(v1.4.3.dev40)"
 )
 
+# Size the lib_xcore_math FFT look-up tables to what lib_voice actually needs, rather than taking
+# the 2^10 tables shipped in lib_xcore_math. Every transform in this library (AEC, IC, NS, VNR) is
+# a 512-point real FFT, which lib_xcore_math implements as a 256-point complex transform plus a
+# mono-adjust pass; that pass indexes the decimation-in-time table as far as element (512 - 5), so
+# a maximum FFT length of 2^9 is the smallest that covers it. The generated coefficients are
+# bit-exact with the default tables over the range used - the DIT table is indexed from its start
+# and the DIF table from its end, so the smaller tables are a prefix and a suffix of the 2^10 ones.
+# This halves the table memory from 16320 to 8128 bytes.
+#
+# Generating the tables needs Python 3 and numpy, which are already required to build the VNR model
+# with ai_tools. These are set as cache entries so that lib_xcore_math's build_options.cmake (which
+# uses set(... CACHE ...) without FORCE) does not overwrite them; a -D on the CMake command line
+# still takes precedence.
+set(XMATH_GEN_FFT_LUT ON CACHE BOOL "Auto-generate FFT look-up tables.")
+set(XMATH_MAX_FFT_LEN_LOG2 "9" CACHE STRING "Maximum FFT length to be supported by generated look-up tables. Must be a positive integer.")
+
 set(LIB_COMPILER_FLAGS
             -g
             -Os

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <assert.h>
 #include "aec.h"
 #include "aec_priv.h"
 #include "xmath/xmath.h"
@@ -99,6 +100,11 @@ void aec_priv_main_init(
         available_mem_start += (32*sizeof(int32_t));
     }
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
+    //Checked before the memset below, so that a runtime configuration which over-subscribes the pool fails here
+    //rather than silently scribbling over whatever follows the pool in aec_state_t. The phase count preconditions on
+    //aec_init() do not imply this on their own: the pool reserves a fixed number of phases for h_hat and for X_fifo
+    //separately, so a configuration can be within the total phase budget while still exceeding one of them.
+    assert(memory_used <= sizeof(aec_memory_pool_t));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -195,6 +201,8 @@ void aec_priv_shadow_init(
     }
 
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
+    //See the equivalent check in aec_priv_main_init()
+    assert(memory_used <= sizeof(aec_shadow_filt_memory_pool_t));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy

@@ -45,17 +45,39 @@
  * on memory pool sizing and usage.
  *
  * \par Preconditions
- * \anchor aec_phase_pool_capacity The runtime configuration must be a subset of compile-time limits. This means:
+ * \anchor aec_phase_pool_capacity The runtime configuration must fit the compile-time one. All of
+ * the following must hold:
  * - num_y_channels <= @ref AEC_MAX_Y_CHANNELS
  * - num_x_channels <= @ref AEC_MAX_X_CHANNELS
- * - Total phase-pool demand should not exceed pool capacity, i.e.:
- *   (num_y_channels * num_x_channels * num_main_filter_phases) +
- *   (num_x_channels * num_main_filter_phases) <=
- *   (@ref AEC_MAX_Y_CHANNELS * @ref AEC_MAX_X_CHANNELS * @ref AEC_MAIN_FILTER_PHASES) +
- *   (@ref AEC_MAX_X_CHANNELS * @ref AEC_MAIN_FILTER_PHASES)
- * - and
- *   (num_y_channels * num_x_channels * num_shadow_filter_phases) <=
- *   (@ref AEC_MAX_Y_CHANNELS * @ref AEC_MAX_X_CHANNELS * @ref AEC_SHADOW_FILTER_PHASES)
+ * - num_x_channels * num_main_filter_phases <= @ref AEC_LIB_MAX_PHASES
+ * - num_x_channels * num_shadow_filter_phases <= @ref AEC_LIB_MAX_PHASES
+ * - AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases)
+ *   <= sizeof(@ref aec_memory_pool_t)
+ * - AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
+ *   <= sizeof(@ref aec_shadow_filt_memory_pool_t)
+ *
+ * The two @ref AEC_LIB_MAX_PHASES conditions are array bounds rather than memory pool capacity:
+ * aec_filter_state_t::h_hat and aec_filter_state_t::X_fifo_1d address one y channel's phases across
+ * all x channels with a single index bounded by @ref AEC_LIB_MAX_PHASES, so it is that index, not
+ * the phase count of the whole filter, which has to fit. de_output_t::phase_power is bounded the
+ * same way.
+ *
+ * The last two conditions are the memory pool capacity, and they are stated in bytes because they
+ * cannot be expressed as a comparison of phase counts. Each pool is a single linear allocation
+ * arena, and the phases drawn from it are not all the same size: a main or shadow filter phase is
+ * @ref AEC_FRAME_ADVANCE `int32_t` (the filter is held in the time domain) while an X FIFO phase is
+ * @ref AEC_FD_FRAME_LENGTH `complex_s32_t`, so exchanging one for the other changes the total. The
+ * remaining allocations scale with the channel counts, and a configuration using fewer channels
+ * than the build allows leaves room that phases can be allocated from. A rule counting only phases
+ * is therefore neither necessary nor sufficient: it admits configurations that overrun the pool and
+ * rejects configurations that fit comfortably.
+ *
+ * @ref AEC_MAIN_POOL_BYTES and @ref AEC_SHADOW_POOL_BYTES compute the exact demand and are compile
+ * time constants for compile time arguments, so an application with a fixed runtime configuration
+ * can check these conditions with `_Static_assert` - see the assertions on ADEC's delay estimation
+ * configuration in `adec_defines.h` for an example. `aec_init()` also asserts all of the above, so
+ * a configuration which breaks them fails at initialisation rather than corrupting memory beyond
+ * the pool.
  *
  * @param[inout] aec_state                AEC state object
  * @param[in]    num_y_channels           Number of microphone input channels

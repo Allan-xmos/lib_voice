@@ -20,13 +20,6 @@
 #define VNR_AGC_THRESHOLD (0.5)
 #define PRINT_VNR_PREDICTION (0)
 
-//Number of main filter phases the AEC runs with in ADEC's delay estimation mode. This is set by the
-//delay range ADEC searches rather than by the pipeline's normal mode AEC, so it is independent of
-//AEC_MAIN_FILTER_PHASES. It still has to fit the compile time memory pool - with 1 x channel it is
-//num_x_channels * num_main_filt_phases = 30 phases of X_fifo, which is more than the pool reserves
-//for the 2 x channel, 10 phase std arch config.
-#define AEC_DE_MODE_PHASES (30)
-
 //Task distribution generated from this build config's AEC_SCHEDULE_CONFIG_<config>
 extern aec_task_distribution_t tdist;
 
@@ -63,10 +56,10 @@ void pipeline_stage_1(chanend_t c_frame_in, chanend_t c_frame_out) {
     aec_non_de_mode_conf.num_shadow_filt_phases = AEC_SHADOW_FILTER_PHASES;
     aec_non_de_mode_conf.tdist = &tdist;
 
-    aec_de_mode_conf.num_y_channels = 1;
-    aec_de_mode_conf.num_x_channels = 1;
-    aec_de_mode_conf.num_main_filt_phases = AEC_DE_MODE_PHASES;
-    aec_de_mode_conf.num_shadow_filt_phases = 0;
+    aec_de_mode_conf.num_y_channels = ADEC_DE_MODE_Y_CHANNELS;
+    aec_de_mode_conf.num_x_channels = ADEC_DE_MODE_X_CHANNELS;
+    aec_de_mode_conf.num_main_filt_phases = ADEC_DE_MODE_MAIN_FILTER_PHASES;
+    aec_de_mode_conf.num_shadow_filt_phases = ADEC_DE_MODE_SHADOW_FILTER_PHASES;
     aec_de_mode_conf.tdist = &tdist;
 
     // Disable ADEC's automatic mode. We only want to estimate and correct for the delay at startup

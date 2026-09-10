@@ -8,22 +8,25 @@ if(NOT DEFINED TEST_SPEEDUP_FACTOR)
 set( TEST_SPEEDUP_FACTOR "1" CACHE STRING "Test speedup factor." )
 endif()
 
-# The ADEC tests drive the AEC with runtime configurations that differ from the compile time one:
-# test_bin_adec's delay estimator mode always uses 1 y channel, 1 x channel and 30 main filter phases,
-# and test_adec's normal mode uses 1 y channel, 2 x channels and 15 main filter phases. The AEC memory
-# pool reserves a fixed number of phases for h_hat and for X_fifo separately, so the compile time
-# configuration has to cover the largest num_x_channels * num_main_filter_phases used at runtime (30),
-# i.e. AEC_MAX_X_CHANNELS * <num_main_phases> >= 30 - hence 15 main phases rather than 10. It is not
-# enough for the total phase budget to fit, which is all the preconditions on aec_init() require; the
-# pool size assertions in aec_priv_main_init()/aec_priv_shadow_init() check the real invariant.
+# Each of these should be the AEC configuration the test actually runs, so that the memory pools are
+# sized for it and the preconditions on aec_init() can be checked. Note that a test's wav channel
+# layout is a separate thing: the ADEC tests feed a 4 channel (2 mic, 2 reference) wav to an AEC
+# configured for fewer y channels than that, so those tests state the frame width with
+# AP_MAX_Y_CHANNELS/AP_MAX_X_CHANNELS in their own CMakeLists rather than taking it from
+# AEC_MAX_Y_CHANNELS/AEC_MAX_X_CHANNELS.
 #
-# The y and x channel counts stay at the maximum because test_bin_adec derives its input and output
-# wav channel layout from AEC_MAX_Y_CHANNELS/AEC_MAX_X_CHANNELS, so lowering them would change the
-# test audio rather than just the memory footprint.
+# Three of these deliberately do not follow the runtime configuration:
+# - de_unit_tests runs a 1 y channel, 1 x channel, 30 main phase AEC but is built for 2 channels,
+#   because it uses aec_tdist_chans2_threads2, which only exists when AEC_LIB_MAX_CHANNELS is 2.
+#   Its configuration fits the 2 channel pools; see the note in its test_estimate_delay.c.
+# - test_adec_startup writes an empty args.bin, so its runtime configuration is the compile time
+#   default and the two cannot differ.
+# - test_delay_estimator runs 0 shadow filter phases but is built for 5, so that the shadow filter
+#   phase pool is not a zero length array.
 if(NOT DEFINED DE_UNIT_TESTS_BUILD_CONFIG)
 set(
     DE_UNIT_TESTS_BUILD_CONFIG
-    "2 2 2 15 5"
+    "2 2 2 10 5"
     CACHE STRING
     "AEC build configuration for de_unit_tests in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )
@@ -32,7 +35,7 @@ endif()
 if(NOT DEFINED TEST_ADEC_BUILD_CONFIG)
 set(
     TEST_ADEC_BUILD_CONFIG
-    "2 2 2 15 5"
+    "2 1 2 15 5"
     CACHE STRING
     "AEC build configuration for test_adec in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )
@@ -50,7 +53,7 @@ endif()
 if(NOT DEFINED TEST_DELAY_ESTIMATOR_BUILD_CONFIG)
 set(
     TEST_DELAY_ESTIMATOR_BUILD_CONFIG
-    "2 2 2 15 5"
+    "2 1 1 30 5"
     CACHE STRING
     "AEC build configuration for test_delay_estimator in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )
@@ -59,7 +62,7 @@ endif()
 if(NOT DEFINED TEST_BIN_ADEC_BUILD_CONFIG)
 set(
     TEST_BIN_ADEC_BUILD_CONFIG
-    "2 2 2 15 5"
+    "2 1 2 15 5"
     CACHE STRING
     "AEC build configuration for test_bin_adec in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )

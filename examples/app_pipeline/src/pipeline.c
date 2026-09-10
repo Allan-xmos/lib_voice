@@ -5,29 +5,34 @@
 
 #include "pipeline_state.h"
 
+// Number of main filter phases the AEC runs with while ADEC estimates the delay. This is set by the
+// delay range ADEC searches rather than by the pipeline's normal mode AEC, so it is independent of
+// AEC_MAIN_FILTER_PHASES.
+#define AEC_DE_MODE_PHASES (30)
+
+// Task distribution generated from this build config's AEC_SCHEDULE_CONFIG_<config>
+extern aec_task_distribution_t tdist;
+
 void pipeline_thread0_init(pipeline_state_thread0_t *state) {
     memset(state, 0, sizeof(pipeline_state_thread0_t));
 
     // Initialise AEC, DE, ADEC stages
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
-#if ALT_ARCH_MODE
-    aec_non_de_mode_conf.num_y_channels = 1;
-    aec_non_de_mode_conf.num_x_channels = AP_MAX_X_CHANNELS;
-    aec_non_de_mode_conf.num_main_filt_phases = 15;
-    aec_non_de_mode_conf.num_shadow_filt_phases = AEC_SHADOW_FILTER_PHASES;
-#else
-    aec_non_de_mode_conf.num_y_channels = AP_MAX_Y_CHANNELS;
-    aec_non_de_mode_conf.num_x_channels = AP_MAX_X_CHANNELS;
+    // Non DE mode runs the AEC this build was configured for, so both build configs read the same
+    // compile time values here. The difference between std arch and alt arch is in the AEC schedule
+    // config the build supplies (see CMakeLists.txt), not in this code: alt arch is built for 1 y
+    // channel and 15 main filter phases, std arch for 2 y channels and 10.
+    aec_non_de_mode_conf.num_y_channels = AEC_MAX_Y_CHANNELS;
+    aec_non_de_mode_conf.num_x_channels = AEC_MAX_X_CHANNELS;
     aec_non_de_mode_conf.num_main_filt_phases = AEC_MAIN_FILTER_PHASES;
     aec_non_de_mode_conf.num_shadow_filt_phases = AEC_SHADOW_FILTER_PHASES;
-#endif
-    aec_non_de_mode_conf.tdist = &aec_tdist_chans2_threads1;
+    aec_non_de_mode_conf.tdist = &tdist;
 
     aec_de_mode_conf.num_y_channels = 1;
     aec_de_mode_conf.num_x_channels = 1;
-    aec_de_mode_conf.num_main_filt_phases = 30;
+    aec_de_mode_conf.num_main_filt_phases = AEC_DE_MODE_PHASES;
     aec_de_mode_conf.num_shadow_filt_phases = 0;
-    aec_de_mode_conf.tdist = &aec_tdist_chans2_threads1;
+    aec_de_mode_conf.tdist = &tdist;
 
     // Disable ADEC's automatic mode. We only want to estimate and correct for the delay at startup
     adec_config_t adec_conf;

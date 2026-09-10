@@ -242,7 +242,7 @@ void aec_priv_bfp_s32_reset(bfp_s32_t *a)
 
 void aec_priv_bfp_complex_s32_reset(bfp_complex_s32_t *a)
 {
-    vect_s32_set((int32_t*)a->data, 0, 2*a->length);
+    vect_complex_s32_set(a->data, 0, 0, a->length);
     a->exp = AEC_ZEROVAL_EXP;
     a->hr = AEC_ZEROVAL_HR;
 }

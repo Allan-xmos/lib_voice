@@ -117,11 +117,11 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
 #endif
     const int32_t file_size = get_file_size(&input_file);
     const unsigned frame_count =
-        file_size / ((AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS) * (unsigned)sizeof(int32_t) * AEC_FRAME_ADVANCE);
+        file_size / ((AP_MAX_Y_CHANNELS+AP_MAX_X_CHANNELS) * (unsigned)sizeof(int32_t) * AEC_FRAME_ADVANCE);
 
-    int32_t DWORD_ALIGNED frame_y[AEC_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
-    int32_t DWORD_ALIGNED frame_x[AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
-    int32_t DWORD_ALIGNED pipeline_output[2][AEC_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED frame_y[AP_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED frame_x[AP_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED pipeline_output[AP_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
 
     // Initialise pipeline
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
@@ -164,8 +164,8 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     pipeline_state.aec_state.main_state.shared_state->config_params.coh_mu_conf.force_adaption_mu_q30 = runtime_args[FORCE_ADAPTION_MU];
 
     for(unsigned b=0; b < frame_count; b++){
-        file_read(&input_file, (uint8_t*)&frame_y[0][0], (unsigned)sizeof(int32_t) * AEC_MAX_Y_CHANNELS * AEC_FRAME_ADVANCE);
-        file_read(&input_file, (uint8_t*)&frame_x[0][0], (unsigned)sizeof(int32_t) * AEC_MAX_X_CHANNELS * AEC_FRAME_ADVANCE);
+        file_read(&input_file, (uint8_t*)&frame_y[0][0], (unsigned)sizeof(int32_t) * AP_MAX_Y_CHANNELS * AEC_FRAME_ADVANCE);
+        file_read(&input_file, (uint8_t*)&frame_x[0][0], (unsigned)sizeof(int32_t) * AP_MAX_X_CHANNELS * AEC_FRAME_ADVANCE);
 
         if (runtime_args[STOP_ADAPTING] > 0) {
             runtime_args[STOP_ADAPTING]--;
@@ -197,7 +197,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
 #endif
 
-        file_write(&output_file, (uint8_t*)pipeline_output, (AEC_MAX_Y_CHANNELS * AEC_FRAME_ADVANCE * sizeof(int32_t)));
+        file_write(&output_file, (uint8_t*)pipeline_output, (AP_MAX_Y_CHANNELS * AEC_FRAME_ADVANCE * sizeof(int32_t)));
 
         char strbuf[100];
         sprintf(strbuf, "%ld\n", pipeline_state.adec_requested_delay_samples);

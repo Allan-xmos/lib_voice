@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <assert.h>
 #include "aec.h"
 #include "aec_priv.h"
 
@@ -17,6 +18,20 @@ void aec_init(
 {
     assert(tdist);
     assert(tdist->thread_count <= 3); // hardcoded in PAR_THREADS_PJOBS macro
+
+    //The runtime configuration has to be a subset of the compile time one - see this function's preconditions. These
+    //are checked here, rather than being left to surface as memory pool exhaustion in the init functions below, so
+    //that a caller asking for too large a configuration is told which parameter is at fault.
+    assert(num_y_channels <= AEC_MAX_Y_CHANNELS);
+    assert(num_x_channels <= AEC_MAX_X_CHANNELS);
+    //aec_filter_state_t::h_hat and aec_filter_state_t::X_fifo_1d index one y channel's phases across all x channels
+    //with a single AEC_LIB_MAX_PHASES bounded index, so that index - not the phase count of the whole filter - is
+    //what has to fit here. The number of y channels is bounded separately above; the total phase count across all y
+    //channels is a memory pool question, checked by the pool size assertions in aec_priv_main_init()/
+    //aec_priv_shadow_init() where the differing sizes of an h_hat and an X_fifo phase can be accounted for.
+    assert(num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
+    assert(num_x_channels * num_shadow_filter_phases <= AEC_LIB_MAX_PHASES);
+
     aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, (uint8_t*)&aec_state->main_mem_pool, num_y_channels, num_x_channels, num_main_filter_phases);
     aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state, (uint8_t*)&aec_state->shadow_mem_pool, num_shadow_filter_phases);
     aec_state->shared_state.tdist = tdist;

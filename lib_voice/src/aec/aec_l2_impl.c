@@ -70,8 +70,8 @@ void aec_l2_adapt_plus_fft_gc(
 //The taps are held in bit-reversed index order so that neither of those per-phase transforms has to run an index
 //bit-reversal pass - see the h_hat bit-reversed storage layout notes in aec_priv.h for how that order is laid out.
 
-//The gather and scatter below move a whole complex element - a pair of taps - at a time, so that the compiler emits
-//double word loads and stores rather than pairs of single word ones. That needs 8 byte alignment, which holds for
+//The gather and scatter below move a whole complex element - a pair of taps - at a time, so that a double word load
+//and store moves each one rather than a pair of single word ones. That needs 8 byte alignment, which holds for
 //every buffer they are used on: aec_state_t declares both AEC memory pools DWORD_ALIGNED and every allocation ahead
 //of h_hat in them is a whole number of double words, and the FFT scratch buffers here are declared DWORD_ALIGNED.
 //A strided move like this is the one thing vpu_memcpy() cannot do, so double words are as wide as it goes.
@@ -79,10 +79,12 @@ typedef int64_t h_hat_tap_pair_t;
 
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
 //constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front.
-static inline void h_hat_bitrev_gather(
-        h_hat_tap_pair_t *dst,
-        const h_hat_tap_pair_t *src)
+static void aec_h_hat_bitrev_gather(
+        int32_t *dst_words,
+        const int32_t *src_words)
 {
+    h_hat_tap_pair_t *dst = (h_hat_tap_pair_t*)dst_words;
+    const h_hat_tap_pair_t *src = (const h_hat_tap_pair_t*)src_words;
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
         for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
             *dst++ = *src;
@@ -93,19 +95,22 @@ static inline void h_hat_bitrev_gather(
 }
 
 //Expand the taps h_hat stores into a full bit-reversed index time domain vector ready to be transformed in place.
-//Every slot h_hat has no storage for is a tap the gradient constraint zeroes, and is written as zero here, so this
-//writes the whole vector and needs no separate zeroing pass.
-static inline void h_hat_bitrev_scatter(
-        h_hat_tap_pair_t *dst,
-        const h_hat_tap_pair_t *src)
+//Every slot h_hat has no storage for is a tap the gradient constraint zeroes, so the whole vector is cleared first
+//- vect_s32_set() does that a vector at a time, faster than storing the zeros one slot at a time here would.
+static void aec_h_hat_bitrev_scatter(
+        int32_t *dst_words,
+        const int32_t *src_words)
 {
+    vect_s32_set(dst_words, 0, AEC_PROC_FRAME_LENGTH);
+
+    h_hat_tap_pair_t *dst = (h_hat_tap_pair_t*)dst_words;
+    const h_hat_tap_pair_t *src = (const h_hat_tap_pair_t*)src_words;
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
         for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
-            *dst++ = *src++; //a stored pair of taps
-            *dst++ = 0;      //the odd slot: taps AEC_PROC_FRAME_LENGTH/2 onwards
-        }
-        *dst++ = 0; //the dropped even slot: taps between AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2
-        *dst++ = 0; //and its odd partner
+            dst[2*i] = src[i]; //a stored pair of taps; the odd slot beside it holds taps
+        }                      //AEC_PROC_FRAME_LENGTH/2 onwards, and stays zero
+        dst += 2*AEC_H_HAT_BITREV_GROUP; //past the dropped even slot, which holds the taps between
+        src += AEC_H_HAT_BITREV_GROUP-1; //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
     }
 }
 
@@ -126,13 +131,15 @@ static void h_hat_forward_fft(
         const bfp_s32_t *h_hat_ph,
         int32_t *scratch)
 {
-    h_hat_bitrev_scatter((h_hat_tap_pair_t*)scratch, (const h_hat_tap_pair_t*)h_hat_ph->data);
-
     //fft_dit_forward() requires 2 bits of headroom. Measure it over the stored taps rather than the expanded vector -
-    //the same answer for a third of the reads, since the taps the scatter zeroed cannot reduce it.
+    //the same answer for a third of the reads, since the taps the scatter zeroed cannot reduce it. Scale them for
+    //the same reason, before the scatter rather than after it: shifting a zero leaves a zero.
+    int32_t DWORD_ALIGNED h_scaled[AEC_FRAME_ADVANCE];
     headroom_t hr = vect_s32_headroom(h_hat_ph->data, AEC_FRAME_ADVANCE);
     right_shift_t shr = 2 - (right_shift_t)hr;
-    vect_s32_shl(scratch, scratch, AEC_PROC_FRAME_LENGTH, -shr);
+    vect_s32_shl(h_scaled, h_hat_ph->data, AEC_FRAME_ADVANCE, -shr);
+
+    aec_h_hat_bitrev_scatter(scratch, h_scaled);
 
     bfp_complex_s32_init(H_hat_ph, (complex_s32_t*)scratch, h_hat_ph->exp + shr, AEC_PROC_FRAME_LENGTH/2, 0);
     H_hat_ph->hr = hr + shr;
@@ -219,7 +226,7 @@ void aec_l2_adapt_plus_ifft(
 
     //Compact the delta down to the taps h_hat stores, in place at the front of delta_scratch. Everything dropped
     //here is a tap the gradient constraint zeroes.
-    h_hat_bitrev_gather((h_hat_tap_pair_t*)delta_scratch, (const h_hat_tap_pair_t*)delta_scratch);
+    aec_h_hat_bitrev_gather((int32_t*)delta_scratch, (const int32_t*)delta_scratch);
 
     bfp_s32_t delta_h_chunk;
     bfp_s32_init(&delta_h_chunk, (int32_t*)delta_scratch, prod.exp, AEC_FRAME_ADVANCE, 0);

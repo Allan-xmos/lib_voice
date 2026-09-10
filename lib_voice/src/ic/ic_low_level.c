@@ -93,7 +93,7 @@ void ic_frame_init(
         const exponent_t zero_exp = -1024;
         state->Y_hat_bfp[ch].exp = zero_exp;
         state->Y_hat_bfp[ch].hr = 0;
-        memset(&state->Y_hat_bfp[ch].data[0], 0, IC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
+        vect_s32_set((int32_t*)&state->Y_hat_bfp[ch].data[0], 0, 2*IC_FD_FRAME_LENGTH);
     }
 }
 

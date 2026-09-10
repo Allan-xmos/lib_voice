@@ -103,13 +103,13 @@ void aec_frame_init(
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         main_state->Y_hat[ch].exp = AEC_ZEROVAL_EXP;
         main_state->Y_hat[ch].hr = AEC_ZEROVAL_HR;
-        memset(&main_state->Y_hat[ch].data[0], 0, ((AEC_PROC_FRAME_LENGTH/2)+1)*sizeof(complex_s32_t));
+        vect_s32_set((int32_t*)&main_state->Y_hat[ch].data[0], 0, 2*AEC_FD_FRAME_LENGTH);
     }
     if(shadow_state != NULL) {
         for(unsigned ch=0; ch<num_y_channels; ch++) {
             shadow_state->Y_hat[ch].exp = AEC_ZEROVAL_EXP;
             shadow_state->Y_hat[ch].hr = AEC_ZEROVAL_HR;
-            memset(&shadow_state->Y_hat[ch].data[0], 0, ((AEC_PROC_FRAME_LENGTH/2)+1)*sizeof(complex_s32_t));
+            vect_s32_set((int32_t*)&shadow_state->Y_hat[ch].data[0], 0, 2*AEC_FD_FRAME_LENGTH);
         }
     }
 }

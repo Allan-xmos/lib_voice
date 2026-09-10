@@ -79,7 +79,7 @@ typedef int64_t h_hat_tap_pair_t;
 
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
 //constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front.
-static void h_hat_bitrev_gather(
+static inline void h_hat_bitrev_gather(
         h_hat_tap_pair_t *dst,
         const h_hat_tap_pair_t *src)
 {
@@ -95,7 +95,7 @@ static void h_hat_bitrev_gather(
 //Expand the taps h_hat stores into a full bit-reversed index time domain vector ready to be transformed in place.
 //Every slot h_hat has no storage for is a tap the gradient constraint zeroes, and is written as zero here, so this
 //writes the whole vector and needs no separate zeroing pass.
-static void h_hat_bitrev_scatter(
+static inline void h_hat_bitrev_scatter(
         h_hat_tap_pair_t *dst,
         const h_hat_tap_pair_t *src)
 {

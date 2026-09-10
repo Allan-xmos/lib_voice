@@ -126,10 +126,10 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     // Initialise pipeline
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
     // DE mode AEC config is fixed and not run time configurable
-    aec_de_mode_conf.num_x_channels = 1;
-    aec_de_mode_conf.num_y_channels = 1;
-    aec_de_mode_conf.num_main_filt_phases = 30;
-    aec_de_mode_conf.num_shadow_filt_phases = 0;
+    aec_de_mode_conf.num_x_channels = ADEC_DE_MODE_X_CHANNELS;
+    aec_de_mode_conf.num_y_channels = ADEC_DE_MODE_Y_CHANNELS;
+    aec_de_mode_conf.num_main_filt_phases = ADEC_DE_MODE_MAIN_FILTER_PHASES;
+    aec_de_mode_conf.num_shadow_filt_phases = ADEC_DE_MODE_SHADOW_FILTER_PHASES;
     aec_de_mode_conf.tdist = &tdist;
 
     /** Non DE mode AEC config is runtime configurable, main reason being ADEC tests pass only for alt arch (1, 2, 15,

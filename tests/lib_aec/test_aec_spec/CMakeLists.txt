@@ -36,11 +36,18 @@ set(AEC_SCHEDULE_CONFIG ${TEST_AEC_SPEC_BUILD_CONFIG})
 include(${CMAKE_CURRENT_LIST_DIR}/../../test_deps.cmake)
 
 if (NOT BUILD_NATIVE)
+    # This test shares test_bin_adec's sources, so it builds a delay estimation mode aec_conf_t even
+    # though BYPASS_ADEC keeps ADEC from ever requesting a delay estimation cycle. The AEC here is
+    # built for the spec test's 1 y channel, 1 x channel, 20 main phase configuration (see
+    # parameters.cfg), which the library default 30 phase delay estimation filter does not fit, so
+    # declare a delay estimation filter this pool can host. Nothing measures a delay in this test;
+    # the point is that the configuration it constructs is one aec_init() could safely be given.
     set(APP_COMPILER_FLAGS
             -report
             -Os
             -DTEST_WAV_XSCOPE=1
-            -DBYPASS_ADEC=1)
+            -DBYPASS_ADEC=1
+            -DADEC_DE_MODE_MAIN_FILTER_PHASES=20)
 
     set(APP_XSCOPE_SRCS ${CONFIG_XSCOPE_REL_PATH})
 else()

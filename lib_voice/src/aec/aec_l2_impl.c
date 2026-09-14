@@ -75,6 +75,26 @@ void aec_l2_adapt_plus_fft_gc(
 //every buffer they are used on: aec_state_t declares both AEC memory pools DWORD_ALIGNED and every allocation ahead
 //of h_hat in them is a whole number of double words, and the FFT scratch buffers here are declared DWORD_ALIGNED.
 //A strided move like this is the one thing vpu_memcpy() cannot do, so double words are as wide as it goes.
+//
+//On XS3 these are the hand written aec_h_hat_bitrev.S, because the ldd/std offsets a group needs run past the 0..11
+//immediate range the encoding allows and the compiler answers that by recomputing addresses, at about five
+//instructions per double word instead of two. The C below is the reference for what the assembly does, and is what
+//non-XS3 builds use.
+#if defined(__XS3A__)
+void aec_h_hat_bitrev_gather(int32_t *dst, const int32_t *src);
+//The assembly scatter writes only the slots h_hat stores, leaving the caller to zero the rest, because
+//vect_s32_set() clears the whole vector with the VPU faster than the scatter can store the zeros itself.
+void aec_h_hat_bitrev_scatter_kept(int32_t *dst, const int32_t *src);
+static inline void aec_h_hat_bitrev_scatter(int32_t *dst, const int32_t *src)
+{
+    vect_s32_set(dst, 0, AEC_PROC_FRAME_LENGTH);
+    aec_h_hat_bitrev_scatter_kept(dst, src);
+}
+
+//The assembly hard codes the layout, so fail the build rather than mis-index if the frame sizes ever change it.
+_Static_assert(AEC_H_HAT_BITREV_DROPPED == 8 && AEC_H_HAT_BITREV_GROUP == 16,
+        "aec_h_hat_bitrev.S is written for the 8 group, 16 slot h_hat layout");
+#else
 typedef int64_t h_hat_tap_pair_t;
 
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
@@ -113,6 +133,7 @@ static void aec_h_hat_bitrev_scatter(
         src += AEC_H_HAT_BITREV_GROUP-1; //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
     }
 }
+#endif
 
 unsigned aec_h_hat_tap_index(unsigned n)
 {

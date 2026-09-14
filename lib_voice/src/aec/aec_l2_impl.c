@@ -132,14 +132,17 @@ static void h_hat_forward_fft(
         int32_t *scratch)
 {
     //fft_dit_forward() requires 2 bits of headroom. Measure it over the stored taps rather than the expanded vector -
-    //the same answer for a third of the reads, since the taps the scatter zeroed cannot reduce it. Scale them for
-    //the same reason, before the scatter rather than after it: shifting a zero leaves a zero.
-    int32_t DWORD_ALIGNED h_scaled[AEC_FRAME_ADVANCE];
+    //the same answer for a third of the reads, since the taps the scatter zeroed cannot reduce it.
     headroom_t hr = vect_s32_headroom(h_hat_ph->data, AEC_FRAME_ADVANCE);
     right_shift_t shr = 2 - (right_shift_t)hr;
-    vect_s32_shl(h_scaled, h_hat_ph->data, AEC_FRAME_ADVANCE, -shr);
 
-    aec_h_hat_bitrev_scatter(scratch, h_scaled);
+    //The shift runs over the expanded vector, after the scatter, even though scaling the stored taps first would be
+    //the same answer over a third of the elements - shifting a zero leaves a zero. Scaling first needs somewhere to
+    //put the scaled taps that is neither h_hat (state) nor `scratch` (the scatter clears all of it before it writes),
+    //so it costs an AEC_FRAME_ADVANCE buffer, and 960 bytes of stack on each of the threads that reach here is a far
+    //worse trade than shifting the 272 extra slots the scatter zeroed.
+    aec_h_hat_bitrev_scatter(scratch, h_hat_ph->data);
+    vect_s32_shl(scratch, scratch, AEC_PROC_FRAME_LENGTH, -shr);
 
     bfp_complex_s32_init(H_hat_ph, (complex_s32_t*)scratch, h_hat_ph->exp + shr, AEC_PROC_FRAME_LENGTH/2, 0);
     H_hat_ph->hr = hr + shr;

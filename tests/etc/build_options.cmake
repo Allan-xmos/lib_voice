@@ -23,10 +23,19 @@ endif()
 #   default and the two cannot differ.
 # - test_delay_estimator runs 0 shadow filter phases but is built for 5, so that the shadow filter
 #   phase pool is not a zero length array.
+
+# The delay estimation tests exercise the full length delay estimation filter, rather than the
+# library default of ADEC_DE_MODE_MAIN_FILTER_PHASES, which is capped at what the memory pool of a
+# 10 phase AEC can hold. A delay estimation cycle is almost all X_fifo, and the pool reserves
+# X_fifo for the normal mode configuration, so the AEC has to be built for 11 phases rather than 10
+# for 30 to fit - see the *_BUILD_CONFIG settings below. The 1 y channel configurations already
+# reserve enough X_fifo and are left alone.
+set(ADEC_TEST_DE_MODE_FLAGS -DADEC_DE_MODE_MAIN_FILTER_PHASES=30)
+
 if(NOT DEFINED DE_UNIT_TESTS_BUILD_CONFIG)
 set(
     DE_UNIT_TESTS_BUILD_CONFIG
-    "2 2 2 10 5"
+    "2 2 2 11 5"
     CACHE STRING
     "AEC build configuration for de_unit_tests in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )
@@ -44,7 +53,7 @@ endif()
 if(NOT DEFINED TEST_ADEC_STARTUP_BUILD_CONFIG)
 set(
     TEST_ADEC_STARTUP_BUILD_CONFIG
-    "2 2 2 10 5"
+    "2 2 2 11 5"
     CACHE STRING
     "AEC build configuration for test_adec_startup in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )

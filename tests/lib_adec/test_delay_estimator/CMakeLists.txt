@@ -45,6 +45,7 @@ if (NOT BUILD_NATIVE)
             -report
             -Os
             -DTEST_WAV_XSCOPE=1
+            ${ADEC_TEST_DE_MODE_FLAGS}
             -DENABLE_ADEC_DEBUG_PRINTS
             -DBYPASS_ADEC=1
             ${TEST_DELAY_ESTIMATOR_CHANNEL_FLAGS})
@@ -53,6 +54,7 @@ if (NOT BUILD_NATIVE)
 else()
     set(APP_COMPILER_FLAGS
             -DX86_BUILD=1
+            ${ADEC_TEST_DE_MODE_FLAGS}
             ${TEST_DELAY_ESTIMATOR_CHANNEL_FLAGS})
 endif()
 XMOS_REGISTER_APP()

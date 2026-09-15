@@ -36,7 +36,7 @@ endif()
 if(NOT DEFINED TEST_ADEC_STARTUP_BUILD_CONFIG)
 set(
     TEST_ADEC_STARTUP_BUILD_CONFIG
-    "2 2 2 10 5"
+    "2 2 2 11 5"
     CACHE STRING
     "AEC build configuration for test_adec_startup in <threads> <ychannels> <xchannels> <num_main_phases> <num_shadow_phases> format"
     )

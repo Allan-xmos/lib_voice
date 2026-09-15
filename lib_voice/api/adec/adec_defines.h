@@ -57,9 +57,16 @@
 #ifndef ADEC_DE_MODE_X_CHANNELS
 #define ADEC_DE_MODE_X_CHANNELS                 (1)
 #endif
-/** @brief See @ref ADEC_DE_MODE_Y_CHANNELS @ingroup adec_defines */
+/** @brief See @ref ADEC_DE_MODE_Y_CHANNELS @ingroup adec_defines
+ *
+ * The default is the longest delay estimation filter that fits @ref aec_memory_pool_t at the
+ * smallest AEC configuration in common use, 2 y channels by 2 x channels by 10 phases. A delay
+ * estimation cycle's phases are almost all X_fifo, which the pool reserves for the normal mode
+ * configuration rather than for this one, so this is what has to give when the two disagree - the
+ * pool assertion below says so explicitly. The filter still spans far more than
+ * @ref ADEC_DE_DELAY_SAMPS, which is what bounds the delay ADEC can actually measure. */
 #ifndef ADEC_DE_MODE_MAIN_FILTER_PHASES
-#define ADEC_DE_MODE_MAIN_FILTER_PHASES         (30)
+#define ADEC_DE_MODE_MAIN_FILTER_PHASES         (29)
 #endif
 /** @brief See @ref ADEC_DE_MODE_Y_CHANNELS @ingroup adec_defines */
 #ifndef ADEC_DE_MODE_SHADOW_FILTER_PHASES

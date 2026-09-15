@@ -142,7 +142,8 @@
 #define AEC_FFT_PADDING (2)
 
 #define AEC_ZEROVAL_EXP (-1024) /// A very small exponent indicating 0 value.
-#define AEC_ZEROVAL_HR (31) /// Headroom value used in BFP arrays when indicating 0 value by setting exponent to AEC_ZEROVAL_EXP
+#define AEC_ZEROVAL_HR (31) /// Headroom value used in 32 bit BFP arrays when indicating 0 value by setting exponent to AEC_ZEROVAL_EXP
+#define AEC_ZEROVAL_HR16 (15) /// AEC_ZEROVAL_HR for the 16 bit BFP arrays, which hold at most 15 bits of headroom
 
 /** @brief Maximum number of hardware threads supported by the AEC.
  *

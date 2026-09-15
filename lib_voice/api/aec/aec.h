@@ -192,7 +192,7 @@ float_s32_t aec_calc_corr_factor(
  *
  * \code
  *      // read tap n of the impulse response of phase ph
- *      int32_t tap = state->h_hat[ch][ph].data[aec_h_hat_tap_index(n)];
+ *      int16_t tap = state->h_hat[ch][ph].data[aec_h_hat_tap_index(n)];
  * \endcode
  *
  * The mapping is a permutation of `[0, AEC_FRAME_ADVANCE)` onto itself, so it can be used in either direction. It is

@@ -58,8 +58,8 @@ void aec_priv_main_init(
     //h_hat (time domain)
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
-            bfp_s32_init(&state->h_hat[ch][ph], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
-            available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int32_t));
+            bfp_s16_init(&state->h_hat[ch][ph], (int16_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
+            available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int16_t));
         }
     }
     //X_fifo
@@ -165,8 +165,8 @@ void aec_priv_shadow_init(
     //h_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
-            bfp_s32_init(&state->h_hat[ch][ph], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
-            available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int32_t));
+            bfp_s16_init(&state->h_hat[ch][ph], (int16_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
+            available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int16_t));
         }
     }
     //initialise Error
@@ -234,11 +234,28 @@ void aec_priv_bfp_s32_copy(
     dst->hr = src->hr;
 }
 
+void aec_priv_bfp_s16_copy(
+        bfp_s16_t *dst,
+        const bfp_s16_t *src)
+{
+    //This assumes that both dst and src are same length
+    vpu_memcpy(dst->data, src->data, dst->length*sizeof(int16_t));
+    dst->exp = src->exp;
+    dst->hr = src->hr;
+}
+
 void aec_priv_bfp_s32_reset(bfp_s32_t *a)
 {
     vect_s32_set(a->data, 0, a->length);
     a->exp = AEC_ZEROVAL_EXP;
     a->hr = AEC_ZEROVAL_HR;
+}
+
+void aec_priv_bfp_s16_reset(bfp_s16_t *a)
+{
+    vect_s16_set(a->data, 0, a->length);
+    a->exp = AEC_ZEROVAL_EXP;
+    a->hr = AEC_ZEROVAL_HR16;
 }
 
 void aec_priv_bfp_complex_s32_reset(bfp_complex_s32_t *a)
@@ -260,18 +277,18 @@ void aec_priv_reset_filter(
 
 //Time domain filter reset used by AEC (frequency domain aec_priv_reset_filter is used by IC)
 void aec_priv_reset_filter_td(
-        bfp_s32_t *h_hat,
+        bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases)
 {
     for(unsigned ph=0; ph<num_x_channels*num_phases; ph++) {
-        aec_priv_bfp_s32_reset(&h_hat[ph]);
+        aec_priv_bfp_s16_reset(&h_hat[ph]);
     }
 }
 
 void aec_priv_copy_filter(
-        bfp_s32_t *h_hat_dst,
-        const bfp_s32_t *h_hat_src,
+        bfp_s16_t *h_hat_dst,
+        const bfp_s16_t *h_hat_src,
         unsigned num_x_channels,
         unsigned num_dst_phases,
         unsigned num_src_phases)
@@ -285,14 +302,14 @@ void aec_priv_copy_filter(
         uint32_t dst_ph_start_offset = ch * num_dst_phases;
         uint32_t src_ph_start_offset = ch * num_src_phases;
         for(uint32_t ph=0; ph<phases_to_copy; ph++) {
-            aec_priv_bfp_s32_copy(&h_hat_dst[dst_ph_start_offset + ph], &h_hat_src[src_ph_start_offset + ph]);
+            aec_priv_bfp_s16_copy(&h_hat_dst[dst_ph_start_offset + ph], &h_hat_src[src_ph_start_offset + ph]);
         }
     }
     //Zero the remaining h_hat_dst phases
     for(uint32_t ch=0; ch<num_x_channels; ch++) {
         uint32_t dst_ph_start_offset = ch * num_dst_phases;
         for(uint32_t ph=num_src_phases; ph<num_dst_phases; ph++) {
-            aec_priv_bfp_s32_reset(&h_hat_dst[dst_ph_start_offset + ph]);
+            aec_priv_bfp_s16_reset(&h_hat_dst[dst_ph_start_offset + ph]);
         }
     }
 }
@@ -740,7 +757,7 @@ void aec_priv_calc_Error_and_Y_hat_td(
         bfp_complex_s32_t *Y_hat,
         const bfp_complex_s32_t *Y,
         const bfp_complex_s32_t *X_fifo,
-        const bfp_s32_t *h_hat,
+        const bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases,
         int32_t bypass_enabled)
@@ -1010,7 +1027,7 @@ void aec_priv_filter_adapt(
 }
 
 void aec_priv_filter_adapt_td(
-        bfp_s32_t *h_hat,
+        bfp_s16_t *h_hat,
         const bfp_complex_s32_t *X_fifo,
         const bfp_complex_s32_t *T,
         unsigned num_x_channels,

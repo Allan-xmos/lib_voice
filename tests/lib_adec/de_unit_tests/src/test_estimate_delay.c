@@ -7,7 +7,9 @@
 #include "aec.h"
 #include "adec.h"
 
-#define NUM_PHASES_DELAY_EST    30
+//This is larger than AEC_MAIN_FILTER_PHASES, but AEC_MAX_Y_CHANNELS and AEC_MAX_X_CHANNELS are 2 so it fits the
+//phase budget, and ADEC_DE_MODE_MAIN_FILTER_PHASES is by definition a phase count aec_memory_pool_t holds.
+#define NUM_PHASES_DELAY_EST    ADEC_DE_MODE_MAIN_FILTER_PHASES
 //The AEC filter is stored in the time domain; each phase has AEC_FRAME_ADVANCE real taps.
 #define PHASE_LEN               AEC_FRAME_ADVANCE
 
@@ -67,7 +69,7 @@ void test_delay_estimate() {
     //FP version of phase coeffs
     double h_hat[1][NUM_PHASES_DELAY_EST][PHASE_LEN] = {{{0.0}}};
 
-    const unsigned num_phases = 30;
+    const unsigned num_phases = NUM_PHASES_DELAY_EST;
     unsigned seed = 34575;
     unsigned ch = 0;
 
@@ -83,7 +85,7 @@ void test_delay_estimate() {
 
         aec_state.main_state.h_hat[ch][ph].exp = pseudo_rand_int(&seed, -39, 39);
         for(unsigned i = 0; i < length; i++){
-            aec_state.main_state.h_hat[ch][ph].data[i] = pseudo_rand_int32(&seed);
+            aec_state.main_state.h_hat[ch][ph].data[i] = (int16_t)(pseudo_rand_int32(&seed) >> 16);
 
             h_hat[ch][ph][i] = ldexp(aec_state.main_state.h_hat[ch][ph].data[i], aec_state.main_state.h_hat[ch][ph].exp);
 

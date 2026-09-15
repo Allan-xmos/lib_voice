@@ -85,7 +85,7 @@ void test_aec_filter_adapt() {
                 state_ptr->h_hat[ch][ph].exp = pseudo_rand_int(&seed, -31, 32);
                 state_ptr->h_hat[ch][ph].hr = pseudo_rand_uint32(&seed) % 5;
                 for(int i=0; i<AEC_FRAME_ADVANCE; i++) {
-                    int32_t tap = pseudo_rand_int32(&seed) >> state_ptr->h_hat[ch][ph].hr;
+                    int16_t tap = (int16_t)(pseudo_rand_int32(&seed) >> (16 + state_ptr->h_hat[ch][ph].hr));
                     state_ptr->h_hat[ch][ph].data[aec_h_hat_tap_index(i)] = tap;
 
                     h_hat_fp[ch][ph][i] = ldexp(tap, state_ptr->h_hat[ch][ph].exp);
@@ -186,7 +186,9 @@ void test_aec_filter_adapt() {
                         AEC_FRAME_ADVANCE);
                 //printf("diff %d\n",diff);
                 max_diff = (diff > max_diff) ? diff : max_diff;
-                TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(1<<7, diff, "h_hat diff too large.");
+                //h_hat mantissas are 16 bit, so this is a much tighter bound than the 1<<7 that suited 32 bit taps.
+                //The observed worst case over this test's fixed seed is 2.
+                TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(1<<3, diff, "h_hat diff too large.");
             }
         }
     }

@@ -416,14 +416,14 @@ void aec_reset_state(aec_state_t *aec_state){
     for(int ch=0; ch<y_channels; ch++) {
         for(int ph=0; ph<x_channels*main_phases; ph++) {
             main_state->h_hat[ch][ph].exp = AEC_ZEROVAL_EXP;
-            main_state->h_hat[ch][ph].hr = AEC_ZEROVAL_HR;
+            main_state->h_hat[ch][ph].hr = AEC_ZEROVAL_HR16;
         }
     }
     //Shadow h_hat
     for(int ch=0; ch<y_channels; ch++) {
         for(int ph=0; ph<x_channels*shadow_phases; ph++) {
             shadow_state->h_hat[ch][ph].exp = AEC_ZEROVAL_EXP;
-            shadow_state->h_hat[ch][ph].hr = AEC_ZEROVAL_HR;
+            shadow_state->h_hat[ch][ph].hr = AEC_ZEROVAL_HR16;
         }
     }
     //X_fifo

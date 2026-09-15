@@ -12,7 +12,7 @@
 
 void adec_estimate_delay (
         de_output_t *de_output,
-        const bfp_s32_t* h_hat,
+        const bfp_s16_t* h_hat,
         unsigned num_phases)
 {
     //de_output_t::phase_power is sized for the compile time maximum phase count
@@ -28,7 +28,7 @@ void adec_estimate_delay (
 
     for(int ph=0; ph<num_phases; ph++) { //compute delay over 1 x-y pair phases
         //The filter is stored in the time domain; per-phase energy is computed directly from the time-domain taps.
-        float_s32_t phase_power = float_s64_to_float_s32(bfp_s32_energy(&h_hat[ph]));
+        float_s32_t phase_power = float_s64_to_float_s32(bfp_s16_energy(&h_hat[ph]));
         de_output->phase_power[ph] = phase_power;
         de_output->sum_phase_powers = float_s32_add(de_output->sum_phase_powers, phase_power);
         if(float_s32_gt(phase_power, peak_fd_power)) {

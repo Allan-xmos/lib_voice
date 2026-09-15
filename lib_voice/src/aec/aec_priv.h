@@ -347,7 +347,7 @@ void aec_l2_calc_Error_and_Y_hat_td(
         bfp_complex_s32_t *Y_hat,
         const bfp_complex_s32_t *Y,
         const bfp_complex_s32_t *X_fifo,
-        const bfp_s32_t *h_hat,
+        const bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases,
         unsigned start_offset,
@@ -375,7 +375,7 @@ void aec_l2_adapt_plus_fft_gc(
  * @ingroup aec_low_level_func
  */
 void aec_l2_adapt_plus_ifft(
-        bfp_s32_t *h_hat_ph,
+        bfp_s16_t *h_hat_ph,
         const bfp_complex_s32_t *X_fifo_ph,
         const bfp_complex_s32_t *T_ph
         );
@@ -427,13 +427,13 @@ void aec_priv_reset_filter(
         unsigned num_phases);
 
 void aec_priv_reset_filter_td(
-        bfp_s32_t *h_hat,
+        bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases);
 
 void aec_priv_copy_filter(
-        bfp_s32_t *h_hat_dst,
-        const bfp_s32_t *h_hat_src,
+        bfp_s16_t *h_hat_dst,
+        const bfp_s16_t *h_hat_src,
         unsigned num_x_channels,
         unsigned num_dst_phases,
         unsigned num_src_phases);
@@ -446,7 +446,13 @@ void aec_priv_bfp_s32_copy(
         bfp_s32_t *dst,
         const bfp_s32_t *src);
 
+void aec_priv_bfp_s16_copy(
+        bfp_s16_t *dst,
+        const bfp_s16_t *src);
+
 void aec_priv_bfp_s32_reset(bfp_s32_t *a);
+
+void aec_priv_bfp_s16_reset(bfp_s16_t *a);
 
 void aec_priv_bfp_complex_s32_reset(bfp_complex_s32_t *a);
 
@@ -500,7 +506,7 @@ void aec_priv_calc_Error_and_Y_hat_td(
         bfp_complex_s32_t *Y_hat,
         const bfp_complex_s32_t *Y,
         const bfp_complex_s32_t *X_fifo,
-        const bfp_s32_t *h_hat,
+        const bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases,
         int32_t bypass_enabled);
@@ -549,7 +555,7 @@ void aec_priv_filter_adapt(
         unsigned num_phases);
 
 void aec_priv_filter_adapt_td(
-        bfp_s32_t *h_hat,
+        bfp_s16_t *h_hat,
         const bfp_complex_s32_t *X_fifo,
         const bfp_complex_s32_t *T,
         unsigned num_x_channels,

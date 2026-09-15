@@ -120,7 +120,7 @@ void test_calc_Error_and_Y_hat() {
                     h_td[i].im = 0.0;
                 }
                 for(int i=0; i<AEC_FRAME_ADVANCE; i++) {
-                    int32_t tap = pseudo_rand_int32(&seed) >> state_ptr->h_hat[ch][ph].hr;
+                    int16_t tap = (int16_t)(pseudo_rand_int32(&seed) >> (16 + state_ptr->h_hat[ch][ph].hr));
                     state_ptr->h_hat[ch][ph].data[aec_h_hat_tap_index(i)] = tap;
                     h_td[i].re = ldexp(tap, state_ptr->h_hat[ch][ph].exp);
                 }

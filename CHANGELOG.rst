@@ -11,6 +11,18 @@ lib_voice change log
     reducing AEC memory use by around 25%. Its taps are stored in bit-reversed index order so that
     the per-phase transforms need no index bit-reversal pass; use `aec_h_hat_tap_index()` to read
     the filter in time order
+  * CHANGED: The AEC adaptive filter's taps are stored at 16 bit rather than 32 bit, saving a
+    further 28800 bytes in the default 2 y channel, 2 x channel, 10 phase configuration. The
+    arithmetic is unchanged: the taps are widened on the way into the per-phase forward transform,
+    and the delta update is rounded back down to 16 bits on the way in. `aec_filter_state_t::h_hat`
+    is therefore now a `bfp_s16_t`, as is the `h_hat` argument of `adec_estimate_delay()`
+  * FIXED: `adec_estimate_delay()` compared filter phase energies against a zero mantissa carrying
+    an exponent of 0, which `float_s32_gt()` turns into an absolute threshold of roughly 2^-31
+    rather than a comparison against zero. A quiet filter therefore reported a peak phase index of
+    0 and a peak to average ratio of 1 regardless of where its energy actually was
+  * CHANGED: `ADEC_DE_MODE_MAIN_FILTER_PHASES` is 29 rather than 30, which is the longest delay
+    estimation filter that fits the smaller `aec_memory_pool_t`. The delay ADEC can measure is
+    bounded by `ADEC_DE_DELAY_SAMPS` and is unaffected
   * CHANGED: The lib_xcore_math FFT look-up tables are now generated at build time, sized for the
     512-point transforms lib_voice performs (`XMATH_GEN_FFT_LUT`/`XMATH_MAX_FFT_LEN_LOG2`), rather
     than using the 1024-point tables shipped with lib_xcore_math. This saves 8192 bytes on any tile

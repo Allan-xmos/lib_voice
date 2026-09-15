@@ -666,7 +666,7 @@ void test_compare_filters_and_calc_mu() {
                 aec_state.main_state.h_hat[ych][ph].exp = pseudo_rand_int(&seed, -31, 32);
                 aec_state.main_state.h_hat[ych][ph].hr = pseudo_rand_uint32(&seed) % 3;
                 for(int i=0; i<AEC_FRAME_ADVANCE; i++) {
-                    aec_state.main_state.h_hat[ych][ph].data[i] = pseudo_rand_int32(&seed) >> aec_state.main_state.h_hat[ych][ph].hr;
+                    aec_state.main_state.h_hat[ych][ph].data[i] = (int16_t)(pseudo_rand_int32(&seed) >> (16 + aec_state.main_state.h_hat[ych][ph].hr));
                     params_fp->h_hat[ych][xch][ph_xch][i] = ldexp(aec_state.main_state.h_hat[ych][ph].data[i], aec_state.main_state.h_hat[ych][ph].exp);
                 }
             }
@@ -676,7 +676,7 @@ void test_compare_filters_and_calc_mu() {
                 aec_state.shadow_state.h_hat[ych][ph].exp = pseudo_rand_int(&seed, -31, 32);
                 aec_state.shadow_state.h_hat[ych][ph].hr = pseudo_rand_uint32(&seed) % 3;
                 for(int i=0; i<AEC_FRAME_ADVANCE; i++) {
-                    aec_state.shadow_state.h_hat[ych][ph].data[i] = pseudo_rand_int32(&seed) >> aec_state.shadow_state.h_hat[ych][ph].hr;
+                    aec_state.shadow_state.h_hat[ych][ph].data[i] = (int16_t)(pseudo_rand_int32(&seed) >> (16 + aec_state.shadow_state.h_hat[ych][ph].hr));
                     params_fp->H_hat_shadow[ych][xch][ph_xch][i] = ldexp(aec_state.shadow_state.h_hat[ych][ph].data[i], aec_state.shadow_state.h_hat[ych][ph].exp);
                 }
             }
@@ -842,12 +842,12 @@ void test_compare_filters_and_calc_mu() {
             //Compare h_hat and H_hat_shadow
             for(int xch=0; xch<num_x_channels; xch++) {
                 for(int ph=0; ph<aec_state.main_state.num_phases; ph++) {
-                    unsigned diff_H_hat = vector_int32_maxdiff((int32_t*)&aec_state.main_state.h_hat[ych][xch*aec_state.main_state.num_phases + ph].data[0], aec_state.main_state.h_hat[ych][xch*aec_state.main_state.num_phases + ph].exp, (double*)&params_fp->h_hat[ych][xch][ph][0], 0, AEC_FRAME_ADVANCE);
+                    unsigned diff_H_hat = vector_int16_maxdiff(&aec_state.main_state.h_hat[ych][xch*aec_state.main_state.num_phases + ph].data[0], aec_state.main_state.h_hat[ych][xch*aec_state.main_state.num_phases + ph].exp, (double*)&params_fp->h_hat[ych][xch][ph][0], 0, AEC_FRAME_ADVANCE);
                     if(diff_H_hat > 0){printf("iter %d, ych %d, xch %d, ph %d, shadow_flag %d. diff_H_hat %d too large\n",iter, ych, xch, ph, params_fp->shadow_flag[ych], diff_H_hat); assert(0);}
                 }
 
                 for(int ph=0; ph<aec_state.shadow_state.num_phases; ph++) {
-                    unsigned diff_H_hat_shadow = vector_int32_maxdiff((int32_t*)&aec_state.shadow_state.h_hat[ych][xch*aec_state.shadow_state.num_phases + ph].data[0], aec_state.shadow_state.h_hat[ych][xch*aec_state.shadow_state.num_phases + ph].exp, (double*)&params_fp->H_hat_shadow[ych][xch][ph][0], 0, AEC_FRAME_ADVANCE);
+                    unsigned diff_H_hat_shadow = vector_int16_maxdiff(&aec_state.shadow_state.h_hat[ych][xch*aec_state.shadow_state.num_phases + ph].data[0], aec_state.shadow_state.h_hat[ych][xch*aec_state.shadow_state.num_phases + ph].exp, (double*)&params_fp->H_hat_shadow[ych][xch][ph][0], 0, AEC_FRAME_ADVANCE);
                     if(diff_H_hat_shadow > 0){printf("iter %d, ych %d, xch %d, ph %d, shadow_flag %d. diff_H_hat_shadow %d too large\n",iter, ych, xch, ph, params_fp->shadow_flag[ych], diff_H_hat_shadow); assert(0);}
                 }
             }

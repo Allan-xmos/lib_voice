@@ -260,25 +260,36 @@ void aec_l2_adapt_plus_ifft(
     //here is a tap the gradient constraint zeroes.
     aec_h_hat_bitrev_gather((int32_t*)delta_scratch, (const int32_t*)delta_scratch);
 
-    //h_hat stores 16 bit taps, so the delta has to be narrowed to the same depth before it can be added. Normalise
-    //it into 16 bits as it goes, so that all 16 are significant. The headroom that decides the shift is measured
-    //over the gathered taps rather than taken from prod.hr: prod.hr is only a lower bound once the gather has
-    //dropped more than half the vector, and here it is exactly the bound that decides how much of the update
-    //survives, so the vector pass to measure it properly is worth its cost. vect_s32_to_vect_s16() rounds rather
-    //than truncates, which matters for the same reason - the delta is a small correction, and truncating it would
-    //bias every update towards zero.
+    //h_hat stores 16 bit taps, so the delta has to be narrowed to that depth before it can be added, and *where* the
+    //narrowing happens decides how much of a small update survives. Narrow it straight to the exponent the sum will
+    //be held at, rather than to its own full 16 bit scale and letting the add line it up afterwards.
+    //
+    //The difference is the rounding mode. vect_s32_to_vect_s16() rounds to nearest, whereas the shift vect_s16_add()
+    //would otherwise apply to the delta is an arithmetic shift, which floors. Once the filter has converged the
+    //per-tap update is a fraction of an LSB, and flooring turns every negative fraction into a whole -1 LSB while
+    //leaving the positive ones at 0. That is not a rounding detail at this depth: roughly half the taps take a -1
+    //every frame, so the filter walks steadily downwards instead of settling.
     int32_t *delta_words = (int32_t*)delta_scratch;
     int16_t *delta_taps = (int16_t*)delta_scratch;
-    right_shift_t delta_shr = 16 - (right_shift_t)vect_s32_headroom(delta_words, AEC_FRAME_ADVANCE);
-    //Nothing is gained by shifting a delta that already fits in 16 bits further left, and the left shift a delta of
-    //all zeros would ask for is out of range.
-    delta_shr = (delta_shr > 0) ? delta_shr : 0;
-    //Narrowing in place is safe: this reads 32 bits ahead of every 16 bits it writes.
-    vect_s32_to_vect_s16(delta_taps, delta_words, AEC_FRAME_ADVANCE, delta_shr);
 
-    bfp_s16_t delta_h_chunk;
-    bfp_s16_init(&delta_h_chunk, delta_taps, prod.exp + delta_shr, AEC_FRAME_ADVANCE, 1);
-    bfp_s16_add(h_hat_ph, h_hat_ph, &delta_h_chunk);
+    //The output exponent is the one vect_s16_add_prepare() would have chosen: whichever operand needs the most room,
+    //plus a bit for the carry. A 32 bit delta with `hr` bits of headroom fills 16 bits at exponent prod.exp + 16 - hr.
+    //The delta's headroom is measured over the gathered taps rather than taken from prod.hr, which is only a lower
+    //bound once the gather has dropped more than half the vector, and it is exactly the bound that sets how much of
+    //the update survives.
+    const headroom_t delta_hr = vect_s32_headroom(delta_words, AEC_FRAME_ADVANCE);
+    const exponent_t h_hat_min_exp = h_hat_ph->exp - (exponent_t)h_hat_ph->hr;
+    const exponent_t delta_min_exp = prod.exp + 16 - (exponent_t)delta_hr;
+    const exponent_t sum_exp = ((h_hat_min_exp > delta_min_exp) ? h_hat_min_exp : delta_min_exp) + 1;
+
+    //Narrowing in place is safe: this reads 32 bits ahead of every 16 bits it writes.
+    vect_s32_to_vect_s16(delta_taps, delta_words, AEC_FRAME_ADVANCE, sum_exp - prod.exp);
+
+    //The delta already sits at the output exponent, so it is added unshifted and keeps the rounding above. Only
+    //h_hat is shifted, and it is the operand a floored LSB cannot matter to.
+    h_hat_ph->hr = vect_s16_add(h_hat_ph->data, h_hat_ph->data, delta_taps, AEC_FRAME_ADVANCE,
+                                sum_exp - h_hat_ph->exp, 0);
+    h_hat_ph->exp = sum_exp;
 }
 
 void aec_l2_bfp_complex_s32_unify_exponent(

@@ -83,7 +83,7 @@ static void alt_arch_rewrite_output(int32_t (*output)[AEC_FRAME_ADVANCE], const 
         {
             for(int ch=y_channels; ch<AEC_MAX_Y_CHANNELS; ch++)
             {
-                memcpy(&output[ch][0], &output[y_channels - 1][0], AEC_FRAME_ADVANCE*sizeof(int32_t));
+                vpu_memcpy(&output[ch][0], &output[y_channels - 1][0], AEC_FRAME_ADVANCE*sizeof(int32_t));
             }
         }
         else {
@@ -92,7 +92,7 @@ static void alt_arch_rewrite_output(int32_t (*output)[AEC_FRAME_ADVANCE], const 
             // preserved, we overwrite the AEC output with mic input. Providing 1 channel of AEC bypassed output and routing the other mic channel
             // unmodified to IC doesn't work for IC.
             for(int ch=0; ch<AEC_MAX_Y_CHANNELS; ch++) {
-                memcpy(&output[ch][0], &mic_input[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t));// AEC cannot process the frame in-place because of this
+                vpu_memcpy(&output[ch][0], &mic_input[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t));// AEC cannot process the frame in-place because of this
             }
         }
     }
@@ -171,7 +171,7 @@ void stage1_process_frame(stage1_t *state, int32_t (*output_frame)[AEC_FRAME_ADV
     // Overwrite output with mic input if delay estimation enabled
     if (state->delay_estimator_enabled) {
         for(int ch=0; ch<AEC_MAX_Y_CHANNELS; ch++) {
-            memcpy(&output_frame[ch][0], &input_y[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t)); // AEC cannot process the frame in-place because of this
+            vpu_memcpy(&output_frame[ch][0], &input_y[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t)); // AEC cannot process the frame in-place because of this
         }
     }
 

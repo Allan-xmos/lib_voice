@@ -181,7 +181,7 @@ void ns_priv_process_frame(bfp_s32_t * abs_Y, ns_state_t * ns){
 
     if(ns_priv_update_and_test_reset(ns)){
         ns_priv_minimum(&ns->S_min, &ns->S_tmp, &ns->S);
-        memcpy(ns->S_tmp.data, ns->S.data, sizeof(int32_t) * NS_PROC_FRAME_BINS);
+        vpu_memcpy(ns->S_tmp.data, ns->S.data, sizeof(int32_t) * NS_PROC_FRAME_BINS);
         ns->S_tmp.exp = ns->S.exp;
         ns->S_tmp.hr = ns->S.hr;
     } else {

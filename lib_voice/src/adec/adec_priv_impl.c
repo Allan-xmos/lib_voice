@@ -38,7 +38,7 @@ void reset_stuff_on_AEC_mode_start(adec_state_t *adec_state, unsigned set_toggle
 
   init_pk_ave_ratio_history(adec_state);
 
-  memset(adec_state->peak_power_history, 0, ADEC_PEAK_LINREG_HISTORY_SIZE * sizeof(adec_state->peak_power_history[0]));
+  vect_s32_set((int32_t*)adec_state->peak_power_history, 0, ADEC_PEAK_LINREG_HISTORY_SIZE * sizeof(adec_state->peak_power_history[0]) / sizeof(int32_t));
   adec_state->peak_power_history_idx = 0;
   adec_state->peak_power_history_valid = 0;
 

@@ -1,6 +1,25 @@
 // Copyright 2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+#include <assert.h>
 #include "stage1.h"
+
+// aec_init() asserts these same conditions, but aec_de_mode_conf only reaches aec_init() when
+// ADEC first triggers a delay estimation cycle - which can be long after startup, or never, if
+// ADEC is bypassed. A config that does not fit the AEC memory pool (e.g. one whose phase count
+// was written as a literal rather than derived from the compile-time limits it is checked
+// against) would otherwise only be caught the first time delay estimation actually runs. Checking
+// both runtime configurations here instead makes that fail at stage1_init().
+static void assert_aec_conf_fits_pool(const aec_conf_t *conf)
+{
+    assert(conf->num_y_channels <= AEC_MAX_Y_CHANNELS);
+    assert(conf->num_x_channels <= AEC_MAX_X_CHANNELS);
+    assert(conf->num_x_channels * conf->num_main_filt_phases <= AEC_LIB_MAX_PHASES);
+    assert(conf->num_x_channels * conf->num_shadow_filt_phases <= AEC_LIB_MAX_PHASES);
+    assert(AEC_MAIN_POOL_BYTES(conf->num_y_channels, conf->num_x_channels, conf->num_main_filt_phases)
+            <= sizeof(aec_memory_pool_t));
+    assert(AEC_SHADOW_POOL_BYTES(conf->num_y_channels, conf->num_x_channels, conf->num_shadow_filt_phases)
+            <= sizeof(aec_shadow_filt_memory_pool_t));
+}
 
 static void aec_switch_configuration(stage1_t *state, aec_conf_t *conf)
 {
@@ -33,6 +52,9 @@ static inline void get_delayed_frame(
 }
 
 void stage1_init(stage1_t *state, aec_conf_t *de_conf, aec_conf_t *non_de_conf, adec_config_t *adec_config) {
+    assert_aec_conf_fits_pool(de_conf);
+    assert_aec_conf_fits_pool(non_de_conf);
+
     state->delay_estimator_enabled = 0;
     state->ref_active_threshold =  f64_to_float_s32(pow(10, REF_ACTIVE_THRESHOLD_DB/20.0)); //-60dB
     state->hold_aec_count = 0; //No. of consecutive frames reference has been absent for

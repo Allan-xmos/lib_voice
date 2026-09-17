@@ -81,7 +81,10 @@ def run_aec_xc(audio_in, audio_ref, audio_out, adapt=-1, h_hat_dump=None, target
 
 
 def get_h_hat(filename, unique_id):
-    """Loads H_hat from an XC H_hat dump (a python source snippet, see dump_H_hat.c).
+    """Loads h_hat from an XC h_hat dump (a python source snippet, see dump_H_hat.c).
+
+    The dump holds the filter's time domain taps, shaped
+    (y_channel_count, x_channel_count, max_phase_count, tap_count).
 
     Uses a per-test temp module name/file so concurrent xdist workers don't clash.
     """
@@ -91,8 +94,8 @@ def get_h_hat(filename, unique_id):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     tmp_path.unlink()
-    assert module.H_hat is not None
-    return module.H_hat
+    assert module.h_hat is not None
+    return module.h_hat
 
 
 def write_log(passed, test_id, stdout_lines):

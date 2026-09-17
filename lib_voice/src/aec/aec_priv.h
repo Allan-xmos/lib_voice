@@ -247,10 +247,10 @@ void aec_calc_T(
 
 /** @brief Update filter
  *
- * This function updates the adaptive filter spectrum (`H_hat'). It calculates the delta update that is applied to the filter by scaling the X FIFO with the T values computed in `aec_compute_T()` and applies the delta update to `H_hat`.
- * A gradient constraint FFT is then applied to constrain the length of each phase of the filter to avoid wrapping when calculating `y_hat`
+ * This function updates the adaptive filter (`h_hat`). It calculates the delta update that is applied to the filter by scaling the X FIFO with the T values computed in `aec_compute_T()` and applies the delta update to `h_hat`.
+ * The update is transformed back into the time domain and its tail discarded, which applies the gradient constraint that keeps each phase of the filter short enough to avoid wrapping when calculating `y_hat`.
  *
- * @param[inout] state AEC state structure. `state->H_hat[y_ch]` is updated
+ * @param[inout] state AEC state structure. `state->h_hat[y_ch]` is updated
  * @param[in] y_ch mic channel index
  *
  * @ingroup aec_func
@@ -296,6 +296,9 @@ void aec_l2_calc_Error_and_Y_hat(
 /**
  * @brief Adapt one phase of the adaptive filter
  *
+ * Frequency domain filter variant, retained for the interference canceller which stores its filter as a spectrum.
+ * The AEC uses aec_l2_adapt_td().
+ *
  * @ingroup aec_low_level_func
  */
 void aec_l2_adapt_plus_fft_gc(
@@ -303,6 +306,62 @@ void aec_l2_adapt_plus_fft_gc(
         const bfp_complex_s32_t *X_fifo_ph,
         const bfp_complex_s32_t *T_ph
         );
+
+/**
+ * @brief Calculate the spectrum of one time domain adaptive filter phase
+ *
+ * Zero pads the AEC_FILTER_TAPS_PER_PHASE taps of `h_ph` out to AEC_PROC_FRAME_LENGTH in `scratch` and takes a real
+ * DFT of the result. On return `H_ph` is an AEC_FD_FRAME_LENGTH spectrum whose data points into `scratch`, and so it
+ * is only valid until the next use of that scratch buffer.
+ *
+ * @param[out] H_ph     Spectrum of the filter phase
+ * @param[in] h_ph      Time domain filter phase
+ * @param[inout] scratch Scratch buffer of at least (AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) int32_t
+ *
+ * @ingroup aec_low_level_func
+ */
+void aec_l2_filter_phase_to_spectrum(
+        bfp_complex_s32_t *H_ph,
+        const bfp_s16_t *h_ph,
+        bfp_s32_t *scratch);
+
+/**
+ * @brief Calculate Error and Y_hat for a channel over a range of bins, from a time domain filter.
+ *
+ * @ingroup aec_low_level_func
+ */
+void aec_l2_calc_Error_and_Y_hat_td(
+        bfp_complex_s32_t *Error,
+        bfp_complex_s32_t *Y_hat,
+        const bfp_complex_s32_t *Y,
+        const bfp_complex_s32_t *X_fifo,
+        const bfp_s16_t *h_hat,
+        unsigned num_x_channels,
+        unsigned num_phases,
+        unsigned start_offset,
+        unsigned length,
+        int32_t bypass_enabled,
+        bfp_s32_t *scratch);
+
+/**
+ * @brief Adapt one phase of the time domain adaptive filter
+ *
+ * Applies the filter update dH = T * conj(X) to a time domain filter phase. The gradient constraint is applied by
+ * discarding the tail of the inverse transform of the update, which is equivalent to constraining the updated filter
+ * because the constraint is linear and the stored filter is already constrained.
+ *
+ * @param[inout] h_hat_ph   Time domain filter phase to adapt
+ * @param[in] X_fifo_ph     Reference spectrum phase
+ * @param[in] T_ph          T for the x channel this phase belongs to
+ * @param[inout] scratch    Scratch buffer of at least (AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) int32_t
+ *
+ * @ingroup aec_low_level_func
+ */
+void aec_l2_adapt_td(
+        bfp_s16_t *h_hat_ph,
+        const bfp_complex_s32_t *X_fifo_ph,
+        const bfp_complex_s32_t *T_ph,
+        bfp_s32_t *scratch);
 
 /**
  * @brief Unify bfp_complex_s32_t chunks into a single exponent and headroom
@@ -345,6 +404,7 @@ void aec_priv_shadow_init(
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_phases);
+/// Reset a frequency domain filter. Used by the interference canceller; the AEC uses aec_priv_reset_filter_td().
 void aec_priv_reset_filter(
         bfp_complex_s32_t *H_hat,
         unsigned num_x_channels,
@@ -357,13 +417,60 @@ void aec_priv_copy_filter(
         unsigned num_dst_phases,
         unsigned num_src_phases);
 
+/// Reset a time domain filter
+void aec_priv_reset_filter_td(
+        bfp_s16_t *h_hat,
+        unsigned num_x_channels,
+        unsigned num_phases);
+
+/// Copy a time domain filter, zeroing any destination phases the source does not cover
+void aec_priv_copy_filter_td(
+        bfp_s16_t *h_hat_dst,
+        const bfp_s16_t *h_hat_src,
+        unsigned num_x_channels,
+        unsigned num_dst_phases,
+        unsigned num_src_phases);
+
 void aec_priv_bfp_complex_s32_copy(
         bfp_complex_s32_t *dst,
         const bfp_complex_s32_t *src);
 
+void aec_priv_bfp_s16_copy(
+        bfp_s16_t *dst,
+        const bfp_s16_t *src);
+
+/** @brief Expand a stored time domain filter phase into a real DFT buffer
+ *
+ * Widens AEC_FILTER_TD_PAIRS 16bit sample pairs into the even complex elements of a
+ * AEC_PROC_FRAME_LENGTH/2 element buffer, applying `shl` and zeroing the odd elements. The odd elements are the
+ * upper half of the impulse response, which the gradient constraint holds at zero.
+ *
+ * @param[out] dst  AEC_PROC_FRAME_LENGTH/2 complex elements
+ * @param[in] src   AEC_FILTER_TD_LENGTH 16bit mantissas
+ * @param[in] shl   Left shift applied while widening
+ */
+void aec_priv_td_expand(
+        complex_s32_t *dst,
+        const int16_t *src,
+        left_shift_t shl);
+
+/** @brief Collect a time domain filter phase from a real DFT buffer
+ *
+ * Inverse of aec_priv_td_expand()'s element mapping: copies the even complex elements of `src` into `dst`,
+ * discarding the odd ones.
+ *
+ * @param[out] dst  AEC_FILTER_TD_PAIRS complex elements
+ * @param[in] src   AEC_PROC_FRAME_LENGTH/2 complex elements
+ */
+void aec_priv_td_gather(
+        complex_s32_t *dst,
+        const complex_s32_t *src);
+
 void aec_priv_bfp_s32_reset(bfp_s32_t *a);
 
 void aec_priv_bfp_complex_s32_reset(bfp_complex_s32_t *a);
+
+void aec_priv_bfp_s16_reset(bfp_s16_t *a);
 
 void aec_priv_compare_filters(
         aec_filter_state_t *main_state,
@@ -400,6 +507,7 @@ void aec_priv_update_X_fifo_and_calc_sigmaXX(
         unsigned num_phases,
         uint32_t sigma_xx_shift);
 
+/// Frequency domain filter variant, used by the interference canceller
 void aec_priv_calc_Error_and_Y_hat(
         bfp_complex_s32_t *Error,
         bfp_complex_s32_t *Y_hat,
@@ -409,6 +517,17 @@ void aec_priv_calc_Error_and_Y_hat(
         unsigned num_x_channels,
         unsigned num_phases,
         int32_t bypass_enabled);
+
+void aec_priv_calc_Error_and_Y_hat_td(
+        bfp_complex_s32_t *Error,
+        bfp_complex_s32_t *Y_hat,
+        const bfp_complex_s32_t *Y,
+        const bfp_complex_s32_t *X_fifo,
+        const bfp_s16_t *h_hat,
+        unsigned num_x_channels,
+        unsigned num_phases,
+        int32_t bypass_enabled,
+        bfp_s32_t *scratch);
 
 void aec_priv_calc_coherence(
         coherence_mu_params_t *coh_mu_state,
@@ -446,12 +565,21 @@ void aec_priv_calc_inv_X_energy(
         unsigned is_shadow,
         unsigned normdenom_apply_factor_of_2);
 
+/// Frequency domain filter variant, used by the interference canceller
 void aec_priv_filter_adapt(
         bfp_complex_s32_t *H_hat,
         const bfp_complex_s32_t *X_fifo,
         const bfp_complex_s32_t *T,
         unsigned num_x_channels,
         unsigned num_phases);
+
+void aec_priv_filter_adapt_td(
+        bfp_s16_t *h_hat,
+        const bfp_complex_s32_t *X_fifo,
+        const bfp_complex_s32_t *T,
+        unsigned num_x_channels,
+        unsigned num_phases,
+        bfp_s32_t *scratch);
 
 void aec_priv_compute_T(
         bfp_complex_s32_t *T,

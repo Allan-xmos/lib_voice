@@ -62,13 +62,17 @@ void adec_process_frame(
  * about the peak phase energy that can then be used to gauge the AEC filter convergence and the reliability of the
  * measured delay.
  *
+ * The phase energies are the energies of the filter's time domain impulse response per phase. They are only
+ * meaningful relative to each other: the delay comes from the index of the largest, and the convergence metrics
+ * derived from them are ratios.
+ *
  * @param[out] de_state Delay estimator output structure
- * @param[in] H_hat bfp_complex_s32_t array storing the AEC filter spectrum
+ * @param[in] h_hat bfp_s16_t array storing the time domain AEC filter phases (aec_filter_state_t::h_hat)
  * @param[in] Number of phases in the AEC filter
  *
  * @ingroup adec_func
  */
 void adec_estimate_delay (
         de_output_t *de_output,
-        const bfp_complex_s32_t* H_hat,
+        const bfp_s16_t* h_hat,
         unsigned num_phases);

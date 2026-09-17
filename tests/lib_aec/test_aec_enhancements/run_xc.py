@@ -66,20 +66,23 @@ def run_aec_xc(y_data, x_data, testname, adapt=-1, h_hat_dump=None, adapt_mode=a
 
 
 def get_h_hat(filename, aec):
-    """Gets H_hat from XC H_hat dump
+    """Gets h_hat from XC h_hat dump
+
+    The dump holds the filter's time domain taps, shaped
+    (y_channel_count, x_channel_count, max_phase_count, tap_count).
 
     WARNING: This could be dangerous, the filename argument is parsed as
     python when aec = 'xc'.
     """
-    H_hat = None
+    h_hat = None
 
     if aec == 'xc':
         shutil.copy2(filename, "temp.py")
-        from temp import H_hat
+        from temp import h_hat
     else:
         with open(filename, "rb") as f:
-            H_hat = np.load(f)
-    assert H_hat is not None
-    return H_hat
+            h_hat = np.load(f)
+    assert h_hat is not None
+    return h_hat
 
 

@@ -1,5 +1,5 @@
 set(LIB_NAME lib_voice)
-set(LIB_VERSION 1.1.0)
+set(LIB_VERSION 2.0.0)
 set(LIB_DEPENDENT_MODULES
     "lib_xcore_math(v3.0.0)"
     "ai_tools(v1.4.3.dev40)"
@@ -27,6 +27,16 @@ elseif(BUILD_NATIVE)
 endif()
 
 set(LIB_CXX_SRCS "")
+
+# Hand written XS3 assembly for the hottest time domain filter loops. Set explicitly rather than left to the
+# default src/*.S glob so that the vx4b and native builds, which take the C reference implementations in
+# aec_priv_impl.c instead, are never handed an XS3 source.
+if(APP_BUILD_ARCH STREQUAL "xs3a")
+    set(LIB_ASM_SRCS src/aec/aec_priv_td_xs3.S)
+else()
+    set(LIB_ASM_SRCS "")
+endif()
+
 include(${CMAKE_CURRENT_LIST_DIR}/vnr_model.cmake)
 file(RELATIVE_PATH MODEL_OUT_DIR_REL ${CMAKE_CURRENT_LIST_DIR} ${MODEL_OUT_DIR})
 

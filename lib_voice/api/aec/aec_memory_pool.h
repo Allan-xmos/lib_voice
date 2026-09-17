@@ -45,6 +45,8 @@
  * @ingroup aec_memory_pool
  */
 typedef struct {
+    /** Memory pointed to by main filter aec_filter_state_t::filter_scratch*/
+    int32_t filter_scratch[AEC_MAX_Y_CHANNELS][AEC_FILTER_SCRATCH_LENGTH];
     /** Memory pointed to by aec_shared_filter_state_t::y and aec_shared_filter_state_t::Y*/
     int32_t mic_input_frame[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
     /** Memory pointed to by aec_shared_filter_state_t::x and aec_shared_filter_state_t::X. Also reused for main filter
@@ -54,9 +56,12 @@ typedef struct {
     int32_t mic_prev_samples[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE];
     /** Memory pointed to by aec_shared_filter_state_t::prev_x*/
     int32_t ref_prev_samples[AEC_MAX_X_CHANNELS][AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE];
-    /** Memory pointed to by main filter aec_filter_state_t::H_hat, aec_shared_filter_state_t::X_fifo, main filter
-     * aec_filter_state_t::X_fifo_1d and shadow filter aec_filter_state_t::X_fifo_1d*/
-    complex_s32_t phase_pool_H_hat_X_fifo[((AEC_MAX_Y_CHANNELS*AEC_MAX_X_CHANNELS*AEC_MAIN_FILTER_PHASES) + (AEC_MAX_X_CHANNELS*AEC_MAIN_FILTER_PHASES)) * AEC_FD_FRAME_LENGTH];
+    /** Memory pointed to by main filter aec_filter_state_t::h_hat. The main filter is stored in the time domain as
+     * AEC_FILTER_TD_LENGTH 16bit mantissas per phase.*/
+    int16_t phase_pool_h_hat[(AEC_MAX_Y_CHANNELS*AEC_MAX_X_CHANNELS*AEC_MAIN_FILTER_PHASES) * AEC_FILTER_TD_LENGTH];
+    /** Memory pointed to by aec_shared_filter_state_t::X_fifo, main filter aec_filter_state_t::X_fifo_1d and shadow
+     * filter aec_filter_state_t::X_fifo_1d*/
+    complex_s32_t phase_pool_X_fifo[(AEC_MAX_X_CHANNELS*AEC_MAIN_FILTER_PHASES) * AEC_FD_FRAME_LENGTH];
     /** Memory pointed to by main filter aec_filter_state_t::Error and aec_filter_state_t::error*/
     complex_s32_t Error[AEC_MAX_Y_CHANNELS][AEC_FD_FRAME_LENGTH];
     /** Memory pointed to by main filter aec_filter_state_t::Y_hat and aec_filter_state_t::y_hat*/
@@ -105,8 +110,11 @@ typedef struct {
  * @ingroup aec_memory_pool
  */
 typedef struct {
-    /** Memory pointed to by shadow filter aec_filter_state_t::H_hat*/
-    complex_s32_t phase_pool_H_hat[AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_SHADOW_FILTER_PHASES * AEC_FD_FRAME_LENGTH];
+    /** Memory pointed to by shadow filter aec_filter_state_t::filter_scratch*/
+    int32_t filter_scratch[AEC_MAX_Y_CHANNELS][AEC_FILTER_SCRATCH_LENGTH];
+    /** Memory pointed to by shadow filter aec_filter_state_t::h_hat. The shadow filter is stored in the time domain as
+     * AEC_FILTER_TD_LENGTH 16bit mantissas per phase.*/
+    int16_t phase_pool_h_hat[AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_SHADOW_FILTER_PHASES * AEC_FILTER_TD_LENGTH];
     /** Memory pointed to by shadow filter aec_filter_state_t::Error and aec_filter_state_t::error*/
     complex_s32_t Error[AEC_MAX_Y_CHANNELS][AEC_FD_FRAME_LENGTH];
     /** Memory pointed to by shadow filter aec_filter_state_t::Y_hat and aec_filter_state_t::y_hat*/

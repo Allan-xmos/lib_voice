@@ -1,6 +1,44 @@
 lib_voice change log
 ====================
 
+2.0.0
+-----
+
+  * CHANGED: AEC adaptive filter is stored in the time domain as 16bit block floating point taps
+    instead of as a 32bit complex spectrum, reducing AEC memory use by approximately 86kB in the
+    default 2 mic, 2 reference, 10 main phase, 5 shadow phase configuration. The spectrum of a
+    filter phase is recovered on demand, and the block LMS gradient constraint is applied to the
+    filter update rather than to the whole filter, so the transform count per frame is unchanged.
+
+  * ADDED: XS3 assembly implementations of the two element order conversions the time domain filter
+    needs, ``aec_priv_td_expand()`` and ``aec_priv_td_gather()``. They are bit exact with the C in
+    ``aec_priv_impl.c``, which remains the implementation for all other targets, and between them
+    they account for most of the cost the time domain filter adds. See
+    ``lib_voice/src/aec/aec_priv_td_xs3.S``.
+
+  * Changes to the API, all of which are breaking:
+
+    - ``aec_filter_state_t::H_hat`` (``bfp_complex_s32_t``) is replaced by
+      ``aec_filter_state_t::h_hat`` (``bfp_s16_t``), holding ``AEC_FILTER_TAPS_PER_PHASE`` time
+      domain taps per phase.
+
+    - ``aec_filter_state_t::filter_scratch`` added. The memory pools grew a matching region, so
+      applications that allocate the pools through ``aec_state_t`` need no change.
+
+    - ``adec_estimate_delay()`` takes the time domain filter. Its phase powers are now impulse
+      response energies; they remain meaningful only relative to each other, which is all the
+      delay estimator and its convergence metrics use.
+
+    - ``aec_l2_calc_Error_and_Y_hat_td()`` and ``aec_l2_adapt_td()`` added, and are what the AEC
+      uses. The frequency domain ``aec_l2_calc_Error_and_Y_hat()`` and
+      ``aec_l2_adapt_plus_fft_gc()`` are retained for the interference canceller, which continues
+      to store its filter as a spectrum.
+
+    - ``AEC_FILTER_TAPS_PER_PHASE`` and ``AEC_ZEROVAL_HR_S16`` added.
+
+  * Note: the memory pool capacity rule is now a byte budget rather than a phase count, because
+    filter phases and X FIFO phases are no longer the same size. See ``aec_init()``.
+
 1.1.0
 -----
 

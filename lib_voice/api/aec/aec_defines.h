@@ -109,6 +109,74 @@
  */
 #define AEC_FD_FRAME_LENGTH ((AEC_PROC_FRAME_LENGTH / 2) + 1)
 
+/** @brief Number of time domain taps stored per adaptive filter phase.
+ *
+ * The AEC adaptive filter is stored in the time domain (see aec_filter_state_t::h_hat). Every filter phase models
+ * AEC_FRAME_ADVANCE taps of the echo path; the remaining (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE) taps of a phase
+ * are constrained to zero so that the circular convolution performed in the frequency domain is equivalent to a
+ * linear convolution. This constraint is what the block LMS algorithm refers to as the `gradient constraint`, and
+ * storing the filter in the time domain makes it implicit rather than something that has to be re-applied every frame.
+ *
+ * NOT USER MODIFIABLE.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_TAPS_PER_PHASE (AEC_FRAME_ADVANCE)
+
+/** @brief Number of complex slots used to store one time domain filter phase.
+ *
+ * The filter phases are stored in the element order that the low level real DFT works in, rather
+ * than in natural tap order. A real AEC_PROC_FRAME_LENGTH point transform is implemented as an
+ * AEC_PROC_FRAME_LENGTH/2 point complex transform in which time domain sample pair
+ * (n = 2k, n = 2k + 1) is held as the real and imaginary parts of complex element
+ * `n_bitrev(k, log2(AEC_PROC_FRAME_LENGTH/2))`.
+ *
+ * Keeping the taps in that order means `fft_dif_inverse()` and `fft_dit_forward()` can be paired so
+ * that neither needs an index bit reversal pass, which is what makes recovering and updating a
+ * phase's spectrum cost no more than the frequency domain filter implementation's gradient
+ * constraint did.
+ *
+ * Only the AEC_FILTER_TAPS_PER_PHASE lowest taps are non-zero, and those fall in the even complex
+ * elements, so a phase needs AEC_PROC_FRAME_LENGTH/4 complex slots. The slots holding sample pairs
+ * at or beyond AEC_FILTER_TAPS_PER_PHASE are permanently zero; they are kept so that expanding a
+ * phase into the transform buffer is a fixed stride operation rather than an indexed scatter.
+ *
+ * NOT USER MODIFIABLE.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_TD_PAIRS (AEC_PROC_FRAME_LENGTH / 4)
+
+/** @brief log2 of @ref AEC_FILTER_TD_PAIRS, i.e. the number of index bits the element order reverses.
+ *
+ * NOT USER MODIFIABLE.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_TD_PAIRS_LOG2 (7)
+
+/** @brief Number of 16bit mantissas used to store one time domain filter phase.
+ *
+ * This is the length of each aec_filter_state_t::h_hat entry. See @ref AEC_FILTER_TD_PAIRS.
+ *
+ * NOT USER MODIFIABLE.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_TD_LENGTH (2 * AEC_FILTER_TD_PAIRS)
+
+/** @brief Size of the per y channel filter transform scratch buffer, in 32bit words.
+ *
+ * Large enough for an in-place real DFT of one filter phase (AEC_PROC_FRAME_LENGTH samples plus
+ * AEC_FFT_PADDING so the unpacked spectrum fits) followed by an AEC_FILTER_TD_LENGTH word
+ * accumulator for the filter update. See aec_filter_state_t::filter_scratch.
+ *
+ * NOT USER MODIFIABLE.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_SCRATCH_LENGTH ((AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) + AEC_FILTER_TD_LENGTH)
+
 /** @brief Maximum total number of phases supported in the AEC library
  * This is the maximum number of total phases supported in the AEC library. Total phases are calculated by summing
  * phases across adaptive filters for all x-y pairs.
@@ -143,6 +211,7 @@
 
 #define AEC_ZEROVAL_EXP (-1024) /// A very small exponent indicating 0 value.
 #define AEC_ZEROVAL_HR (31) /// Headroom value used in BFP arrays when indicating 0 value by setting exponent to AEC_ZEROVAL_EXP
+#define AEC_ZEROVAL_HR_S16 (15) /// AEC_ZEROVAL_HR equivalent for 16bit BFP arrays
 
 /** @brief Maximum number of hardware threads supported by the AEC.
  *

@@ -127,7 +127,11 @@ def run_dut(input_data, xe, target="xs3a", tmp_folder=None, **run_kwargs):
         output_data, target_stdout = _run_dut_inner(input_data, xe_path, tmp_path, target, **run_kwargs)
         return output_data, target_stdout
 
-    with tempfile.TemporaryDirectory(dir=".", suffix=xe_path.stem) as auto_tmp:
+    # ignore_cleanup_errors: on Windows the xscope_fileio host process can still hold stdout.txt
+    # open when this context exits, and a failed temp dir cleanup must not discard a completed
+    # measurement.
+    with tempfile.TemporaryDirectory(dir=".", suffix=xe_path.stem,
+                                     ignore_cleanup_errors=True) as auto_tmp:
         tmp_path = Path(auto_tmp)
         output_data, target_stdout = _run_dut_inner(input_data, xe_path, tmp_path, target, **run_kwargs)
 

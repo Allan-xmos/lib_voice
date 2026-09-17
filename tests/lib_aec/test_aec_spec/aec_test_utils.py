@@ -122,7 +122,10 @@ def get_h_hat_impulse_response(h_hat, y_channel, x_channel):
     """Gets the impulse response of h_hat.
 
     h_hat is an array internal to the aec with a shape as follows:
-    (y_channel_count, x_channel_count, max_phase_count, f_bin_count)
+    (y_channel_count, x_channel_count, max_phase_count, tap_count)
+
+    The aec stores its filter in the time domain, so each phase already is its own impulse
+    response and the phases just need concatenating.
 
     Args:
         h_hat: h_hat array
@@ -133,18 +136,14 @@ def get_h_hat_impulse_response(h_hat, y_channel, x_channel):
         Impulse response of h_hat for channel pair (y_channel, x_channel)
     """
 
-    y_channel_count = h_hat.shape[0]
-    x_channel_count = h_hat.shape[1]
     max_phase_count = h_hat.shape[2]
-    f_bin_count     = h_hat.shape[3]
-    frame_advance = 240
-    h_hat_ir = np.zeros((max_phase_count * frame_advance,))
+    tap_count       = h_hat.shape[3]
+    h_hat_ir = np.zeros((max_phase_count * tap_count,))
 
     for phase in range(max_phase_count):
-        phase_ir = np.fft.irfft(h_hat[y_channel][x_channel][phase])
-        start   = frame_advance *  phase
-        end     = frame_advance * (phase + 1)
-        h_hat_ir[start:end] = phase_ir[:frame_advance]
+        start = tap_count *  phase
+        end   = tap_count * (phase + 1)
+        h_hat_ir[start:end] = h_hat[y_channel][x_channel][phase]
 
     return h_hat_ir
 

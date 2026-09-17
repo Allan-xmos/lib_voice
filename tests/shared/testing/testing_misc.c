@@ -77,3 +77,19 @@ unsigned vector_int32_maxdiff(int32_t * B, int B_exp, double * f, int start, int
     }
     return max_diff;
 }
+
+unsigned vector_int16_maxdiff(int16_t * B, int B_exp, double * f, int start, int count){
+    unsigned max_diff = 0;
+
+    for(int i=start;i<start + count;i++){
+        //Scale the reference into B's exponent and round, so the diff is in units of B's LSB
+        double r = ldexp(f[i], -B_exp);
+        int32_t v = (int32_t)((r < 0) ? (r - 0.5) : (r + 0.5));
+        int diff = v - B[i];
+        if (diff < 0 ) diff = -diff;
+        if( (unsigned)diff > max_diff){
+            max_diff = (unsigned)diff;
+        }
+    }
+    return max_diff;
+}

@@ -19,21 +19,35 @@ void aec_dump_H_hat(aec_filter_state_t *state, file_t *file_handle){
     file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
     sprintf(strbuf, "max_phase_count = %u\n", state->num_phases);
     file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
-    sprintf(strbuf, "f_bin_count = %u\n", state->H_hat[0][0].length);
+    sprintf(strbuf, "tap_count = %u\n", AEC_FILTER_TAPS_PER_PHASE);
     file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
-    sprintf(strbuf, "H_hat = np.zeros((y_channel_count, x_channel_count, max_phase_count, f_bin_count), dtype=np.complex128)\n");
+    /* The AEC filter is stored in the time domain, so the impulse response is dumped directly rather than as a
+     * spectrum that the reader has to inverse transform. The stored taps are in the low level DFT's element order
+     * (see AEC_FILTER_TD_PAIRS), so they are unscrambled into natural tap order here. */
+    sprintf(strbuf, "h_hat = np.zeros((y_channel_count, x_channel_count, max_phase_count, tap_count), dtype=np.float64)\n");
     file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
 
     for(int ych=0; ych<state->shared_state->num_y_channels; ych++) {
         for(int xch=0; xch<state->shared_state->num_x_channels; xch++) {
             for(int ph=0; ph<state->num_phases; ph++) {
-                sprintf(strbuf, "H_hat[%u][%u][%u] = ", ych, xch, ph);
+                bfp_s16_t *h_ph = &state->h_hat[ych][xch*state->num_phases + ph];
+                double taps[AEC_FILTER_TAPS_PER_PHASE];
+
+                for(unsigned m=0; m<AEC_FILTER_TD_PAIRS; m++) {
+                    const unsigned k = n_bitrev(m, AEC_FILTER_TD_PAIRS_LOG2);
+                    if((2*k) >= AEC_FILTER_TAPS_PER_PHASE) {
+                        continue; //permanently zero slot
+                    }
+                    taps[2*k] = ldexp(h_ph->data[2*m], h_ph->exp);
+                    taps[2*k + 1] = ldexp(h_ph->data[2*m + 1], h_ph->exp);
+                }
+
+                sprintf(strbuf, "h_hat[%u][%u][%u] = ", ych, xch, ph);
                 file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
                 sprintf(strbuf, "np.asarray([");
                 file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
-                for(int i=0; i<state->H_hat[ych][xch*state->num_phases + ph].length; i++) {
-                    sprintf(strbuf, "%.12f + %.12fj, ", ldexp( state->H_hat[ych][xch*state->num_phases + ph].data[i].re, state->H_hat[ych][xch*state->num_phases + ph].exp),
-                    ldexp( state->H_hat[ych][xch*state->num_phases + ph].data[i].im, state->H_hat[ych][xch*state->num_phases + ph].exp));
+                for(int i=0; i<AEC_FILTER_TAPS_PER_PHASE; i++) {
+                    sprintf(strbuf, "%.12f, ", taps[i]);
                     file_write(file_handle, (uint8_t*)strbuf,  strlen(strbuf));
                 }
                 sprintf(strbuf, "])\n");

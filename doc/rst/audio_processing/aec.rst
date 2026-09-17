@@ -100,6 +100,26 @@ For each frame, the AEC performs the following high-level steps:
 5. Transform the error signal back to the time domain to produce the
    echo-cancelled output.
 
+Filter coefficient storage
+--------------------------
+
+The adaptive filters are stored in the time domain, as 16-bit block floating point taps with one
+exponent per phase. Each phase holds :c:macro:`AEC_FILTER_TAPS_PER_PHASE` taps, and its spectrum is
+recovered on demand in step 2 with a real DFT of the zero padded taps.
+
+This costs a quarter of the memory of the equivalent frequency domain representation, at no extra
+transform cost per frame. The block LMS algorithm requires a gradient constraint, which forces each
+filter phase back to :c:macro:`AEC_FILTER_TAPS_PER_PHASE` taps after every update and is normally
+implemented as an inverse transform, a tail zeroing, and a forward transform of the whole filter.
+Because that constraint is linear and a time domain filter of that length is already constrained,
+it is sufficient to apply it to the filter update alone, so step 4 performs one inverse transform
+per phase and step 2 performs one forward transform per phase, the same total as a frequency domain
+filter.
+
+The trade off is coefficient precision: the filter is requantised to 16-bit mantissas once per
+frame, so the quantisation floor of a phase sits approximately 16 bits below that phase's largest
+tap.
+
 Usage
 -----
 

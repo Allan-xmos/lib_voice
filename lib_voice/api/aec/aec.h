@@ -48,11 +48,17 @@
  * \anchor aec_phase_pool_capacity The runtime configuration must be a subset of compile-time limits. This means:
  * - num_y_channels <= @ref AEC_MAX_Y_CHANNELS
  * - num_x_channels <= @ref AEC_MAX_X_CHANNELS
- * - Total phase-pool demand should not exceed pool capacity, i.e.:
- *   (num_y_channels * num_x_channels * num_main_filter_phases) +
- *   (num_x_channels * num_main_filter_phases) <=
- *   (@ref AEC_MAX_Y_CHANNELS * @ref AEC_MAX_X_CHANNELS * @ref AEC_MAIN_FILTER_PHASES) +
- *   (@ref AEC_MAX_X_CHANNELS * @ref AEC_MAIN_FILTER_PHASES)
+ * - Total phase-pool demand should not exceed pool capacity. A filter phase and an X FIFO phase are different sizes,
+ *   because the filter is stored as @ref AEC_FILTER_TAPS_PER_PHASE 16bit time domain taps while the X FIFO is stored
+ *   as an @ref AEC_FD_FRAME_LENGTH 32bit complex spectrum, so this is a budget in bytes rather than in phases:
+ *
+ *   ((num_y_channels * num_x_channels * num_main_filter_phases) * F) +
+ *   ((num_x_channels * num_main_filter_phases) * X) <=
+ *   ((@ref AEC_MAX_Y_CHANNELS * @ref AEC_MAX_X_CHANNELS * @ref AEC_MAIN_FILTER_PHASES) * F) +
+ *   ((@ref AEC_MAX_X_CHANNELS * @ref AEC_MAIN_FILTER_PHASES) * X)
+ *
+ *   where F = @ref AEC_FILTER_TAPS_PER_PHASE * sizeof(int16_t) and
+ *   X = @ref AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)
  * - and
  *   (num_y_channels * num_x_channels * num_shadow_filter_phases) <=
  *   (@ref AEC_MAX_Y_CHANNELS * @ref AEC_MAX_X_CHANNELS * @ref AEC_SHADOW_FILTER_PHASES)

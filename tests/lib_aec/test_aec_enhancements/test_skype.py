@@ -79,10 +79,9 @@ def test_skype(channel_count, target):
     error_xc = output_wav_file[:,0]
     _, leq_error_xc = wtf.leq_smooth(error_xc, fs, 0.05)
 
-    Hxmos = run_xc.get_h_hat(filter_fd_file, 'xc')[0,0]
-    print('Hxmos.shape = ',Hxmos.shape)
-    #Hxmos = np.load('skype_H_fd_xc.npy')[0,0]
-    h = np.fft.irfft(Hxmos)
+    # The AEC filter is stored in the time domain, so the dump is already an impulse response per phase
+    h = run_xc.get_h_hat(filter_fd_file, 'xc')[0,0]
+    print('h.shape = ',h.shape)
     hxmos_xc = np.zeros(frame_advance*phases)
     for p in range(phases):
         hxmos_xc[p*frame_advance: frame_advance*(p+1)] = h[p, :frame_advance]

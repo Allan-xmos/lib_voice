@@ -10,6 +10,34 @@
 #define TEST_NUM_X (2)
 #define TEST_SHADOW_PHASES (3)
 #define NUM_BINS ((AEC_PROC_FRAME_LENGTH/2) + 1)
+#define NUM_TAPS (AEC_FILTER_TAPS_PER_PHASE)
+
+static double sine_lut_fwd[AEC_PROC_FRAME_LENGTH / 4 + 1];
+
+/* Reference spectrum of one time domain filter phase: zero pad the taps out to a full processing block and take a
+ * real DFT. This mirrors what aec_l2_filter_phase_to_spectrum() does in the library, and the zero tail is what makes
+ * the resulting spectrum a gradient constrained one. */
+static void filter_phase_to_spectrum_fp(
+        complex_double_t *H_ph,
+        const double *h_ph) {
+    complex_double_t scratch[AEC_PROC_FRAME_LENGTH];
+    int N = AEC_PROC_FRAME_LENGTH;
+
+    for(int i=0; i<N; i++) {
+        scratch[i].re = (i < NUM_TAPS) ? h_ph[i] : 0.0;
+        scratch[i].im = 0.0;
+    }
+    bit_reverse(scratch, N);
+    forward_fft(scratch, N, sine_lut_fwd);
+
+    for(int i=0; i<NUM_BINS; i++) {
+        H_ph[i].re = scratch[i].re;
+        H_ph[i].im = scratch[i].im;
+    }
+    //A real input gives a purely real DC and nyquist bin
+    H_ph[0].im = 0.0;
+    H_ph[NUM_BINS-1].im = 0.0;
+}
 
 void calc_Error_and_Y_hat_fp(
         complex_double_t (*Error)[NUM_BINS],
@@ -80,9 +108,14 @@ void test_calc_Error_and_Y_hat() {
     complex_double_t Y_hat_fp[TEST_NUM_Y][NUM_BINS];
     complex_double_t Error_fp[TEST_NUM_Y][NUM_BINS];
 
+    make_sine_table(sine_lut_fwd, AEC_PROC_FRAME_LENGTH);
+
     unsigned seed = 2;
     int max_diff = 0;
-    for(int iter=0; iter<(1<<12)/F; iter++) {
+    /* Fewer iterations than the frequency domain filter version of this test: the reference now has to take a double
+     * precision DFT of every filter phase on every iteration to get the spectrum the DUT works from, which on this
+     * target is several orders of magnitude more expensive than the reference multiply-accumulate itself. */
+    for(int iter=0; iter<(1<<8)/F; iter++) {
         int32_t new_frame[AEC_MAX_Y_CHANNELS+AEC_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
         unsigned is_main = pseudo_rand_uint32(&seed) % 2;
         aec_filter_state_t *state_ptr;
@@ -103,22 +136,33 @@ void test_calc_Error_and_Y_hat() {
             //standalone testing.
             bfp_complex_s32_init(&state_ptr->shared_state->Y[ch], (complex_s32_t*)&state_ptr->shared_state->y[ch].data[0], 0, NUM_BINS, 0);
         }
-        //Generate H_hat
+        //Generate h_hat as time domain taps, then derive the reference spectrum from them
         for(int ch=0; ch<num_y_channels; ch++) {
             for(int ph=0; ph<num_x_channels*state_ptr->num_phases; ph++) {
-                state_ptr->H_hat[ch][ph].exp = pseudo_rand_int(&seed, -31, 32);
-                state_ptr->H_hat[ch][ph].hr = pseudo_rand_uint32(&seed) % 3;
-                for(int i=0; i<NUM_BINS; i++) {
-                    state_ptr->H_hat[ch][ph].data[i].re = pseudo_rand_int32(&seed) >> state_ptr->H_hat[ch][ph].hr;
-                    state_ptr->H_hat[ch][ph].data[i].im = pseudo_rand_int32(&seed) >> state_ptr->H_hat[ch][ph].hr;
-                    if(is_main) {
-                        H_hat_fp[ch][ph][i].re = ldexp(state_ptr->H_hat[ch][ph].data[i].re, state_ptr->H_hat[ch][ph].exp);
-                        H_hat_fp[ch][ph][i].im = ldexp(state_ptr->H_hat[ch][ph].data[i].im, state_ptr->H_hat[ch][ph].exp);
+                /* Fill the stored phase, which is in the low level DFT's element order (see AEC_FILTER_TD_PAIRS),
+                 * and read the natural order taps back out of it for the reference. The slots holding taps at or
+                 * beyond NUM_TAPS are held at zero by the gradient constraint, so they are generated as zero. */
+                double h_ph_fp[NUM_TAPS];
+                bfp_s16_t *h_ph = &state_ptr->h_hat[ch][ph];
+                h_ph->exp = pseudo_rand_int(&seed, -31, 32);
+                h_ph->hr = pseudo_rand_uint32(&seed) % 3;
+                for(unsigned m=0; m<AEC_FILTER_TD_PAIRS; m++) {
+                    const unsigned k = n_bitrev(m, AEC_FILTER_TD_PAIRS_LOG2);
+                    for(unsigned half=0; half<2; half++) {
+                        const unsigned tap = 2*k + half;
+                        int16_t mant = 0;
+                        if(tap < NUM_TAPS) {
+                            mant = (int16_t)(pseudo_rand_int32(&seed) >> (16 + h_ph->hr));
+                            h_ph_fp[tap] = ldexp(mant, h_ph->exp);
+                        }
+                        h_ph->data[2*m + half] = mant;
                     }
-                    else {
-                        H_hat_shadow_fp[ch][ph][i].re = ldexp(state_ptr->H_hat[ch][ph].data[i].re, state_ptr->H_hat[ch][ph].exp);
-                        H_hat_shadow_fp[ch][ph][i].im = ldexp(state_ptr->H_hat[ch][ph].data[i].im, state_ptr->H_hat[ch][ph].exp);
-                    }
+                }
+                if(is_main) {
+                    filter_phase_to_spectrum_fp(H_hat_fp[ch][ph], h_ph_fp);
+                }
+                else {
+                    filter_phase_to_spectrum_fp(H_hat_shadow_fp[ch][ph], h_ph_fp);
                 }
             }
         }
@@ -200,7 +244,7 @@ void test_calc_Error_and_Y_hat() {
                     bfp_complex_s32_init(&Y_hat_par[index], &state_ptr->Y_hat[ch].data[start_offset], state_ptr->Y_hat[ch].exp, length, 0);
                     Y_hat_par[index].hr = state_ptr->Y_hat[ch].hr;
 
-                    aec_l2_calc_Error_and_Y_hat(&Error_par[index], &Y_hat_par[index], &state_ptr->shared_state->Y[ch], state_ptr->X_fifo_1d, state_ptr->H_hat[ch], num_x_channels, state_ptr->num_phases, start_offset, length, state_ptr->shared_state->config_params.aec_core_conf.bypass);
+                    aec_l2_calc_Error_and_Y_hat_td(&Error_par[index], &Y_hat_par[index], &state_ptr->shared_state->Y[ch], state_ptr->X_fifo_1d, state_ptr->h_hat[ch], num_x_channels, state_ptr->num_phases, start_offset, length, state_ptr->shared_state->config_params.aec_core_conf.bypass, &state_ptr->filter_scratch[ch]);
                     //printf("Error: (%d, %d), Y_hat: (%d,%d)\n", Error_par[index].exp, Error_par[index].hr, Y_hat_par[index].exp, Y_hat_par[index].hr);
                 }
             }
@@ -235,17 +279,21 @@ void test_calc_Error_and_Y_hat() {
 
             int32_t *dut_Y_hat_ptr = (int32_t*)&state_ptr->Y_hat[ch].data[0];
             double *ref_Y_hat_ptr = (double*)&Y_hat_fp[ch][0];
+            /* The filter spectrum is now recovered with a 32bit BFP real DFT of the stored taps rather than being
+             * held as a spectrum, so the error budget includes one 512 point BFP transform per phase on top of the
+             * accumulation error the frequency domain filter implementation had. That raises the observed worst case
+             * from a handful of LSBs to ~76, which is the ~2^-25 relative accuracy of the transform. */
             for(int i=0; i<NUM_BINS*2; i++) {
                 //Error
                 int32_t diff = double_to_int32(ref_Error_ptr[i], state_ptr->Error[ch].exp) - dut_Error_ptr[i];
                 diff = (diff < 0) ? -diff : diff;
                 if(diff > max_diff) max_diff = diff;
-                TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(1<<4, max_diff, "Error diff too large.");
+                TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(1<<8, max_diff, "Error diff too large.");
                 //Y_hat
                 diff = double_to_int32(ref_Y_hat_ptr[i], state_ptr->Y_hat[ch].exp) - dut_Y_hat_ptr[i];
                 diff = (diff < 0) ? -diff : diff;
                 if(diff > max_diff) max_diff = diff;
-                TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(1<<4, max_diff, "Y_hat diff too large.");
+                TEST_ASSERT_LESS_OR_EQUAL_UINT32_MESSAGE(1<<8, max_diff, "Y_hat diff too large.");
             }
         }
 

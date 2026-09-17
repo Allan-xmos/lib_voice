@@ -279,21 +279,47 @@ typedef struct {
      * AEC_FD_FRAME_LENGTH, complex 32bit array per y channel.*/
     bfp_complex_s32_t Error[AEC_MAX_Y_CHANNELS];
 
-    /** BFP array pointing to the adaptive filter spectrum.
-     * The filter spectrum is stored as a num_y_channels x total_phases_across_all_x_channels array where each H_hat[i][j]
-     * entry points to the spectrum of a single phase.
+    /** BFP array pointing to the time domain adaptive filter taps.
+     * The filter is stored as a num_y_channels x total_phases_across_all_x_channels array where each h_hat[i][j]
+     * entry points to the impulse response of a single phase.
      *
      * Number of phases in the filter refers to its tail length. A filter with more phases would be able to model a longer
      * echo thereby causing better echo cancellation.
      *
      * For example, for a 2 y-channels, 3 x-channels, 10 phases per x channel configuration,
-     * the filter spectrum phases are stored in a 2x30 array. For a given y channel, say y channel 0, H_hat[0][0] to
-     * H_hat[0][9] points to 10 phases of H_hat<SUB>y0x0</SUB>, H_hat[0][10] to H_hat[0][19] points to 10 phases of
-     * H_hat<SUB>y0x1</SUB> and H_hat[0][20] to H_hat[0][29] points to 10 phases of H_hat<SUB>y0x2</SUB>.
+     * the filter phases are stored in a 2x30 array. For a given y channel, say y channel 0, h_hat[0][0] to
+     * h_hat[0][9] points to 10 phases of h_hat<SUB>y0x0</SUB>, h_hat[0][10] to h_hat[0][19] points to 10 phases of
+     * h_hat<SUB>y0x1</SUB> and h_hat[0][20] to h_hat[0][29] points to 10 phases of h_hat<SUB>y0x2</SUB>.
      *
-     * Each filter phase data which is pointed to by H_hat[i][j].data is stored as AEC_FD_FRAME_LENGTH complex 32bit
-     * array.*/
-    bfp_complex_s32_t H_hat[AEC_MAX_Y_CHANNELS][AEC_LIB_MAX_PHASES];
+     * Each filter phase, pointed to by h_hat[i][j].data, is stored as an AEC_FILTER_TD_LENGTH length, 16bit integer
+     * array with a per-phase exponent and headroom.
+     *
+     * The filter is held in the time domain rather than as a spectrum, which costs less than half the memory of the
+     * equivalent AEC_FD_FRAME_LENGTH complex 32bit spectrum. The taps are not in natural order: they are held in the
+     * element order the low level real DFT works in, so that recovering and updating a phase's spectrum needs no
+     * index bit reversal pass. See @ref AEC_FILTER_TD_PAIRS for the mapping, and note that this means the array must
+     * be unscrambled before it can be read as an impulse response. Energy, copies and resets are all order
+     * independent, so they act on it directly.
+     *
+     * The spectrum of a phase is recovered on demand with `aec_l2_filter_phase_to_spectrum()`, using
+     * aec_filter_state_t::filter_scratch.
+     *
+     * @note
+     * The 16bit mantissas are the dominant source of filter quantisation error in the AEC. The adaptive filter update
+     * is accumulated at 32bit precision and rounded to nearest once per frame (see `aec_l2_adapt_td()`), so the
+     * quantisation floor of a phase sits approximately 16 bits below that phase's largest tap.*/
+    bfp_s16_t h_hat[AEC_MAX_Y_CHANNELS][AEC_LIB_MAX_PHASES];
+
+    /** Per y-channel scratch buffer used for the time domain <-> frequency domain conversions of the adaptive filter.
+     *
+     * `filter_scratch[ch].data` points to a buffer of @ref AEC_FILTER_SCRATCH_LENGTH 32bit integers: enough for an
+     * in-place real DFT of one filter phase, or one complex AEC_FD_FRAME_LENGTH filter update spectrum, plus an
+     * accumulator for the filter update.
+     *
+     * There is one buffer per y channel per filter because `aec_calc_Error_and_Y_hat()` and `aec_filter_adapt()` are
+     * distributed across hardware threads per (filter, y channel) pair; see @ref aec_task_distribution_t. The two
+     * functions run in different stages of a frame and therefore share the same buffer.*/
+    bfp_s32_t filter_scratch[AEC_MAX_Y_CHANNELS];
 
     /** BFP array pointing to all phases of reference input spectrum across all x channels. Here, the reference input
      * spectrum is saved in a 1 dimensional array of phases, with x channel 0 phases followed by x channel 1 phases and

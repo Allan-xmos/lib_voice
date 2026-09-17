@@ -81,7 +81,7 @@ _Static_assert(ADEC_DE_MODE_X_CHANNELS <= AEC_MAX_X_CHANNELS,
         "The AEC is not built for enough x channels to run a delay estimation cycle");
 _Static_assert(ADEC_DE_MODE_X_CHANNELS * ADEC_DE_MODE_MAIN_FILTER_PHASES <= AEC_LIB_MAX_PHASES,
         "A delay estimation cycle indexes more filter phases than AEC_LIB_MAX_PHASES, so it would "
-        "run off the end of aec_filter_state_t::h_hat, aec_filter_state_t::X_fifo_1d and "
+        "run off the end of aec_filter_state_t::H_hat, aec_filter_state_t::X_fifo_1d and "
         "de_output_t::phase_power. Build the AEC for more phases, or reduce "
         "ADEC_DE_MODE_MAIN_FILTER_PHASES");
 _Static_assert(AEC_MAIN_POOL_BYTES(ADEC_DE_MODE_Y_CHANNELS, ADEC_DE_MODE_X_CHANNELS,

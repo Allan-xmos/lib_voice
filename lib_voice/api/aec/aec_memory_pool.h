@@ -131,8 +131,9 @@ typedef struct {
  * The pool is a linear allocation arena, so the only thing that has to hold for a runtime
  * configuration to be safe is that its total demand fits in `sizeof(aec_memory_pool_t)`. The
  * individual phase reservations in the struct are not separate budgets and cannot be checked
- * independently: an h_hat phase is AEC_FRAME_ADVANCE `int32_t` while an X_fifo phase is
- * AEC_FD_FRAME_LENGTH `complex_s32_t`, so trading one for the other changes the total.
+ * independently: an H_hat phase and an X_fifo phase are both AEC_FD_FRAME_LENGTH `complex_s32_t`
+ * (the filter is held in the frequency domain), while other allocations in the pool are sized in
+ * `int32_t`, so the mix of element types and counts has to be totalled in bytes.
  *
  * This is a compile time constant for compile time arguments, so it can be used in a
  * `_Static_assert` to check a fixed runtime configuration against the pool. It is the same quantity
@@ -143,7 +144,7 @@ typedef struct {
 #define AEC_MAIN_POOL_BYTES(num_y, num_x, num_main_phases) ( \
       ((num_y) + (num_x)) * (AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) * sizeof(int32_t) \
     + ((num_y) + (num_x)) * (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE) * sizeof(int32_t) \
-    + (num_y) * (num_x) * (num_main_phases) * AEC_FRAME_ADVANCE * sizeof(int32_t) \
+    + (num_y) * (num_x) * (num_main_phases) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + (num_x) * (num_main_phases) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + 2 * (num_y) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + 3 * (num_x) * AEC_FD_FRAME_LENGTH * sizeof(int32_t) \
@@ -156,7 +157,7 @@ typedef struct {
  * @ingroup aec_memory_pool
  */
 #define AEC_SHADOW_POOL_BYTES(num_y, num_x, num_shadow_phases) ( \
-      (num_y) * (num_x) * (num_shadow_phases) * AEC_FRAME_ADVANCE * sizeof(int32_t) \
+      (num_y) * (num_x) * (num_shadow_phases) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + (2 * (num_y) + (num_x)) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + 2 * (num_x) * AEC_FD_FRAME_LENGTH * sizeof(int32_t) \
     + (num_y) * (AEC_UNUSED_TAPS_PER_PHASE * 2) * sizeof(int32_t) )

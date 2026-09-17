@@ -57,20 +57,19 @@
  *   <= sizeof(@ref aec_shadow_filt_memory_pool_t)
  *
  * The two @ref AEC_LIB_MAX_PHASES conditions are array bounds rather than memory pool capacity:
- * aec_filter_state_t::h_hat and aec_filter_state_t::X_fifo_1d address one y channel's phases across
+ * aec_filter_state_t::H_hat and aec_filter_state_t::X_fifo_1d address one y channel's phases across
  * all x channels with a single index bounded by @ref AEC_LIB_MAX_PHASES, so it is that index, not
  * the phase count of the whole filter, which has to fit. de_output_t::phase_power is bounded the
  * same way.
  *
  * The last two conditions are the memory pool capacity, and they are stated in bytes because they
  * cannot be expressed as a comparison of phase counts. Each pool is a single linear allocation
- * arena, and the phases drawn from it are not all the same size: a main or shadow filter phase is
- * @ref AEC_FRAME_ADVANCE `int32_t` (the filter is held in the time domain) while an X FIFO phase is
- * @ref AEC_FD_FRAME_LENGTH `complex_s32_t`, so exchanging one for the other changes the total. The
- * remaining allocations scale with the channel counts, and a configuration using fewer channels
- * than the build allows leaves room that phases can be allocated from. A rule counting only phases
- * is therefore neither necessary nor sufficient: it admits configurations that overrun the pool and
- * rejects configurations that fit comfortably.
+ * arena, and its allocations are not all the same size: an H_hat or X_fifo phase is
+ * @ref AEC_FD_FRAME_LENGTH `complex_s32_t` (the filter is held in the frequency domain), while other
+ * allocations in the pool are sized in `int32_t`. The remaining allocations scale with the channel
+ * counts, and a configuration using fewer channels than the build allows leaves room that phases can
+ * be allocated from. A rule counting only phases is therefore neither necessary nor sufficient: it
+ * admits configurations that overrun the pool and rejects configurations that fit comfortably.
  *
  * @ref AEC_MAIN_POOL_BYTES and @ref AEC_SHADOW_POOL_BYTES compute the exact demand and are compile
  * time constants for compile time arguments, so an application with a fixed runtime configuration

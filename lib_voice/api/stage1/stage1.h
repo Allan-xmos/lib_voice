@@ -25,19 +25,7 @@
 
 
 /** Number of microphone (Y) channels the pipeline carries through stage1.
- *
- * This is the width of the mic input and output frames stage1 works on. It is not necessarily the
- * number of channels the AEC is configured for: in alt arch mode the AEC runs on a single mic
- * channel while the pipeline carries two, because the downstream interference canceller needs both
- * with their phase relationship preserved. Stage1 fills the channels the AEC did not process by
- * duplicating the AEC output or by copying the mic input, so it has to know how many the pipeline
- * expects.
- *
- * In @ref ALT_ARCH_MODE this is 2 and does not follow @ref AEC_MAX_Y_CHANNELS, because alt arch is
- * a two mic design by construction: the AEC processes one mic channel and stage1 fills the second
- * for the IC, so alt arch cannot work with a single mic channel however the AEC is configured.
- * Otherwise it defaults to @ref AEC_MAX_Y_CHANNELS, which is correct for any pipeline that feeds
- * every mic channel it carries through the AEC.
+ *  In @ref ALT_ARCH_MODE this must be 2.
  *
  * @ingroup stage1_types
  */
@@ -50,15 +38,15 @@
 #endif
 
 _Static_assert(STAGE1_MAX_Y_CHANNELS >= AEC_MAX_Y_CHANNELS,
-        "STAGE1_MAX_Y_CHANNELS is the number of mic channels the pipeline carries, so it cannot be "
+        "STAGE1_MAX_Y_CHANNELS is the number of mic channels Stage1 carries, so it cannot be "
         "smaller than the number of y channels the AEC can be configured for");
 _Static_assert(STAGE1_MAX_Y_CHANNELS <= MAX_DELAY_BUF_CHANNELS,
         "The delay buffer holds MAX_DELAY_BUF_CHANNELS channels, so it cannot delay every mic "
-        "channel the pipeline carries");
+        "channel Stage1 carries");
 #if ALT_ARCH_MODE
-_Static_assert(STAGE1_MAX_Y_CHANNELS >= 2,
+_Static_assert(STAGE1_MAX_Y_CHANNELS == 2,
         "alt arch duplicates the single channel AEC output into a second mic channel for the IC, so "
-        "it needs the pipeline to carry at least 2 mic channels");
+        "it needs the pipeline to carry 2 mic channels");
 #endif
 
 

@@ -27,9 +27,7 @@
  * - @ref AEC_SHADOW_FILTER_PHASES
  *
  * The same pool can be used to initialize AEC for any runtime configuration (passed as arguments to `aec_init()`)
- * which satisfies @ref aec_phase_pool_capacity. Note that this is not simply a matter of the runtime phase counts
- * being smaller than the compile-time ones: the phases drawn from a pool are not all the same size, so what has to
- * fit is the byte demand, which @ref AEC_MAIN_POOL_BYTES and @ref AEC_SHADOW_POOL_BYTES compute.
+ * which satisfies @ref aec_phase_pool_capacity.
  *
  * @note
  * This structure exists to own memory, not to describe layout.
@@ -88,10 +86,8 @@ typedef struct {
  * - @ref AEC_MAIN_FILTER_PHASES
  * - @ref AEC_SHADOW_FILTER_PHASES
  *
- * The same pool can be used to initialize AEC for any runtime configuration (passed as arguments to `aec_init()`)
- * which satisfies @ref aec_phase_pool_capacity. Note that this is not simply a matter of the runtime phase counts
- * being smaller than the compile-time ones: the phases drawn from a pool are not all the same size, so what has to
- * fit is the byte demand, which @ref AEC_MAIN_POOL_BYTES and @ref AEC_SHADOW_POOL_BYTES compute.
+ * The same pool can be used to initialize AEC (or shadow filter) for any runtime configuration
+ * (passed as arguments to `aec_init()`) which satisfies @ref aec_phase_pool_capacity.
  *
  * @note
  * This structure exists to own memory, not to describe layout.
@@ -128,17 +124,11 @@ typedef struct {
 /**
  * @brief Bytes `aec_init()` takes from @ref aec_memory_pool_t for a runtime configuration.
  *
- * The pool is a linear allocation arena, so the only thing that has to hold for a runtime
- * configuration to be safe is that its total demand fits in `sizeof(aec_memory_pool_t)`. The
- * individual phase reservations in the struct are not separate budgets and cannot be checked
- * independently: an H_hat phase and an X_fifo phase are both AEC_FD_FRAME_LENGTH `complex_s32_t`
- * (the filter is held in the frequency domain), while other allocations in the pool are sized in
- * `int32_t`, so the mix of element types and counts has to be totalled in bytes.
- *
  * This is a compile time constant for compile time arguments, so it can be used in a
- * `_Static_assert` to check a fixed runtime configuration against the pool. It is the same quantity
- * `aec_priv_main_init()` asserts at runtime.
- *
+ * `_Static_assert` to check a fixed runtime configuration against the pool. 
+ * 
+ * AEC_MAIN_POOL_BYTES(num_y, num_x, num_main_phases) must always be <= sizeof(aec_memory_pool_t)
+ * 
  * @ingroup aec_memory_pool
  */
 #define AEC_MAIN_POOL_BYTES(num_y, num_x, num_main_phases) ( \
@@ -162,11 +152,8 @@ typedef struct {
     + 2 * (num_x) * AEC_FD_FRAME_LENGTH * sizeof(int32_t) \
     + (num_y) * (AEC_UNUSED_TAPS_PER_PHASE * 2) * sizeof(int32_t) )
 
-/* The two formulas above restate the allocation sequence in aec_priv_main_init() and
- * aec_priv_shadow_init(). These assertions tie them to the pool definitions: at the compile time
- * configuration a pool is allocated in full, so the formula has to reproduce the struct exactly.
- * A member added to a pool, or an allocation resized, without the formula being updated therefore
- * fails to build here, rather than silently making every check built on these formulas optimistic. */
+/* Assert that the compile-time pool sizes match the calculated byte requirements for the maximum
+configuration */
 _Static_assert(AEC_MAIN_POOL_BYTES(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS, AEC_MAIN_FILTER_PHASES)
                 == sizeof(aec_memory_pool_t),
         "AEC_MAIN_POOL_BYTES() no longer matches aec_memory_pool_t - update it to match the "

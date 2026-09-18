@@ -4,17 +4,13 @@
 #include "stage1.h"
 
 // aec_init() asserts these same conditions, but aec_de_mode_conf only reaches aec_init() when
-// ADEC first triggers a delay estimation cycle - which can be long after startup, or never, if
-// ADEC is bypassed. A config that does not fit the AEC memory pool (e.g. one whose phase count
-// was written as a literal rather than derived from the compile-time limits it is checked
-// against) would otherwise only be caught the first time delay estimation actually runs. Checking
-// both runtime configurations here instead makes that fail at stage1_init().
+// ADEC first triggers a delay estimation cycle
 static void assert_aec_conf_fits_pool(const aec_conf_t *conf)
 {
     assert(conf->num_y_channels <= AEC_MAX_Y_CHANNELS);
     assert(conf->num_x_channels <= AEC_MAX_X_CHANNELS);
     assert(conf->num_x_channels * conf->num_main_filt_phases <= AEC_LIB_MAX_PHASES);
-    assert(conf->num_x_channels * conf->num_shadow_filt_phases <= AEC_LIB_MAX_PHASES);
+    assert(conf->num_x_channels * conf->num_shadow_filt_phases <= AEC_LIB_MAX_SHADOW_PHASES);
     assert(AEC_MAIN_POOL_BYTES(conf->num_y_channels, conf->num_x_channels, conf->num_main_filt_phases)
             <= sizeof(aec_memory_pool_t));
     assert(AEC_SHADOW_POOL_BYTES(conf->num_y_channels, conf->num_x_channels, conf->num_shadow_filt_phases)

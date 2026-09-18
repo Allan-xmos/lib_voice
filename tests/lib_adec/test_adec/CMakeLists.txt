@@ -35,8 +35,7 @@ set(APP_INCLUDES
 set(AEC_SCHEDULE_CONFIG ${TEST_ADEC_BUILD_CONFIG})
 include(${CMAKE_CURRENT_LIST_DIR}/../../test_deps.cmake)
 # The test wav carries 2 mic and 2 reference channels while the AEC is built for the 1 y channel
-# configuration this test actually runs (see TEST_ADEC_BUILD_CONFIG), so the frame width has to be
-# stated separately from AEC_MAX_Y_CHANNELS. Needed by the native build as well as the xcore one.
+# configuration this test actually runs (see TEST_ADEC_BUILD_CONFIG)
 set(TEST_ADEC_CHANNEL_FLAGS -DAP_MAX_Y_CHANNELS=2)
 
 if (NOT BUILD_NATIVE)

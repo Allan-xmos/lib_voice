@@ -43,13 +43,10 @@
  *
  * While estimating the delay, ADEC has the application re-initialise the AEC as a single channel
  * filter long enough to search the delay range, with no shadow filter. This configuration is fixed
- * rather than derived from the application's normal mode AEC, so it is not bounded by
- * @ref AEC_MAIN_FILTER_PHASES: `ADEC_DE_MODE_X_CHANNELS * ADEC_DE_MODE_MAIN_FILTER_PHASES` can be
- * larger than `AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES`, which is why it has to be checked
- * against the memory pool explicitly - see the assertions below.
+ * rather than derived from the application's normal mode AEC, but must fit within the same memory
+ * pool.
  *
- * Applications should build their delay estimation mode `aec_conf_t` from these rather than
- * repeating the numbers, so that the configuration and the checks cannot disagree.
+ * Applications should build their delay estimation mode `aec_conf_t` from these defines.
  *
  * @ingroup adec_defines
  */
@@ -69,31 +66,22 @@
 #define ADEC_DE_MODE_SHADOW_FILTER_PHASES       (0)
 #endif
 
-/* A delay estimation cycle re-initialises the AEC with the configuration above, using the same
- * compile time memory pools as the application's normal mode AEC. Nothing about the normal mode
- * configuration implies that the delay estimation one fits, so check it here: any build that links
- * ADEC can reach a delay estimation cycle, and getting this wrong overruns the pools silently.
- * Adjusting ADEC_DE_MODE_MAIN_FILTER_PHASES, or building the AEC for fewer channels or phases, will
- * fail here instead. */
+/* The delay estimator shares the same memory pool as the AEC, so check it fits. */
 _Static_assert(ADEC_DE_MODE_Y_CHANNELS <= AEC_MAX_Y_CHANNELS,
-        "The AEC is not built for enough y channels to run a delay estimation cycle");
+        "The AEC is not built for enough y channels to run ADEC");
 _Static_assert(ADEC_DE_MODE_X_CHANNELS <= AEC_MAX_X_CHANNELS,
-        "The AEC is not built for enough x channels to run a delay estimation cycle");
+        "The AEC is not built for enough x channels to run ADEC");
 _Static_assert(ADEC_DE_MODE_X_CHANNELS * ADEC_DE_MODE_MAIN_FILTER_PHASES <= AEC_LIB_MAX_PHASES,
-        "A delay estimation cycle indexes more filter phases than AEC_LIB_MAX_PHASES, so it would "
-        "run off the end of aec_filter_state_t::H_hat, aec_filter_state_t::X_fifo_1d and "
-        "de_output_t::phase_power. Build the AEC for more phases, or reduce "
-        "ADEC_DE_MODE_MAIN_FILTER_PHASES");
+        "ADEC is using more filter phases than AEC_LIB_MAX_PHASES allows. Build the AEC for more "
+        "phases, or reduce ADEC_DE_MODE_MAIN_FILTER_PHASES");
 _Static_assert(AEC_MAIN_POOL_BYTES(ADEC_DE_MODE_Y_CHANNELS, ADEC_DE_MODE_X_CHANNELS,
                                   ADEC_DE_MODE_MAIN_FILTER_PHASES) <= sizeof(aec_memory_pool_t),
-        "A delay estimation cycle does not fit aec_memory_pool_t. The pool reserves "
-        "AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES phases of X_fifo, which does not bound the "
-        "ADEC_DE_MODE_X_CHANNELS * ADEC_DE_MODE_MAIN_FILTER_PHASES a delay estimation cycle needs. "
-        "Build the AEC for more phases, or reduce ADEC_DE_MODE_MAIN_FILTER_PHASES");
+        "ADEC does not fit aec_memory_pool_t. Build the AEC for more phases, or reduce "
+        "ADEC_DE_MODE_MAIN_FILTER_PHASES");
 _Static_assert(AEC_SHADOW_POOL_BYTES(ADEC_DE_MODE_Y_CHANNELS, ADEC_DE_MODE_X_CHANNELS,
                                      ADEC_DE_MODE_SHADOW_FILTER_PHASES)
                 <= sizeof(aec_shadow_filt_memory_pool_t),
-        "A delay estimation cycle does not fit aec_shadow_filt_memory_pool_t");
+        "ADEC does not fit aec_shadow_filt_memory_pool_t");
 _Static_assert(ADEC_DE_DELAY_SAMPS <= ADEC_DE_MODE_MAIN_FILTER_PHASES * AEC_FRAME_ADVANCE,
         "The delay estimation filter is shorter than the delay range ADEC searches, so the delay "
         "ADEC applies at the start of a cycle would push the echo past the end of the filter. "

@@ -19,6 +19,8 @@ void aec_priv_main_init(
         unsigned num_x_channels,
         unsigned num_phases)
 {
+    assert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases)
+            <= sizeof(aec_memory_pool_t));
     memset(state, 0, sizeof(aec_filter_state_t));
     //reset shared_state. Only done in main_init()
     memset(shared_state, 0, sizeof(aec_shared_filter_state_t));
@@ -100,10 +102,6 @@ void aec_priv_main_init(
         available_mem_start += (32*sizeof(int32_t));
     }
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    //Checked before the memset below, so that a runtime configuration which over-subscribes the pool fails here
-    //rather than silently scribbling over whatever follows the pool in aec_state_t. The phase count preconditions on
-    //aec_init() do not imply this on their own: the pool reserves a fixed number of phases for h_hat and for X_fifo
-    //separately, so a configuration can be within the total phase budget while still exceeding one of them.
     assert(memory_used <= sizeof(aec_memory_pool_t));
     memset(mem_pool, 0, memory_used);
 
@@ -150,6 +148,7 @@ void aec_priv_shadow_init(
     if(state == NULL) {
         return;
     }
+
     memset(state, 0, sizeof(aec_filter_state_t));
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
@@ -159,6 +158,9 @@ void aec_priv_shadow_init(
     state->shared_state = shared_state;
     unsigned num_y_channels = state->shared_state->num_y_channels;
     unsigned num_x_channels = state->shared_state->num_x_channels;
+
+    assert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_phases)
+            <= sizeof(aec_shadow_filt_memory_pool_t));
 
     //H_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
@@ -201,7 +203,6 @@ void aec_priv_shadow_init(
     }
 
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    //See the equivalent check in aec_priv_main_init()
     assert(memory_used <= sizeof(aec_shadow_filt_memory_pool_t));
     memset(mem_pool, 0, memory_used);
 

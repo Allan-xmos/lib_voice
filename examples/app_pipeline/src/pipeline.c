@@ -13,10 +13,7 @@ void pipeline_thread0_init(pipeline_state_thread0_t *state) {
 
     // Initialise AEC, DE, ADEC stages
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
-    // Non DE mode runs the AEC this build was configured for, so both build configs read the same
-    // compile time values here. The difference between std arch and alt arch is in the AEC schedule
-    // config the build supplies (see CMakeLists.txt), not in this code: alt arch is built for 1 y
-    // channel and 15 main filter phases, std arch for 2 y channels and 10.
+    // The AEC schedule is determined by the build configuration and is passed via the tdist structure.
     aec_non_de_mode_conf.num_y_channels = AEC_MAX_Y_CHANNELS;
     aec_non_de_mode_conf.num_x_channels = AEC_MAX_X_CHANNELS;
     aec_non_de_mode_conf.num_main_filt_phases = AEC_MAIN_FILTER_PHASES;

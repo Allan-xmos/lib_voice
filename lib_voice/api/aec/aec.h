@@ -56,28 +56,6 @@
  * - AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
  *   <= sizeof(@ref aec_shadow_filt_memory_pool_t)
  *
- * The two @ref AEC_LIB_MAX_PHASES conditions are array bounds rather than memory pool capacity:
- * aec_filter_state_t::H_hat and aec_filter_state_t::X_fifo_1d address one y channel's phases across
- * all x channels with a single index bounded by @ref AEC_LIB_MAX_PHASES, so it is that index, not
- * the phase count of the whole filter, which has to fit. de_output_t::phase_power is bounded the
- * same way.
- *
- * The last two conditions are the memory pool capacity, and they are stated in bytes because they
- * cannot be expressed as a comparison of phase counts. Each pool is a single linear allocation
- * arena, and its allocations are not all the same size: an H_hat or X_fifo phase is
- * @ref AEC_FD_FRAME_LENGTH `complex_s32_t` (the filter is held in the frequency domain), while other
- * allocations in the pool are sized in `int32_t`. The remaining allocations scale with the channel
- * counts, and a configuration using fewer channels than the build allows leaves room that phases can
- * be allocated from. A rule counting only phases is therefore neither necessary nor sufficient: it
- * admits configurations that overrun the pool and rejects configurations that fit comfortably.
- *
- * @ref AEC_MAIN_POOL_BYTES and @ref AEC_SHADOW_POOL_BYTES compute the exact demand and are compile
- * time constants for compile time arguments, so an application with a fixed runtime configuration
- * can check these conditions with `_Static_assert` - see the assertions on ADEC's delay estimation
- * configuration in `adec_defines.h` for an example. `aec_init()` also asserts all of the above, so
- * a configuration which breaks them fails at initialisation rather than corrupting memory beyond
- * the pool.
- *
  * @param[inout] aec_state                AEC state object
  * @param[in]    num_y_channels           Number of microphone input channels
  * @param[in]    num_x_channels           Number of reference input channels

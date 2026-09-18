@@ -10,10 +10,10 @@ endif()
 
 # Each of these should be the AEC configuration the test actually runs, so that the memory pools are
 # sized for it and the preconditions on aec_init() can be checked. Note that a test's wav channel
-# layout is a separate thing: the ADEC tests feed a 4 channel (2 mic, 2 reference) wav to an AEC
-# configured for fewer y channels than that, so those tests state the frame width with
-# AP_MAX_Y_CHANNELS/AP_MAX_X_CHANNELS in their own CMakeLists rather than taking it from
-# AEC_MAX_Y_CHANNELS/AEC_MAX_X_CHANNELS.
+# layout is a separate thing: test_adec and test_bin_adec feed a 4 channel (2 mic, 2 reference) wav
+# to an AEC configured for fewer y channels than that, so those tests state the frame width with
+# AP_MAX_Y_CHANNELS in their own CMakeLists rather than taking it from AEC_MAX_Y_CHANNELS, and only
+# serialise the y channels the AEC actually produces.
 if(NOT DEFINED DE_UNIT_TESTS_BUILD_CONFIG)
 set(
     DE_UNIT_TESTS_BUILD_CONFIG

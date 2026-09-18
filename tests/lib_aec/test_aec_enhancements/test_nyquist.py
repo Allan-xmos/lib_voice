@@ -71,7 +71,7 @@ def test_nyquist(target):
 
     print("Run AEC XC")
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_FORCE_ON'], num_y_channels=y_channel_count, num_x_channels=x_channel_count, target=target)
-    output_wav_file, _ = sf.read(dut_output_file)
+    output_wav_file, _ = sf.read(dut_output_file, always_2d=True)
     error_xc = output_wav_file[:,0]
     _, leq_error_xc = wtf.leq_smooth(error_xc, fs, 0.05)
     max_atten_xc = wtf.calc_max_attenuation(leq_error_xc)

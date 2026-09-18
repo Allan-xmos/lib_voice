@@ -57,7 +57,10 @@ def run_aec_xc(y_data, x_data, testname, adapt=-1, h_hat_dump=None, adapt_mode=a
             fargs.write(f"stop_adapting {adapt}\n".encode('utf-8'))
             fargs.write(f"adaption_mode {adapt_mode}\n".encode('utf-8'))
 
-        test_wav(aec_xe, input_file, output_file, 240, AEC_MAX_Y_CHANNELS, 240, target=target, tmp_folder=tmp_folder)
+        # The input wav always carries AEC_MAX_Y_CHANNELS mic channels, but the DUT only writes
+        # the num_y_channels the AEC is configured to process at runtime, so the output frame
+        # width is num_y_channels rather than AEC_MAX_Y_CHANNELS.
+        test_wav(aec_xe, input_file, output_file, 240, num_y_channels, 240, target=target, tmp_folder=tmp_folder)
 
         if h_hat_dump is not None:
             shutil.copy2(tmp_path / dut_H_hat_file, h_hat_dump)

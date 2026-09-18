@@ -123,6 +123,14 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     int32_t DWORD_ALIGNED frame_x[AP_MAX_X_CHANNELS][AEC_FRAME_ADVANCE];
     int32_t DWORD_ALIGNED pipeline_output[AP_MAX_Y_CHANNELS][AEC_FRAME_ADVANCE];
 
+    /** The wav can carry more mic channels than the AEC is configured to process, so the frames
+     * above are the width of the wav while the AEC only ever fills the first
+     * aec_non_de_mode_conf.num_y_channels rows of pipeline_output. Only those rows are written to
+     * the output file. While the delay estimator is running the AEC is reconfigured to
+     * ADEC_DE_MODE_Y_CHANNELS, but pipeline_process_frame() passes the mic input through on every
+     * channel in that mode, so this count stays correct.*/
+    const unsigned num_output_y_channels = (unsigned)runtime_args[Y_CHANNELS];
+
     // Initialise pipeline
     aec_conf_t aec_de_mode_conf, aec_non_de_mode_conf;
     // DE mode AEC config is fixed and not run time configurable
@@ -197,7 +205,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
 #endif
 
-        file_write(&output_file, (uint8_t*)pipeline_output, (AP_MAX_Y_CHANNELS * AEC_FRAME_ADVANCE * sizeof(int32_t)));
+        file_write(&output_file, (uint8_t*)pipeline_output, (num_output_y_channels * AEC_FRAME_ADVANCE * sizeof(int32_t)));
 
         char strbuf[100];
         sprintf(strbuf, "%ld\n", pipeline_state.adec_requested_delay_samples);

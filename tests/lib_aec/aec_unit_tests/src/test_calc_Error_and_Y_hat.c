@@ -141,21 +141,22 @@ void test_calc_Error_and_Y_hat() {
             for(int ph=0; ph<num_x_channels*state_ptr->num_phases; ph++) {
                 /* Fill the stored phase, which is in the low level DFT's element order (see AEC_FILTER_TD_PAIRS),
                  * and read the natural order taps back out of it for the reference. The slots holding taps at or
-                 * beyond NUM_TAPS are held at zero by the gradient constraint, so they are generated as zero. */
+                 * beyond NUM_TAPS are held at zero by the gradient constraint and are not stored at all. */
                 double h_ph_fp[NUM_TAPS];
                 bfp_s16_t *h_ph = &state_ptr->h_hat[ch][ph];
                 h_ph->exp = pseudo_rand_int(&seed, -31, 32);
                 h_ph->hr = pseudo_rand_uint32(&seed) % 3;
                 for(unsigned m=0; m<AEC_FILTER_TD_PAIRS; m++) {
+                    if(!AEC_FILTER_TD_SLOT_STORED(m)) {
+                        continue;
+                    }
                     const unsigned k = n_bitrev(m, AEC_FILTER_TD_PAIRS_LOG2);
+                    const unsigned s = AEC_FILTER_TD_STORED_INDEX(m);
                     for(unsigned half=0; half<2; half++) {
                         const unsigned tap = 2*k + half;
-                        int16_t mant = 0;
-                        if(tap < NUM_TAPS) {
-                            mant = (int16_t)(pseudo_rand_int32(&seed) >> (16 + h_ph->hr));
-                            h_ph_fp[tap] = ldexp(mant, h_ph->exp);
-                        }
-                        h_ph->data[2*m + half] = mant;
+                        const int16_t mant = (int16_t)(pseudo_rand_int32(&seed) >> (16 + h_ph->hr));
+                        h_ph_fp[tap] = ldexp(mant, h_ph->exp);
+                        h_ph->data[2*s + half] = mant;
                     }
                 }
                 if(is_main) {

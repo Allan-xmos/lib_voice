@@ -128,4 +128,51 @@ typedef struct {
     /** Memory pointed to by shadow filter aec_filter_state_t::overlap*/
     int32_t overlap[AEC_MAX_Y_CHANNELS][AEC_UNUSED_TAPS_PER_PHASE*2];
 }aec_shadow_filt_memory_pool_t;
+
+/** @brief Bytes consumed from aec_memory_pool_t by a given runtime configuration.
+ *
+ * This mirrors the allocation sequence in `aec_priv_main_init()` exactly, and is what makes the capacity rule in
+ * @ref aec_phase_pool_capacity checkable rather than merely documented. A filter phase and an X FIFO phase are
+ * different sizes, so the demand cannot be expressed as a phase count.
+ *
+ * @ingroup aec_memory_pool
+ */
+#define AEC_MAIN_POOL_BYTES(Y, X, PH) ( \
+      ((Y) * AEC_FILTER_SCRATCH_LENGTH * sizeof(int32_t))                   /* filter_scratch */ \
+    + ((Y) * (AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) * sizeof(int32_t))   /* y */ \
+    + ((X) * (AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) * sizeof(int32_t))   /* x */ \
+    + ((Y) * (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE) * sizeof(int32_t)) /* prev_y */ \
+    + ((X) * (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE) * sizeof(int32_t)) /* prev_x */ \
+    + ((Y) * (X) * (PH) * AEC_FILTER_TD_LENGTH * sizeof(int16_t))           /* h_hat */ \
+    + ((X) * (PH) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t))            /* X_fifo */ \
+    + (2 * (Y) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t))               /* Error, Y_hat */ \
+    + (3 * (X) * AEC_FD_FRAME_LENGTH * sizeof(int32_t))                     /* X_energy, sigma_XX, inv_X_energy */ \
+    + ((Y) * AEC_UNUSED_TAPS_PER_PHASE * 2 * sizeof(int32_t))               /* overlap */ \
+    )
+
+/** @brief Bytes consumed from aec_shadow_filt_memory_pool_t by a given runtime configuration.
+ *
+ * Mirrors the allocation sequence in `aec_priv_shadow_init()`. See @ref AEC_MAIN_POOL_BYTES.
+ *
+ * @ingroup aec_memory_pool
+ */
+#define AEC_SHADOW_POOL_BYTES(Y, X, PH) ( \
+      ((Y) * AEC_FILTER_SCRATCH_LENGTH * sizeof(int32_t))                   /* filter_scratch */ \
+    + ((Y) * (X) * (PH) * AEC_FILTER_TD_LENGTH * sizeof(int16_t))           /* h_hat */ \
+    + (2 * (Y) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t))               /* Error, Y_hat */ \
+    + ((X) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t))                   /* T */ \
+    + (2 * (X) * AEC_FD_FRAME_LENGTH * sizeof(int32_t))                     /* X_energy, inv_X_energy */ \
+    + ((Y) * AEC_UNUSED_TAPS_PER_PHASE * 2 * sizeof(int32_t))               /* overlap */ \
+    )
+
+/* The pools must at least cover the compile-time configuration they are declared from. This catches the pool struct
+ * and the allocators drifting apart; it cannot catch a runtime configuration that asks for more phases than the
+ * compile-time maximum, which aec_init() asserts instead. */
+_Static_assert(AEC_MAIN_POOL_BYTES(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS, AEC_MAIN_FILTER_PHASES)
+                    <= sizeof(aec_memory_pool_t),
+        "aec_memory_pool_t is too small for AEC_MAX_Y_CHANNELS x AEC_MAX_X_CHANNELS x AEC_MAIN_FILTER_PHASES.");
+_Static_assert(AEC_SHADOW_POOL_BYTES(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS, AEC_SHADOW_FILTER_PHASES)
+                    <= sizeof(aec_shadow_filt_memory_pool_t),
+        "aec_shadow_filt_memory_pool_t is too small for AEC_MAX_Y_CHANNELS x AEC_MAX_X_CHANNELS x AEC_SHADOW_FILTER_PHASES.");
+
 #endif

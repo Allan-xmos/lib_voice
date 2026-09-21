@@ -5,10 +5,17 @@ lib_voice change log
 -----
 
   * CHANGED: AEC adaptive filter is stored in the time domain as 16bit block floating point taps
-    instead of as a 32bit complex spectrum, reducing AEC memory use by approximately 86kB in the
-    default 2 mic, 2 reference, 10 main phase, 5 shadow phase configuration. The spectrum of a
+    instead of as a 32bit complex spectrum, reducing AEC memory use by approximately 80kB (80472
+    bytes measured) in the default 2 mic, 2 reference, 10 main phase, 5 shadow phase configuration,
+    and by approximately 54kB (54952 bytes) in the 1 mic, 2 reference, 15 main phase configuration.
+    MIPS is within 1.5% of the frequency domain implementation in every profiled configuration, and
+    the 2 thread standard architecture is slightly cheaper than it was. The spectrum of a
     filter phase is recovered on demand, and the block LMS gradient constraint is applied to the
     filter update rather than to the whole filter, so the transform count per frame is unchanged.
+    A phase costs exactly ``AEC_FILTER_TAPS_PER_PHASE`` 16bit mantissas: the transform slots the
+    gradient constraint holds at zero fall on a fixed stride in the element order used, so they are
+    neither stored nor updated. Discarding them in the gather is what applies the constraint, and
+    no part of the filter has to be zeroed afterwards.
 
   * ADDED: XS3 assembly implementations of the two element order conversions the time domain filter
     needs, ``aec_priv_td_expand()`` and ``aec_priv_td_gather()``. They are bit exact with the C in
@@ -36,8 +43,16 @@ lib_voice change log
 
     - ``AEC_FILTER_TAPS_PER_PHASE`` and ``AEC_ZEROVAL_HR_S16`` added.
 
+  * FIXED: the delay estimator's phase energy accumulators are seeded from the first phase rather
+    than from a zero valued ``float_s32_t``. Accumulating a small positive energy onto
+    ``f64_to_float_s32(0.0)`` annihilated it in the exponent alignment, so quiet phases could
+    report zero energy and the estimated delay could be wrong. See ``de_impl.c``.
+
   * Note: the memory pool capacity rule is now a byte budget rather than a phase count, because
-    filter phases and X FIFO phases are no longer the same size. See ``aec_init()``.
+    filter phases and X FIFO phases are no longer the same size. ``aec_init()`` asserts that the
+    requested configuration fits the pools it was given; overflowing the main pool previously
+    corrupted the shadow filter's scratch silently. See ``aec_init()`` and
+    ``AEC_MAIN_POOL_BYTES()`` / ``AEC_SHADOW_POOL_BYTES()`` in ``aec_memory_pool.h``.
 
 1.1.0
 -----

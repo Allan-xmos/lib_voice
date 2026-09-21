@@ -54,7 +54,10 @@ def run_test(pipeline_config, info, path_to_regression_files, input_audio_files,
       copyfile(ground_truth_file_delays, ground_truth_file)
 
       gt_changes = 0
-      test_name = info + ", " + str(input_audio_files).split('/')[-1]
+      # Path().name rather than splitting on '/', so the leaf is found on Windows too. Splitting on '/' left the
+      # whole absolute path in test_name, and test_name becomes a .png filename below, which then contained a
+      # drive colon and could not be created.
+      test_name = info + ", " + Path(str(input_audio_files)).name
 
     print ("run_target = ", run_target, ", tmp_dir = ", tmp_dir)
 

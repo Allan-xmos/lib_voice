@@ -43,3 +43,12 @@ test/**/*.png
 tests/lib_aec/test_aec_spec/audio_in
 tests/profile_memory/worker_logs
 .embedder
+**/audio_in
+**/audio_out
+**/tmp*
+**/*logs
+**/filter_out
+**/plots
+*.log
+
+

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <assert.h>
 #include "aec.h"
 #include "aec_priv.h"
 #include "xmath/xmath.h"
@@ -14,10 +15,15 @@ void aec_priv_main_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
+        size_t mem_pool_bytes,
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_phases)
 {
+    /* Checked before anything is written, because overflowing this pool corrupts the shadow filter's scratch
+     * rather than failing visibly. See @ref aec_phase_pool_capacity. */
+    assert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases) <= mem_pool_bytes);
+
     memset(state, 0, sizeof(aec_filter_state_t));
     //reset shared_state. Only done in main_init()
     memset(shared_state, 0, sizeof(aec_shared_filter_state_t));
@@ -157,11 +163,15 @@ void aec_priv_shadow_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
+        size_t mem_pool_bytes,
         unsigned num_phases)
 {
     if(state == NULL) {
         return;
     }
+    assert(AEC_SHADOW_POOL_BYTES(shared_state->num_y_channels, shared_state->num_x_channels, num_phases)
+                <= mem_pool_bytes);
+
     memset(state, 0, sizeof(aec_filter_state_t));
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
@@ -271,7 +281,25 @@ void aec_priv_bfp_s16_copy(
  * the compiler spends around 12 instructions per element on the expand and 7 on the gather. The C below stays as
  * the reference and as the implementation for every other target. */
 
-#if !defined(__XS3A__)
+/* The compacted storage relies on the omitted slots forming a regular stride. That only holds when the transform's
+ * time domain half is a power of two slots and the stored fraction is (AEC_FILTER_TD_BLOCK-1)/AEC_FILTER_TD_BLOCK
+ * with AEC_FILTER_TD_BLOCK itself a power of two; otherwise the zero pairs are not the k whose high index bits are
+ * all ones, and reversing them does not land on a fixed stride. */
+_Static_assert((AEC_FILTER_TD_PAIRS & (AEC_FILTER_TD_PAIRS - 1)) == 0,
+        "AEC_FILTER_TD_PAIRS must be a power of two.");
+_Static_assert((1u << AEC_FILTER_TD_PAIRS_LOG2) == AEC_FILTER_TD_PAIRS,
+        "AEC_FILTER_TD_PAIRS_LOG2 does not match AEC_FILTER_TD_PAIRS.");
+_Static_assert((AEC_FILTER_TD_BLOCK & (AEC_FILTER_TD_BLOCK - 1)) == 0,
+        "AEC_FILTER_TD_BLOCK must be a power of two.");
+_Static_assert(AEC_FILTER_TD_STORED_PAIRS * AEC_FILTER_TD_BLOCK
+                    == AEC_FILTER_TD_PAIRS * (AEC_FILTER_TD_BLOCK - 1),
+        "The omitted filter slots are not a fixed stride for this AEC_FILTER_TAPS_PER_PHASE.");
+_Static_assert(AEC_FILTER_TD_LENGTH == AEC_FILTER_TAPS_PER_PHASE,
+        "A filter phase must cost exactly AEC_FILTER_TAPS_PER_PHASE 16bit mantissas.");
+_Static_assert((AEC_FILTER_TD_LENGTH * sizeof(int16_t)) % sizeof(uint64_t) == 0,
+        "A filter phase must be a whole number of double words so phase bases stay double word aligned.");
+
+#if !defined(__XS3A__) || defined(AEC_TD_FORCE_C)
 
 void aec_priv_td_expand(
         complex_s32_t *dst,
@@ -280,15 +308,20 @@ void aec_priv_td_expand(
 {
     const uint32_t *pairs = (const uint32_t*)src;
     uint64_t *out = (uint64_t*)dst;
+    unsigned s = 0;
 
     for(unsigned m=0; m<AEC_FILTER_TD_PAIRS; m++) {
-        //The shift cannot overflow: an int16 mantissa with hr bits of headroom has 16+hr bits of headroom in an
-        //int32, and shl is chosen as 14+hr. Done through unsigned types so shifting a negative value is defined.
-        const uint32_t pair = pairs[m];
-        const uint32_t re = (uint32_t)((int32_t)(int16_t)(pair & 0xFFFFu)) << shl;
-        const uint32_t im = (uint32_t)((int32_t)(int16_t)(pair >> 16)) << shl;
+        uint64_t even = 0; //the slots the gradient constraint holds at zero are not stored, so supply them here
+        if(AEC_FILTER_TD_SLOT_STORED(m)) {
+            //The shift cannot overflow: an int16 mantissa with hr bits of headroom has 16+hr bits of headroom in an
+            //int32, and shl is chosen as 14+hr. Done through unsigned types so shifting a negative value is defined.
+            const uint32_t pair = pairs[s++];
+            const uint32_t re = (uint32_t)((int32_t)(int16_t)(pair & 0xFFFFu)) << shl;
+            const uint32_t im = (uint32_t)((int32_t)(int16_t)(pair >> 16)) << shl;
+            even = ((uint64_t)im << 32) | re;
+        }
 
-        out[2*m] = ((uint64_t)im << 32) | re;
+        out[2*m] = even;
         out[2*m + 1] = 0; //odd elements are the upper half of the impulse response, held at zero
     }
 }
@@ -299,9 +332,14 @@ void aec_priv_td_gather(
 {
     const uint64_t *in = (const uint64_t*)src;
     uint64_t *out = (uint64_t*)dst;
+    unsigned s = 0;
 
     for(unsigned m=0; m<AEC_FILTER_TD_PAIRS; m++) {
-        out[m] = in[2*m];
+        //Dropping the unstored slots here is the rest of the gradient constraint: the update to the taps at or
+        //beyond AEC_FILTER_TAPS_PER_PHASE is simply discarded.
+        if(AEC_FILTER_TD_SLOT_STORED(m)) {
+            out[s++] = in[2*m];
+        }
     }
 }
 

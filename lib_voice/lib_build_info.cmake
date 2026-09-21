@@ -31,10 +31,14 @@ set(LIB_CXX_SRCS "")
 # Hand written XS3 assembly for the hottest time domain filter loops. Set explicitly rather than left to the
 # default src/*.S glob so that the vx4b and native builds, which take the C reference implementations in
 # aec_priv_impl.c instead, are never handed an XS3 source.
-if(APP_BUILD_ARCH STREQUAL "xs3a")
+# AEC_TD_FORCE_C builds the C reference implementations even on XS3, for A/B checking the assembly.
+if(APP_BUILD_ARCH STREQUAL "xs3a" AND NOT AEC_TD_FORCE_C)
     set(LIB_ASM_SRCS src/aec/aec_priv_td_xs3.S)
 else()
     set(LIB_ASM_SRCS "")
+    if(AEC_TD_FORCE_C)
+        list(APPEND LIB_COMPILER_FLAGS -DAEC_TD_FORCE_C=1)
+    endif()
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/vnr_model.cmake)

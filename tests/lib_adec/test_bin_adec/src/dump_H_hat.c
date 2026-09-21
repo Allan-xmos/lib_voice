@@ -34,12 +34,13 @@ void aec_dump_H_hat(aec_filter_state_t *state, file_t *file_handle){
                 double taps[AEC_FILTER_TAPS_PER_PHASE];
 
                 for(unsigned m=0; m<AEC_FILTER_TD_PAIRS; m++) {
-                    const unsigned k = n_bitrev(m, AEC_FILTER_TD_PAIRS_LOG2);
-                    if((2*k) >= AEC_FILTER_TAPS_PER_PHASE) {
-                        continue; //permanently zero slot
+                    if(!AEC_FILTER_TD_SLOT_STORED(m)) {
+                        continue; //slot the gradient constraint holds at zero, and which is therefore not stored
                     }
-                    taps[2*k] = ldexp(h_ph->data[2*m], h_ph->exp);
-                    taps[2*k + 1] = ldexp(h_ph->data[2*m + 1], h_ph->exp);
+                    const unsigned k = n_bitrev(m, AEC_FILTER_TD_PAIRS_LOG2);
+                    const unsigned s = AEC_FILTER_TD_STORED_INDEX(m);
+                    taps[2*k] = ldexp(h_ph->data[2*s], h_ph->exp);
+                    taps[2*k + 1] = ldexp(h_ph->data[2*s + 1], h_ph->exp);
                 }
 
                 sprintf(strbuf, "h_hat[%u][%u][%u] = ", ych, xch, ph);

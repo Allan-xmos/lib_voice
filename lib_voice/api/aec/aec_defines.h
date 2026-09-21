@@ -137,9 +137,8 @@
  * constraint did.
  *
  * Only the AEC_FILTER_TAPS_PER_PHASE lowest taps are non-zero, and those fall in the even complex
- * elements, so a phase needs AEC_PROC_FRAME_LENGTH/4 complex slots. The slots holding sample pairs
- * at or beyond AEC_FILTER_TAPS_PER_PHASE are permanently zero; they are kept so that expanding a
- * phase into the transform buffer is a fixed stride operation rather than an indexed scatter.
+ * elements, so the transform's time domain half occupies AEC_PROC_FRAME_LENGTH/4 complex slots.
+ * Not all of them have to be stored: see @ref AEC_FILTER_TD_STORED_PAIRS.
  *
  * NOT USER MODIFIABLE.
  *
@@ -155,15 +154,68 @@
  */
 #define AEC_FILTER_TD_PAIRS_LOG2 (7)
 
-/** @brief Number of 16bit mantissas used to store one time domain filter phase.
+/** @brief Number of complex slots actually stored per time domain filter phase.
  *
- * This is the length of each aec_filter_state_t::h_hat entry. See @ref AEC_FILTER_TD_PAIRS.
+ * Of the @ref AEC_FILTER_TD_PAIRS slots in the transform's time domain half, those holding sample
+ * pairs at or beyond AEC_FILTER_TAPS_PER_PHASE are permanently zero under the gradient constraint
+ * and are not stored, so a phase costs exactly AEC_FILTER_TAPS_PER_PHASE 16bit mantissas.
+ *
+ * The omitted slots are not scattered. Sample pair k lives in slot `n_bitrev(k)`, and the zero
+ * pairs are k in [AEC_FILTER_TAPS_PER_PHASE/2, AEC_FILTER_TD_PAIRS), which for the ratio this
+ * configuration uses is the top AEC_FILTER_TD_PAIRS_LOG2-4 index bits being all ones. Reversed,
+ * that puts them at slot indices congruent to (@ref AEC_FILTER_TD_BLOCK - 1) modulo
+ * @ref AEC_FILTER_TD_BLOCK, i.e. every AEC_FILTER_TD_BLOCK'th slot. Expanding a phase is therefore
+ * still a fixed stride operation, just over blocks of AEC_FILTER_TD_BLOCK slots in which the last
+ * slot is supplied as zero rather than read from memory.
  *
  * NOT USER MODIFIABLE.
  *
  * @ingroup aec_defines
  */
-#define AEC_FILTER_TD_LENGTH (2 * AEC_FILTER_TD_PAIRS)
+#define AEC_FILTER_TD_STORED_PAIRS (AEC_FILTER_TAPS_PER_PHASE / 2)
+
+/** @brief Slot block size over which one slot is omitted. See @ref AEC_FILTER_TD_STORED_PAIRS.
+ *
+ * Slot m is stored if and only if (m % AEC_FILTER_TD_BLOCK) != (AEC_FILTER_TD_BLOCK - 1). Stored
+ * index s and slot index m are related by s = m - m/AEC_FILTER_TD_BLOCK and
+ * m = s + s/(AEC_FILTER_TD_BLOCK - 1).
+ *
+ * NOT USER MODIFIABLE.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_TD_BLOCK \
+        (AEC_FILTER_TD_PAIRS / (AEC_FILTER_TD_PAIRS - AEC_FILTER_TD_STORED_PAIRS))
+
+/** @brief Is transform slot `m` backed by stored mantissas, or is it one of the gradient constraint's zeros?
+ *
+ * See @ref AEC_FILTER_TD_STORED_PAIRS.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_TD_SLOT_STORED(m) \
+        (((m) % AEC_FILTER_TD_BLOCK) != (AEC_FILTER_TD_BLOCK - 1))
+
+/** @brief Index of the stored sample pair that holds transform slot `m`.
+ *
+ * Only meaningful when @ref AEC_FILTER_TD_SLOT_STORED is true for `m`. The pair occupies 16bit mantissas
+ * `2*AEC_FILTER_TD_STORED_INDEX(m)` and `2*AEC_FILTER_TD_STORED_INDEX(m) + 1` of the phase.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_TD_STORED_INDEX(m) \
+        ((m) - ((m) / AEC_FILTER_TD_BLOCK))
+
+/** @brief Number of 16bit mantissas used to store one time domain filter phase.
+ *
+ * This is the length of each aec_filter_state_t::h_hat entry, and is exactly the number of taps a
+ * phase models. See @ref AEC_FILTER_TD_STORED_PAIRS.
+ *
+ * NOT USER MODIFIABLE.
+ *
+ * @ingroup aec_defines
+ */
+#define AEC_FILTER_TD_LENGTH (2 * AEC_FILTER_TD_STORED_PAIRS)
 
 /** @brief Size of the per y channel filter transform scratch buffer, in 32bit words.
  *

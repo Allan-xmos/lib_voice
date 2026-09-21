@@ -292,14 +292,16 @@ typedef struct {
      * h_hat<SUB>y0x1</SUB> and h_hat[0][20] to h_hat[0][29] points to 10 phases of h_hat<SUB>y0x2</SUB>.
      *
      * Each filter phase, pointed to by h_hat[i][j].data, is stored as an AEC_FILTER_TD_LENGTH length, 16bit integer
-     * array with a per-phase exponent and headroom.
+     * array with a per-phase exponent and headroom. AEC_FILTER_TD_LENGTH is exactly
+     * @ref AEC_FILTER_TAPS_PER_PHASE, so a phase costs one 16bit mantissa per tap it models and nothing more.
      *
-     * The filter is held in the time domain rather than as a spectrum, which costs less than half the memory of the
+     * The filter is held in the time domain rather than as a spectrum, which costs a quarter of the memory of the
      * equivalent AEC_FD_FRAME_LENGTH complex 32bit spectrum. The taps are not in natural order: they are held in the
      * element order the low level real DFT works in, so that recovering and updating a phase's spectrum needs no
-     * index bit reversal pass. See @ref AEC_FILTER_TD_PAIRS for the mapping, and note that this means the array must
-     * be unscrambled before it can be read as an impulse response. Energy, copies and resets are all order
-     * independent, so they act on it directly.
+     * index bit reversal pass, and the slots that order would fill with the gradient constraint's zeros are omitted.
+     * See @ref AEC_FILTER_TD_PAIRS and @ref AEC_FILTER_TD_STORED_PAIRS for the mapping, and note that this means the
+     * array must be unscrambled before it can be read as an impulse response. Energy, copies and resets are all
+     * order independent, so they act on it directly.
      *
      * The spectrum of a phase is recovered on demand with `aec_l2_filter_phase_to_spectrum()`, using
      * aec_filter_state_t::filter_scratch.

@@ -72,8 +72,8 @@ void aec_l2_filter_phase_to_spectrum(
     complex_s32_t *buf = (complex_s32_t*)scratch->data;
 
     /* Expand the phase into the transform buffer. The taps are already in the element order
-     * fft_dit_forward() wants, so this is a fixed stride widen with zeros in the odd elements and no index
-     * bit reversal pass.
+     * fft_dit_forward() wants, so this is a fixed stride widen with zeros in the odd elements, zeros in the slots
+     * the compacted storage omits, and no index bit reversal pass.
      *
      * An int16 mantissa with `hr` bits of headroom sits in an int32 with 16 + hr bits of headroom, and
      * fft_dit_forward() wants exactly 2, so the widening shift is (14 + hr). That folds the transform's input
@@ -177,20 +177,12 @@ void aec_l2_adapt_td(
     fft_mono_adjust(buf, AEC_PROC_FRAME_LENGTH, 1);
     fft_dif_inverse(buf, AEC_PROC_FRAME_LENGTH/2, &hr, &exp);
 
-    /* Collect the update's even complex elements, which hold the sample pairs below
-     * AEC_PROC_FRAME_LENGTH/2. Leaving the odd elements behind discards the upper half of the impulse response,
-     * which is most of the gradient constraint. */
+    /* Collect the update's stored slots. This applies the whole gradient constraint: leaving the odd complex
+     * elements behind discards the upper half of the impulse response, and skipping the slots that the compacted
+     * storage does not keep (see AEC_FILTER_TD_STORED_PAIRS) discards the update to the taps at or beyond
+     * AEC_FILTER_TAPS_PER_PHASE. Nothing has to be zeroed afterwards. */
     complex_s32_t *acc = (complex_s32_t*)&scratch->data[AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
     aec_priv_td_gather(acc, buf);
-
-    /* The rest of the constraint: zero the slots holding the sample pairs at or beyond
-     * AEC_FILTER_TAPS_PER_PHASE. Sample pair k lives in element n_bitrev(k), so these are scattered, but there are
-     * only (AEC_PROC_FRAME_LENGTH/2 - AEC_FILTER_TAPS_PER_PHASE)/2 of them. */
-    for(unsigned k = AEC_FILTER_TAPS_PER_PHASE/2; k < AEC_FILTER_TD_PAIRS; k++) {
-        const unsigned m = n_bitrev(k, AEC_FILTER_TD_PAIRS_LOG2);
-        acc[m].re = 0;
-        acc[m].im = 0;
-    }
 
     /* Accumulate at 32bit precision and round to nearest once, rather than aligning the update to the filter's 16bit
      * exponent and rounding twice. The transform buffer is dead now that the update has been collected, so the low

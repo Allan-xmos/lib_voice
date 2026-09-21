@@ -391,10 +391,15 @@ void aec_l2_bfp_s32_unify_exponent(
         uint32_t desired_index,
         uint32_t min_headroom);
 
+/* `mem_pool_bytes` is the size of the buffer `mem_pool` points at. The allocators are linear arenas with no
+ * inherent bound, and the capacity rule in @ref aec_phase_pool_capacity is a precondition the caller could
+ * previously violate silently: overflowing the main pool puts the tail of its allocations, including
+ * inv_X_energy, on top of the shadow pool's filter_scratch, which the transforms rewrite every frame. */
 void aec_priv_main_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
+        size_t mem_pool_bytes,
         unsigned num_y_channels,
         unsigned num_x_channels,
         unsigned num_phases);
@@ -403,6 +408,7 @@ void aec_priv_shadow_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
+        size_t mem_pool_bytes,
         unsigned num_phases);
 /// Reset a frequency domain filter. Used by the interference canceller; the AEC uses aec_priv_reset_filter_td().
 void aec_priv_reset_filter(
@@ -441,9 +447,13 @@ void aec_priv_bfp_s16_copy(
 
 /** @brief Expand a stored time domain filter phase into a real DFT buffer
  *
- * Widens AEC_FILTER_TD_PAIRS 16bit sample pairs into the even complex elements of a
+ * Widens AEC_FILTER_TD_STORED_PAIRS 16bit sample pairs into the even complex elements of a
  * AEC_PROC_FRAME_LENGTH/2 element buffer, applying `shl` and zeroing the odd elements. The odd elements are the
  * upper half of the impulse response, which the gradient constraint holds at zero.
+ *
+ * The stored pairs do not cover every even element: the slots the compacted storage omits (see
+ * @ref AEC_FILTER_TD_STORED_PAIRS, every AEC_FILTER_TD_BLOCK'th slot) are written as zero rather than read from
+ * `src`, because the gradient constraint holds those taps at zero too.
  *
  * @param[out] dst  AEC_PROC_FRAME_LENGTH/2 complex elements
  * @param[in] src   AEC_FILTER_TD_LENGTH 16bit mantissas
@@ -456,10 +466,11 @@ void aec_priv_td_expand(
 
 /** @brief Collect a time domain filter phase from a real DFT buffer
  *
- * Inverse of aec_priv_td_expand()'s element mapping: copies the even complex elements of `src` into `dst`,
- * discarding the odd ones.
+ * Inverse of aec_priv_td_expand()'s element mapping: copies the even complex elements of `src` that the compacted
+ * storage keeps into `dst`, discarding the odd elements and the omitted slots. Discarding them is what applies the
+ * gradient constraint to the filter update.
  *
- * @param[out] dst  AEC_FILTER_TD_PAIRS complex elements
+ * @param[out] dst  AEC_FILTER_TD_STORED_PAIRS complex elements
  * @param[in] src   AEC_PROC_FRAME_LENGTH/2 complex elements
  */
 void aec_priv_td_gather(

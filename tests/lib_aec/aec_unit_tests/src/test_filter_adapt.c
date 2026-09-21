@@ -61,18 +61,24 @@ void aec_filter_adapt_td_fp(
     }
 }
 
-/* The stored filter is in the low level DFT's element order (see AEC_FILTER_TD_PAIRS): stored complex element m
- * holds the sample pair (2k, 2k+1) for k = n_bitrev(m). These helpers move between that and natural tap order. */
+/* The stored filter is in the low level DFT's element order (see AEC_FILTER_TD_PAIRS): transform slot m holds the
+ * sample pair (2k, 2k+1) for k = n_bitrev(m). Only the slots the gradient constraint does not hold at zero are
+ * stored, at index AEC_FILTER_TD_STORED_INDEX(m). These helpers move between that and natural tap order. */
 static void scramble_taps(bfp_s16_t *h, const double *taps, exponent_t exp, headroom_t hr)
 {
     h->exp = exp;
     h->hr = hr;
     for(unsigned m=0; m<AEC_FILTER_TD_PAIRS; m++) {
+        if(!AEC_FILTER_TD_SLOT_STORED(m)) {
+            continue;
+        }
         const unsigned k = n_bitrev(m, AEC_FILTER_TD_PAIRS_LOG2);
+        const unsigned s = AEC_FILTER_TD_STORED_INDEX(m);
         for(unsigned half=0; half<2; half++) {
             const unsigned tap = 2*k + half;
-            double v = (tap < NUM_TAPS) ? ldexp(taps[tap], -exp) : 0.0;
-            h->data[2*m + half] = (int16_t)((v < 0) ? (v - 0.5) : (v + 0.5));
+            TEST_ASSERT_LESS_THAN_UINT32_MESSAGE(NUM_TAPS, tap, "A stored slot must hold a modelled tap.");
+            const double v = ldexp(taps[tap], -exp);
+            h->data[2*s + half] = (int16_t)((v < 0) ? (v - 0.5) : (v + 0.5));
         }
     }
 }
@@ -81,13 +87,16 @@ static unsigned taps_maxdiff(const bfp_s16_t *h, const double *taps)
 {
     unsigned max_diff = 0;
     for(unsigned m=0; m<AEC_FILTER_TD_PAIRS; m++) {
+        if(!AEC_FILTER_TD_SLOT_STORED(m)) {
+            continue; //taps at or beyond NUM_TAPS are not stored, so there is nothing to compare
+        }
         const unsigned k = n_bitrev(m, AEC_FILTER_TD_PAIRS_LOG2);
+        const unsigned s = AEC_FILTER_TD_STORED_INDEX(m);
         for(unsigned half=0; half<2; half++) {
             const unsigned tap = 2*k + half;
-            //Taps at or beyond NUM_TAPS must be held at zero by the gradient constraint
-            double r = (tap < NUM_TAPS) ? ldexp(taps[tap], -h->exp) : 0.0;
+            const double r = ldexp(taps[tap], -h->exp);
             int32_t v = (int32_t)((r < 0) ? (r - 0.5) : (r + 0.5));
-            int diff = v - h->data[2*m + half];
+            int diff = v - h->data[2*s + half];
             if(diff < 0) diff = -diff;
             if((unsigned)diff > max_diff) max_diff = (unsigned)diff;
         }

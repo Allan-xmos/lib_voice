@@ -249,6 +249,22 @@ void aec_priv_bfp_s16_copy(
     dst->hr = src->hr;
 }
 
+void aec_priv_bfp_s16_real_scale(
+        bfp_s16_t *a,
+        const bfp_s16_t *b,
+        float_s32_t c)
+{
+    //vect_s16_scale() takes a 16 bit scalar, so normalise c's mantissa and keep its top 16 bits. Normalising first
+    //is what makes the narrowing cheap in precision: the discarded bits are always below the 16 that are kept.
+    const headroom_t c_hr = HR_S32(c.mant);
+    const int16_t c_mant = (int16_t)((c.mant << c_hr) >> 16);
+    const exponent_t c_exp = c.exp - (exponent_t)c_hr + 16;
+
+    right_shift_t a_shr;
+    vect_s16_scale_prepare(&a->exp, &a_shr, b->exp, c_exp, b->hr, HR_S16(c_mant));
+    a->hr = vect_s16_scale(a->data, b->data, b->length, c_mant, a_shr);
+}
+
 void aec_priv_bfp_s32_reset(bfp_s32_t *a)
 {
     vect_s32_set(a->data, 0, a->length);
@@ -263,25 +279,7 @@ void aec_priv_bfp_s16_reset(bfp_s16_t *a)
     a->hr = AEC_ZEROVAL_HR16;
 }
 
-void aec_priv_bfp_complex_s32_reset(bfp_complex_s32_t *a)
-{
-    vect_complex_s32_set(a->data, 0, 0, a->length);
-    a->exp = AEC_ZEROVAL_EXP;
-    a->hr = AEC_ZEROVAL_HR;
-}
-
 void aec_priv_reset_filter(
-        bfp_complex_s32_t *H_hat,
-        unsigned num_x_channels,
-        unsigned num_phases)
-{
-    for(unsigned ph=0; ph<num_x_channels*num_phases; ph++) {
-        aec_priv_bfp_complex_s32_reset(&H_hat[ph]);
-    }
-}
-
-//Time domain filter reset used by AEC (frequency domain aec_priv_reset_filter is used by IC)
-void aec_priv_reset_filter_td(
         bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases)
@@ -342,7 +340,7 @@ void aec_priv_compare_filters(
         if(float_s32_gt(shadow_state->overall_Error[ch], shared_state->overall_Y[ch]) && shadow_params->shadow_reset_count[ch] >= 0)
         {
             shadow_params->shadow_flag[ch] = ERROR;
-            aec_priv_reset_filter_td(shadow_state->h_hat[ch], shadow_state->shared_state->num_x_channels, shadow_state->num_phases);
+            aec_priv_reset_filter(shadow_state->h_hat[ch], shadow_state->shared_state->num_x_channels, shadow_state->num_phases);
             //Y -> shadow Error
             aec_priv_bfp_complex_s32_copy(&shadow_state->Error[ch], &shared_state->Y[ch]);
             shadow_state->overall_Error[ch] = shared_state->overall_Y[ch];
@@ -382,7 +380,7 @@ void aec_priv_compare_filters(
             if(shadow_params->shadow_reset_count[ch] > shadow_conf->shadow_zero_thresh) {
                 //# if shadow filter has been reset several times in a row, reset to zeros
                 shadow_params->shadow_flag[ch] = ZERO;
-                aec_priv_reset_filter_td(shadow_state->h_hat[ch], shadow_state->shared_state->num_x_channels, shadow_state->num_phases);
+                aec_priv_reset_filter(shadow_state->h_hat[ch], shadow_state->shared_state->num_x_channels, shadow_state->num_phases);
                 aec_priv_bfp_complex_s32_copy(&shadow_state->Error[ch], &shared_state->Y[ch]);
                 //# give the zeroed filter time to reconverge (or redeconverge)
                 shadow_params->shadow_reset_count[ch] = -(int)shadow_conf->shadow_reset_timer;
@@ -749,25 +747,12 @@ void aec_priv_calc_Error_and_Y_hat(
         bfp_complex_s32_t *Y_hat,
         const bfp_complex_s32_t *Y,
         const bfp_complex_s32_t *X_fifo,
-        const bfp_complex_s32_t *H_hat,
-        unsigned num_x_channels,
-        unsigned num_phases,
-        int32_t bypass_enabled)
-{
-    aec_l2_calc_Error_and_Y_hat(Error, Y_hat, Y, X_fifo, H_hat, num_x_channels, num_phases, 0, AEC_PROC_FRAME_LENGTH/2 + 1, bypass_enabled);
-}
-
-void aec_priv_calc_Error_and_Y_hat_td(
-        bfp_complex_s32_t *Error,
-        bfp_complex_s32_t *Y_hat,
-        const bfp_complex_s32_t *Y,
-        const bfp_complex_s32_t *X_fifo,
         const bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases,
         int32_t bypass_enabled)
 {
-    aec_l2_calc_Error_and_Y_hat_td(Error, Y_hat, Y, X_fifo, h_hat, num_x_channels, num_phases, 0, AEC_PROC_FRAME_LENGTH/2 + 1, bypass_enabled);
+    aec_l2_calc_Error_and_Y_hat(Error, Y_hat, Y, X_fifo, h_hat, num_x_channels, num_phases, 0, AEC_PROC_FRAME_LENGTH/2 + 1, bypass_enabled);
 }
 
 void aec_priv_calc_coherence(
@@ -1018,20 +1003,6 @@ void aec_priv_calc_inv_X_energy(
 }
 
 void aec_priv_filter_adapt(
-        bfp_complex_s32_t *H_hat,
-        const bfp_complex_s32_t *X_fifo,
-        const bfp_complex_s32_t *T,
-        unsigned num_x_channels,
-        unsigned num_phases)
-{
-    unsigned phases = num_x_channels * num_phases;
-    for(unsigned ph=0; ph<phases; ph++) {
-        //find out which channel this phase belongs to
-        aec_l2_adapt_plus_fft_gc(&H_hat[ph], &X_fifo[ph], &T[ph/num_phases]);
-    }
-}
-
-void aec_priv_filter_adapt_td(
         bfp_s16_t *h_hat,
         const bfp_complex_s32_t *X_fifo,
         const bfp_complex_s32_t *T,

@@ -319,30 +319,13 @@ void aec_update_X_fifo_1d(
 /**
  * @brief Calculate Error and Y_hat for a channel over a range of bins.
  *
- * @ingroup aec_low_level_func
- */
-void aec_l2_calc_Error_and_Y_hat(
-        bfp_complex_s32_t *Error,
-        bfp_complex_s32_t *Y_hat,
-        const bfp_complex_s32_t *Y,
-        const bfp_complex_s32_t *X_fifo,
-        const bfp_complex_s32_t *H_hat,
-        unsigned num_x_channels,
-        unsigned num_phases,
-        unsigned start_offset,
-        unsigned length,
-        int32_t bypass_enabled);
-
-/**
- * @brief Calculate Error and Y_hat for a time domain filter over a range of bins.
- *
  * Each phase of `h_hat` is expanded from its bit-reversed storage and transformed to the frequency
  * domain on the fly. Because the storage is already bit-reversed, the forward transform needs no
  * index bit-reversal pass.
  *
  * @ingroup aec_low_level_func
  */
-void aec_l2_calc_Error_and_Y_hat_td(
+void aec_l2_calc_Error_and_Y_hat(
         bfp_complex_s32_t *Error,
         bfp_complex_s32_t *Y_hat,
         const bfp_complex_s32_t *Y,
@@ -356,17 +339,6 @@ void aec_l2_calc_Error_and_Y_hat_td(
 
 /**
  * @brief Adapt one phase of the adaptive filter
- *
- * @ingroup aec_low_level_func
- */
-void aec_l2_adapt_plus_fft_gc(
-        bfp_complex_s32_t *H_hat_ph,
-        const bfp_complex_s32_t *X_fifo_ph,
-        const bfp_complex_s32_t *T_ph
-        );
-
-/**
- * @brief Adapt one phase of the time domain adaptive filter
  *
  * The inverse transform of the delta update leaves its time domain result in bit-reversed index
  * order, which is the order `h_hat` is stored in, so no index bit-reversal pass is needed. The
@@ -422,11 +394,6 @@ void aec_priv_shadow_init(
         uint8_t *mem_pool,
         unsigned num_phases);
 void aec_priv_reset_filter(
-        bfp_complex_s32_t *H_hat,
-        unsigned num_x_channels,
-        unsigned num_phases);
-
-void aec_priv_reset_filter_td(
         bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases);
@@ -450,11 +417,19 @@ void aec_priv_bfp_s16_copy(
         bfp_s16_t *dst,
         const bfp_s16_t *src);
 
+/** @brief Multiply a 16 bit BFP vector by a float_s32_t scalar.
+ *
+ * bfp_s16_scale() takes its scalar as a C `float`, so this is the fixed point equivalent of
+ * bfp_complex_s32_real_scale() for the 16 bit filter.
+ */
+void aec_priv_bfp_s16_real_scale(
+        bfp_s16_t *a,
+        const bfp_s16_t *b,
+        float_s32_t c);
+
 void aec_priv_bfp_s32_reset(bfp_s32_t *a);
 
 void aec_priv_bfp_s16_reset(bfp_s16_t *a);
-
-void aec_priv_bfp_complex_s32_reset(bfp_complex_s32_t *a);
 
 void aec_priv_compare_filters(
         aec_filter_state_t *main_state,
@@ -492,16 +467,6 @@ void aec_priv_update_X_fifo_and_calc_sigmaXX(
         uint32_t sigma_xx_shift);
 
 void aec_priv_calc_Error_and_Y_hat(
-        bfp_complex_s32_t *Error,
-        bfp_complex_s32_t *Y_hat,
-        const bfp_complex_s32_t *Y,
-        const bfp_complex_s32_t *X_fifo,
-        const bfp_complex_s32_t *H_hat,
-        unsigned num_x_channels,
-        unsigned num_phases,
-        int32_t bypass_enabled);
-
-void aec_priv_calc_Error_and_Y_hat_td(
         bfp_complex_s32_t *Error,
         bfp_complex_s32_t *Y_hat,
         const bfp_complex_s32_t *Y,
@@ -548,13 +513,6 @@ void aec_priv_calc_inv_X_energy(
         unsigned normdenom_apply_factor_of_2);
 
 void aec_priv_filter_adapt(
-        bfp_complex_s32_t *H_hat,
-        const bfp_complex_s32_t *X_fifo,
-        const bfp_complex_s32_t *T,
-        unsigned num_x_channels,
-        unsigned num_phases);
-
-void aec_priv_filter_adapt_td(
         bfp_s16_t *h_hat,
         const bfp_complex_s32_t *X_fifo,
         const bfp_complex_s32_t *T,

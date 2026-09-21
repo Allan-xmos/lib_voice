@@ -216,7 +216,7 @@ void test_calc_Error_and_Y_hat() {
                     bfp_complex_s32_init(&Y_hat_par[index], &state_ptr->Y_hat[ch].data[start_offset], state_ptr->Y_hat[ch].exp, length, 0);
                     Y_hat_par[index].hr = state_ptr->Y_hat[ch].hr;
 
-                    aec_l2_calc_Error_and_Y_hat_td(&Error_par[index], &Y_hat_par[index], &state_ptr->shared_state->Y[ch], state_ptr->X_fifo_1d, state_ptr->h_hat[ch], num_x_channels, state_ptr->num_phases, start_offset, length, state_ptr->shared_state->config_params.aec_core_conf.bypass);
+                    aec_l2_calc_Error_and_Y_hat(&Error_par[index], &Y_hat_par[index], &state_ptr->shared_state->Y[ch], state_ptr->X_fifo_1d, state_ptr->h_hat[ch], num_x_channels, state_ptr->num_phases, start_offset, length, state_ptr->shared_state->config_params.aec_core_conf.bypass);
                     //printf("Error: (%d, %d), Y_hat: (%d,%d)\n", Error_par[index].exp, Error_par[index].hr, Y_hat_par[index].exp, Y_hat_par[index].hr);
                 }
             }

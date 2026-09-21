@@ -190,10 +190,10 @@ typedef struct {
      * so the Error storage is reused for error. */
     complex_s32_t DWORD_ALIGNED Error[IC_Y_CHANNELS][IC_FD_FRAME_LENGTH];
 
-    /** BFP array pointing to the frequency domain estimate of transfer function. */
-    bfp_complex_s32_t H_hat_bfp[IC_Y_CHANNELS][IC_X_CHANNELS*IC_FILTER_PHASES];
-    /** Storage for H_hat mantissas. */
-    complex_s32_t DWORD_ALIGNED H_hat[IC_Y_CHANNELS][IC_FILTER_PHASES*IC_X_CHANNELS][IC_FD_FRAME_LENGTH];
+    /** BFP array pointing to the time domain estimate of the transfer function. */
+    bfp_s16_t h_hat_bfp[IC_Y_CHANNELS][IC_X_CHANNELS*IC_FILTER_PHASES];
+    /** Storage for h_hat mantissas, stored in bit-reversed order. */
+    int16_t DWORD_ALIGNED h_hat[IC_Y_CHANNELS][IC_X_CHANNELS*IC_FILTER_PHASES][IC_FRAME_ADVANCE];
 
     /** BFP array pointing to the frequency domain X input history used for calculating normalisation. */
     bfp_complex_s32_t X_fifo_bfp[IC_X_CHANNELS][IC_FILTER_PHASES];

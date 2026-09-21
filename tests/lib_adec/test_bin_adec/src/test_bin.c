@@ -92,10 +92,8 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     printf("\n");
 
     //Check validity of runtime configuration
-    assert(runtime_args[Y_CHANNELS] <= AEC_MAX_Y_CHANNELS);
-    assert(runtime_args[X_CHANNELS] <= AEC_MAX_X_CHANNELS);
-    assert((runtime_args[Y_CHANNELS] * runtime_args[X_CHANNELS] * runtime_args[MAIN_FILTER_PHASES]) <= (AEC_LIB_MAX_PHASES));
-    assert((runtime_args[Y_CHANNELS] * runtime_args[X_CHANNELS] * runtime_args[SHADOW_FILTER_PHASES]) <= (AEC_LIB_MAX_PHASES));
+    aec_assert_config_supported(runtime_args[Y_CHANNELS], runtime_args[X_CHANNELS],
+            runtime_args[MAIN_FILTER_PHASES], runtime_args[SHADOW_FILTER_PHASES]);
 
     file_t input_file, output_file, req_delay_file, H_hat_file, measured_delay_file;
     // Open input wav file containing mic and ref channels of input data

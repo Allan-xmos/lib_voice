@@ -9,11 +9,11 @@ set( TEST_SPEEDUP_FACTOR "1" CACHE STRING "Test speedup factor." )
 endif()
 
 # Each of these should be the AEC configuration the test actually runs, so that the memory pools are
-# sized for it and the preconditions on aec_init() can be checked. Note that a test's wav channel
-# layout is a separate thing: test_adec and test_bin_adec feed a 4 channel (2 mic, 2 reference) wav
-# to an AEC configured for fewer y channels than that, so those tests state the frame width with
-# AP_MAX_Y_CHANNELS in their own CMakeLists rather than taking it from AEC_MAX_Y_CHANNELS, and only
-# serialise the y channels the AEC actually produces.
+# sized for it and the preconditions on aec_init() can be checked. 
+#
+# Note that a test's wav channel layout is not consistent, some 4ch inputs are passed to tests with
+# a single y channel. This is overridden by the test's own CMakeLists configuration using
+# AP_MAX_Y_CHANNELS (e.g. test_adec and test_bin_adec).
 if(NOT DEFINED DE_UNIT_TESTS_BUILD_CONFIG)
 set(
     DE_UNIT_TESTS_BUILD_CONFIG

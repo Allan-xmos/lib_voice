@@ -125,17 +125,12 @@
  *
  * @ingroup aec_defines
  */
-#define AEC_LIB_MAX_PHASES (AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES)
+#define AEC_LIB_MAX_PHASES (AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES * AEC_MAX_Y_CHANNELS)
 
-/** @brief Maximum total number of phases supported in the AEC shadow filter. 
- * 
- * See the description for @ref AEC_LIB_MAX_PHASES for more details on how total phases are calculated.
- * 
- * @ingroup aec_defines
- */
-#define AEC_LIB_MAX_SHADOW_PHASES (AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_SHADOW_FILTER_PHASES)
-
-
+/* The shadow filter reads phases from the X FIFO that the main filter fills, so it can never be
+longer than the main filter. aec_init() enforces the same rule on its runtime arguments. */
+_Static_assert(AEC_SHADOW_FILTER_PHASES <= AEC_MAIN_FILTER_PHASES,
+        "AEC_SHADOW_FILTER_PHASES must be less than or equal to AEC_MAIN_FILTER_PHASES");
 
 /** Overlap data length
  *

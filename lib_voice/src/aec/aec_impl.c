@@ -7,6 +7,27 @@
 #include "aec.h"
 #include "aec_priv.h"
 
+void aec_assert_config_supported(
+        unsigned num_y_channels,
+        unsigned num_x_channels,
+        unsigned num_main_filter_phases,
+        unsigned num_shadow_filter_phases)
+{
+    assert(num_y_channels <= AEC_MAX_Y_CHANNELS);
+    assert(num_x_channels <= AEC_MAX_X_CHANNELS);
+
+    // Check config fits in aec_filter_state_t
+    assert((size_t)num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
+    assert((size_t)num_x_channels * num_shadow_filter_phases <= AEC_LIB_MAX_PHASES);
+    assert(num_shadow_filter_phases <= num_main_filter_phases);
+
+    // Check this filter config will fit in the memory pools
+    assert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases)
+            <= sizeof(aec_memory_pool_t));
+    assert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
+            <= sizeof(aec_shadow_filt_memory_pool_t));
+}
+
 void aec_init(
         aec_state_t *aec_state,
         unsigned num_y_channels,
@@ -18,14 +39,8 @@ void aec_init(
 {
     assert(tdist);
     assert(tdist->thread_count <= 3); // hardcoded in PAR_THREADS_PJOBS macro
-    assert(num_y_channels <= AEC_MAX_Y_CHANNELS);
-    assert(num_x_channels <= AEC_MAX_X_CHANNELS);
-
-    // Check this filter config will fit in the memory pools
-    assert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases)
-            <= sizeof(aec_memory_pool_t));
-    assert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
-            <= sizeof(aec_shadow_filt_memory_pool_t));
+    aec_assert_config_supported(num_y_channels, num_x_channels, num_main_filter_phases,
+            num_shadow_filter_phases);
 
     aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, (uint8_t*)&aec_state->main_mem_pool, num_y_channels, num_x_channels, num_main_filter_phases);
     aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state, (uint8_t*)&aec_state->shadow_mem_pool, num_shadow_filter_phases);

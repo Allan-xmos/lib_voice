@@ -18,11 +18,13 @@ if(APP_BUILD_ARCH STREQUAL "xs3a")
 elseif(APP_BUILD_ARCH STREQUAL "vx4b")
     list(APPEND LIB_COMPILER_FLAGS
         -Wno-fptrgroup
+        -DLIBXCORE_XASSERT_IS_ASSERT
     )
 elseif(BUILD_NATIVE)
     list(APPEND LIB_COMPILER_FLAGS
         -D__xtflm_conf_h_exists__
         -DNN_USE_REF
+        -DLIBXCORE_XASSERT_IS_ASSERT
     )
 endif()
 

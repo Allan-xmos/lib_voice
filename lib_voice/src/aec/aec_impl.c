@@ -3,7 +3,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#if defined(__XS3A__) || defined(__VX4B__)
+#include <xcore/assert.h>
+#else
 #include <assert.h>
+#define xassert(c) assert(c)
+#endif
 #include "aec.h"
 #include "aec_priv.h"
 
@@ -13,18 +18,18 @@ void aec_assert_config_supported(
         unsigned num_main_filter_phases,
         unsigned num_shadow_filter_phases)
 {
-    assert(num_y_channels <= AEC_MAX_Y_CHANNELS);
-    assert(num_x_channels <= AEC_MAX_X_CHANNELS);
+    xassert(num_y_channels <= AEC_MAX_Y_CHANNELS);
+    xassert(num_x_channels <= AEC_MAX_X_CHANNELS);
 
     // Check config fits in aec_filter_state_t
-    assert((size_t)num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
-    assert((size_t)num_x_channels * num_shadow_filter_phases <= AEC_LIB_MAX_PHASES);
-    assert(num_shadow_filter_phases <= num_main_filter_phases);
+    xassert((size_t)num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
+    xassert((size_t)num_x_channels * num_shadow_filter_phases <= AEC_LIB_MAX_PHASES);
+    xassert(num_shadow_filter_phases <= num_main_filter_phases);
 
     // Check this filter config will fit in the memory pools
-    assert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases)
+    xassert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases)
             <= sizeof(aec_memory_pool_t));
-    assert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
+    xassert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
             <= sizeof(aec_shadow_filt_memory_pool_t));
 }
 
@@ -37,8 +42,8 @@ void aec_init(
         const aec_task_distribution_t *tdist
     )
 {
-    assert(tdist);
-    assert(tdist->thread_count <= 3); // hardcoded in PAR_THREADS_PJOBS macro
+    xassert(tdist);
+    xassert(tdist->thread_count <= 3); // hardcoded in PAR_THREADS_PJOBS macro
     aec_assert_config_supported(num_y_channels, num_x_channels, num_main_filter_phases,
             num_shadow_filter_phases);
 
@@ -291,7 +296,7 @@ void aec_calc_freq_domain_energy(
 {
     int32_t DWORD_ALIGNED scratch_mem[AEC_PROC_FRAME_LENGTH/2 + 1];
 #if (BFP_DEBUG_CHECK_LENGTHS)
-    assert(input->length <= AEC_PROC_FRAME_LENGTH/2 + 1);
+    xassert(input->length <= AEC_PROC_FRAME_LENGTH/2 + 1);
 #endif
     bfp_s32_t scratch;
     bfp_s32_init(&scratch, scratch_mem, 0, input->length, 0);

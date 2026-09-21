@@ -2,13 +2,20 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include "vnr.h"
+#if defined(__XS3A__) || defined(__VX4B__)
+#include <xcore/assert.h>
+#else
+#include <assert.h>
+#define xassert(c) assert(c)
+#endif
+
 
 void vnr_state_init(vnr_state_t *vnr)
 {
     vnr_input_state_init(&vnr->input_state);
     vnr_feature_state_init(&vnr->feature_state);
     int32_t ret = vnr_inference_init();
-    assert(ret == 0 && "vnr inference initialisation has failed");
+    xassert(ret == 0 && "vnr inference initialisation has failed");
 }
 
 void vnr_process_frame(vnr_state_t * vnr, float_s32_t * output, int32_t input[VNR_FRAME_ADVANCE])

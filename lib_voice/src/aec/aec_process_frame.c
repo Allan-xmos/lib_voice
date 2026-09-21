@@ -3,6 +3,13 @@
 #include "aec.h"
 #include "aec_priv.h"
 
+#if defined(__XS3A__) || defined(__VX4B__)
+#include <xcore/assert.h>
+#else
+#include <assert.h>
+#define xassert(c) assert(c)
+#endif
+
 // helper functions
 enum e_td_ema {Y_EMA, X_EMA, ERROR_EMA};
 enum e_fft {Y_FFT, X_FFT, ERROR_FFT};
@@ -45,7 +52,7 @@ void calc_time_domain_ema_energy_task(const aec_par_tasks_and_channels_t* s, aec
 
                 aec_calc_time_domain_ema_energy(&state->error_ema_energy[ch], &temp, 0, AEC_FRAME_ADVANCE, &state->shared_state->config_params);
             }
-            else{assert(0);}
+            else{xassert(0);}
         }
     }
 }
@@ -79,7 +86,7 @@ void fft_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_st
                         &shadow_state->error[ch]
                         ); //error_shad -> Error_shad
             }
-            else{assert(0);}
+            else{xassert(0);}
         }
     }
 }

@@ -7,10 +7,7 @@
 #include "aec.h"
 #include "aec_priv.h"
 
-/* The IC filter is the AEC filter: the same bit-reversed 16 bit time domain storage, transformed a phase at a time
- * by the same aec_l2_* functions. That layout is derived from the AEC's frame geometry, so the two have to agree.
- * These are the whole of the IC's memory checks - unlike the AEC, whose pool ADEC re-carves at runtime into a
- * different channel/phase split, the IC's filter is a fixed array in ic_state_t that sizes itself. */
+/* The IC filter is the AEC filter share the same underlying implementation, so must be the same size. */
 _Static_assert(IC_FRAME_LENGTH == AEC_PROC_FRAME_LENGTH,
         "The IC filter uses the AEC's bit-reversed tap layout, which is derived from AEC_PROC_FRAME_LENGTH");
 _Static_assert(IC_FRAME_ADVANCE == AEC_FRAME_ADVANCE,

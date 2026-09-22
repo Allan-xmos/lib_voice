@@ -57,20 +57,7 @@
 #ifndef ADEC_DE_MODE_X_CHANNELS
 #define ADEC_DE_MODE_X_CHANNELS                 (1)
 #endif
-/** @brief See @ref ADEC_DE_MODE_Y_CHANNELS @ingroup adec_defines
- *
- * A delay estimation cycle's memory demand is almost all X_fifo, which @ref aec_memory_pool_t
- * reserves for `AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES` phases - a count that says nothing
- * about the `ADEC_DE_MODE_X_CHANNELS * ADEC_DE_MODE_MAIN_FILTER_PHASES` this configuration needs.
- * An AEC built for 2 y channels by 2 x channels by 10 phases reserves only 20 X_fifo phases
- * against the 30 a full length delay estimation filter asks for, and 30 does not fit; 29 does.
- *
- * The default is therefore 29, which is what a 10 phase AEC can afford. 30 is the length the delay
- * estimator is tuned for and it does measurably better on rapid delay changes, so an application
- * that can spare the memory should ask for it - building the AEC for 11 phases rather than 10 is
- * enough, and the delay estimation tests do exactly that. The assertion below decides whether a
- * given pairing fits. Either way the filter spans far more than @ref ADEC_DE_DELAY_SAMPS, which is
- * what bounds the delay ADEC can actually measure. */
+/** @brief See @ref ADEC_DE_MODE_Y_CHANNELS @ingroup adec_defines */
 #ifndef ADEC_DE_MODE_MAIN_FILTER_PHASES
 #define ADEC_DE_MODE_MAIN_FILTER_PHASES         (29)
 #endif

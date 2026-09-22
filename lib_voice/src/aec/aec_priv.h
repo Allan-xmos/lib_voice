@@ -15,7 +15,7 @@
 /** @name h_hat bit-reversed storage layout
  *
  * The AEC adaptive filter is stored in the time domain, with its taps held in the bit-reversed
- * index order the low level FFT functions work in. See aec_state_t::h_hat for why.
+ * index order that the low level FFT functions work in. See aec_state_t::h_hat for why.
  *
  * An AEC_PROC_FRAME_LENGTH point real FFT is computed as an AEC_PROC_FRAME_LENGTH/2 point complex
  * FFT over a vector whose element `c` holds the real time domain samples `td[2c]` and `td[2c+1]`.
@@ -25,12 +25,11 @@
  * - An odd slot `j` always holds a `c` from the second half of the frame, i.e. taps
  *   `td[AEC_PROC_FRAME_LENGTH/2]` onwards. Those taps are always zero, so odd slots are not stored.
  * - Of the AEC_H_HAT_BITREV_SLOTS even slots, the ones holding the taps between AEC_FRAME_ADVANCE
- *   and AEC_PROC_FRAME_LENGTH/2 - also always zero - are exactly every AEC_H_HAT_BITREV_GROUP'th
- *   one. Those are not stored either.
+ *   and AEC_PROC_FRAME_LENGTH/2 are zeroed for gradient constraint. These are every AEC_H_HAT_BITREV_GROUP'th
+ *   value, and can also be discarded.
  *
  * What remains is exactly the AEC_FRAME_ADVANCE taps of the filter, so bit-reversed storage costs
- * no more memory than natural order storage does. Zeroing the taps that are not stored *is* the
- * AEC gradient constraint, so it costs nothing either.
+ * no more memory than natural order storage does.
  */
 ///@{
 /** Number of even bit-reversed slots, i.e. complex time domain elements in the first half of the frame. */
@@ -45,8 +44,7 @@
 
 /* The "every AEC_H_HAT_BITREV_GROUP'th slot" shortcut above only holds when the dropped slots are a
  * power of two count aligned to the top of the frame, which is where AEC_FRAME_ADVANCE and
- * AEC_PROC_FRAME_LENGTH happen to sit. Fail the build loudly rather than silently mis-index if
- * either is ever changed to a combination that breaks it. */
+ * AEC_PROC_FRAME_LENGTH sit. */
 _Static_assert((AEC_H_HAT_BITREV_DROPPED & (AEC_H_HAT_BITREV_DROPPED - 1)) == 0,
         "h_hat bit-reversed storage needs a power of two number of dropped slots");
 _Static_assert(AEC_H_HAT_BITREV_GROUP * AEC_H_HAT_BITREV_DROPPED == AEC_H_HAT_BITREV_SLOTS,

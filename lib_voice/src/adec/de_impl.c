@@ -19,12 +19,7 @@ void adec_estimate_delay (
     xassert(num_phases <= AEC_LIB_MAX_PHASES);
 
     //Direct manipulation of mant/exp because f64_to_float_s32(0.0) takes hundreds of cycles.
-    //The exponent of a zero mantissa is not cosmetic here. float_s32_gt() subtracts, and the
-    //subtraction aligns both operands to an exponent derived from the larger of the two, so a
-    //sentinel of {0, 0} makes every comparison against it an absolute threshold of about 2^-31
-    //rather than a comparison against zero. Phase energies are the square of 16 bit taps at the
-    //filter's own exponent and routinely sit well below that, so the sentinel is given an exponent
-    //no real phase energy can go under: a zeroed phase is AEC_ZEROVAL_EXP, and squaring doubles it.
+    //Non-zero exponent ensures comparison in a sensible range rather than against an absolute zero.
     const float_s32_t zero = {0, 2*AEC_ZEROVAL_EXP};
     const float_s32_t one = {1, 0};
 
@@ -33,7 +28,6 @@ void adec_estimate_delay (
     de_output->sum_phase_powers = zero;
 
     for(int ph=0; ph<num_phases; ph++) { //compute delay over 1 x-y pair phases
-        //The filter is stored in the time domain; per-phase energy is computed directly from the time-domain taps.
         float_s32_t phase_power = float_s64_to_float_s32(bfp_s16_energy(&h_hat[ph]));
         de_output->phase_power[ph] = phase_power;
         de_output->sum_phase_powers = float_s32_add(de_output->sum_phase_powers, phase_power);

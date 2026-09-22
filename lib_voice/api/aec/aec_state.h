@@ -283,11 +283,7 @@ typedef struct {
      * The filter is stored as a num_y_channels x total_phases_across_all_x_channels array where each h_hat[i][j]
      * entry points to a single time domain filter phase. The filter is stored in the time domain (rather than the
      * frequency domain) to save memory; it is transformed to the frequency domain on the fly during the Error and
-     * Y_hat calculation.
-     *
-     * The taps are held at 16 bit depth, again to save memory - the filter is by a wide margin the largest thing the
-     * AEC stores. Only the storage is 16 bit: every arithmetic step is still done at 32 bit, with the taps widened
-     * on the way into the forward transform and the delta update rounded down to 16 bits on the way back in.
+     * Y_hat calculation. The taps are held at 16 bit depth in bit-reversed order.
      *
      * Number of phases in the filter refers to its tail length. A filter with more phases would be able to model a longer
      * echo thereby causing better echo cancellation.
@@ -299,14 +295,7 @@ typedef struct {
      *
      * Each filter phase data which is pointed to by h_hat[i][j].data is stored as an AEC_FRAME_ADVANCE length real 16bit
      * array.
-     *
-     * The taps within a phase are not in time order. They are permuted into the bit-reversed index order the FFT
-     * works in, which lets both of the per-phase transforms the AEC does every frame - the inverse transform of the
-     * delta update and the forward transform used for Y_hat - skip their index bit-reversal pass. The permutation
-     * happens to leave exactly the AEC_FRAME_ADVANCE taps of the filter, so it costs no extra memory, and the taps it
-     * leaves no room for are exactly the ones the gradient constraint zeroes. Use aec_h_hat_tap_index() to map a tap's
-     * position in the impulse response to its position in the stored phase; anything order independent, such as the
-     * per-phase energy the delay estimator uses, can read the stored data directly.*/
+     */
     bfp_s16_t h_hat[AEC_MAX_Y_CHANNELS][AEC_LIB_MAX_PHASES];
 
     /** BFP array pointing to all phases of reference input spectrum across all x channels. Here, the reference input

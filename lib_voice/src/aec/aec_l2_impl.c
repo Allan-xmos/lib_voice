@@ -125,6 +125,43 @@ static void h_hat_forward_fft(
     bfp_fft_unpack_mono(H_hat_ph);
 }
 
+//Transform each filter phase in turn and accumulate X * H_hat into Y_hat over the requested chunk.
+//
+//This is deliberately not part of aec_l2_calc_Error_and_Y_hat(), and deliberately not inlined back
+//into it. vx4b passes a function's first eight arguments in registers and the rest on the stack, and
+//XTC 0.3.1 mis-addresses those stack passed arguments whenever the frame outgrows the xm.entsp
+//immediate (1008 bytes) and the prologue has to lower sp a second time: the argument loads keep the
+//offset they had before that second adjustment, and so read out of the middle of the frame instead.
+//aec_l2_calc_Error_and_Y_hat() takes ten arguments, so `length` and `bypass_enabled` arrive on the
+//stack, and the AEC_PROC_FRAME_LENGTH scratch buffer below is what would push its frame past that
+//limit. Holding the scratch here keeps that frame inside a single xm.entsp. Keep this function at
+//eight arguments or fewer so that it takes none of its own from the stack.
+__attribute__((noinline))
+static void aec_l2_accumulate_Y_hat(
+        bfp_complex_s32_t *Y_hat,
+        const bfp_complex_s32_t *X_fifo,
+        const bfp_s16_t *h_hat,
+        unsigned phases,
+        unsigned start_offset,
+        unsigned length)
+{
+    //Scratch to hold one filter phase expanded from its bit-reversed storage into a full AEC_PROC_FRAME_LENGTH
+    //time domain vector and, after the in-place FFT, its AEC_FD_FRAME_LENGTH spectrum. The full spectrum is
+    //always computed so outputs are bitexact irrespective of the start_offset/length this function is called with.
+    int32_t DWORD_ALIGNED h_fft_scratch[AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
+    for(unsigned ph=0; ph<phases; ph++) {
+        bfp_complex_s32_t H_hat_ph;
+        h_hat_forward_fft(&H_hat_ph, &h_hat[ph], h_fft_scratch);
+
+        bfp_complex_s32_t X_chunk, H_hat_chunk;
+        bfp_complex_s32_init(&X_chunk, &X_fifo[ph].data[start_offset], X_fifo[ph].exp, length, 0);
+        X_chunk.hr = X_fifo[ph].hr;
+        bfp_complex_s32_init(&H_hat_chunk, &H_hat_ph.data[start_offset], H_hat_ph.exp, length, 0);
+        H_hat_chunk.hr = H_hat_ph.hr;
+        bfp_complex_s32_macc(Y_hat, &X_chunk, &H_hat_chunk);
+    }
+}
+
 void aec_l2_calc_Error_and_Y_hat(
         bfp_complex_s32_t *Error,
         bfp_complex_s32_t *Y_hat,
@@ -150,22 +187,7 @@ void aec_l2_calc_Error_and_Y_hat(
         Y_hat->hr = AEC_ZEROVAL_HR;
     }
     else {
-        //Scratch to hold one filter phase expanded from its bit-reversed storage into a full AEC_PROC_FRAME_LENGTH
-        //time domain vector and, after the in-place FFT, its AEC_FD_FRAME_LENGTH spectrum. The full spectrum is
-        //always computed so outputs are bitexact irrespective of the start_offset/length this function is called with.
-        int32_t DWORD_ALIGNED h_fft_scratch[AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
-        uint32_t phases = num_x_channels * num_phases;
-        for(unsigned ph=0; ph<phases; ph++) {
-            bfp_complex_s32_t H_hat_ph;
-            h_hat_forward_fft(&H_hat_ph, &h_hat[ph], h_fft_scratch);
-
-            bfp_complex_s32_t X_chunk, H_hat_chunk;
-            bfp_complex_s32_init(&X_chunk, &X_fifo[ph].data[start_offset], X_fifo[ph].exp, length, 0);
-            X_chunk.hr = X_fifo[ph].hr;
-            bfp_complex_s32_init(&H_hat_chunk, &H_hat_ph.data[start_offset], H_hat_ph.exp, length, 0);
-            H_hat_chunk.hr = H_hat_ph.hr;
-            bfp_complex_s32_macc(Y_hat, &X_chunk, &H_hat_chunk);
-        }
+        aec_l2_accumulate_Y_hat(Y_hat, X_fifo, h_hat, num_x_channels * num_phases, start_offset, length);
 
         bfp_complex_s32_t Y_chunk;
         bfp_complex_s32_init(&Y_chunk, &Y->data[start_offset], Y->exp, length, 0);

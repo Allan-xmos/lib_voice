@@ -134,7 +134,7 @@ void pipeline_stage_2(chanend_t c_frame_in, chanend_t c_frame_out) {
         // Calculating the ASR channel
         ic_process_frame(&ic_state, frame[0], frame[1], frame[0], &input_vnr_pred);
 #if PRINT_VNR_PREDICTION
-        printf("VNR INPUT PRED: %ld %d\n", input_vnr_pred.mant, input_vnr_pred.exp);
+        printf("VNR INPUT PRED: %ld %d\n", (long)input_vnr_pred.mant, input_vnr_pred.exp);
 #endif
         md.vnr_pred_flag = input_vnr_pred;
 

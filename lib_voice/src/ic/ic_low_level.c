@@ -319,7 +319,7 @@ void ic_mu_control_system(ic_state_t * state, float_s32_t vnr){
         state->leakage_alpha = ad_config->instability_recovery_leakage_alpha;
         ad_state->control_flag = UNSTABLE;
     }
-    //printf("MU: %ld %d\n", state->mu[0][0].mant, state->mu[0][0].exp);
+    //printf("MU: %ld %ld\n", (long)state->mu[0][0].mant, (long)state->mu[0][0].exp);
 }
 
 // Reset adaptive components and output an unprocessed frame

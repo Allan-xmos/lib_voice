@@ -75,8 +75,8 @@ static void aec_h_hat_bitrev_scatter(
 
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
         for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
-            dst[4*i]   = ((int32_t)src[2*i]) << 16;   //a stored pair of taps; the odd slot beside it holds taps
-            dst[4*i+1] = ((int32_t)src[2*i+1]) << 16; //AEC_PROC_FRAME_LENGTH/2 onwards, and stays zero
+            dst[4*i]   = ((int32_t)src[2*i]) * (1 << 16);   //a stored pair of taps; the odd slot beside it holds taps
+            dst[4*i+1] = ((int32_t)src[2*i+1]) * (1 << 16); //AEC_PROC_FRAME_LENGTH/2 onwards, and stays zero
         }
         dst += 4*AEC_H_HAT_BITREV_GROUP;     //past the dropped even slot, which holds the taps between
         src += 2*(AEC_H_HAT_BITREV_GROUP-1); //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner

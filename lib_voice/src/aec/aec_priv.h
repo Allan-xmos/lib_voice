@@ -22,7 +22,7 @@
 /** @name h_hat bit-reversed storage layout
  *
  * The AEC adaptive filter is stored in the time domain, with its taps held in the bit-reversed
- * index order the low level FFT functions work in. See aec_state_t::h_hat for why.
+ * index order that the low level FFT functions work in. See aec_state_t::h_hat for why.
  *
  * An AEC_PROC_FRAME_LENGTH point real FFT is computed as an AEC_PROC_FRAME_LENGTH/2 point complex
  * FFT over a vector whose element `c` holds the real time domain samples `td[2c]` and `td[2c+1]`.
@@ -32,12 +32,11 @@
  * - An odd slot `j` always holds a `c` from the second half of the frame, i.e. taps
  *   `td[AEC_PROC_FRAME_LENGTH/2]` onwards. Those taps are always zero, so odd slots are not stored.
  * - Of the AEC_H_HAT_BITREV_SLOTS even slots, the ones holding the taps between AEC_FRAME_ADVANCE
- *   and AEC_PROC_FRAME_LENGTH/2 - also always zero - are exactly every AEC_H_HAT_BITREV_GROUP'th
- *   one. Those are not stored either.
+ *   and AEC_PROC_FRAME_LENGTH/2 are zeroed for gradient constraint. These are every AEC_H_HAT_BITREV_GROUP'th
+ *   value, and can also be discarded.
  *
  * What remains is exactly the AEC_FRAME_ADVANCE taps of the filter, so bit-reversed storage costs
- * no more memory than natural order storage does. Zeroing the taps that are not stored *is* the
- * AEC gradient constraint, so it costs nothing either.
+ * no more memory and saves the need for a computationally expensive bit-reversal pass.
  */
 ///@{
 /** Number of even bit-reversed slots, i.e. complex time domain elements in the first half of the frame. */
@@ -52,12 +51,44 @@
 
 /* The "every AEC_H_HAT_BITREV_GROUP'th slot" shortcut above only holds when the dropped slots are a
  * power of two count aligned to the top of the frame, which is where AEC_FRAME_ADVANCE and
- * AEC_PROC_FRAME_LENGTH happen to sit. Fail the build loudly rather than silently mis-index if
- * either is ever changed to a combination that breaks it. */
+ * AEC_PROC_FRAME_LENGTH sit. */
 _Static_assert((AEC_H_HAT_BITREV_DROPPED & (AEC_H_HAT_BITREV_DROPPED - 1)) == 0,
         "h_hat bit-reversed storage needs a power of two number of dropped slots");
 _Static_assert(AEC_H_HAT_BITREV_GROUP * AEC_H_HAT_BITREV_DROPPED == AEC_H_HAT_BITREV_SLOTS,
         "h_hat bit-reversed storage needs the dropped slots to divide the slot count");
+
+/**
+ * @brief Expand one stored 16b h_hat phase into a full 32b bit-reversed time domain vector
+ *
+ * Writes the AEC_FRAME_ADVANCE taps of `src` into the slots of `dst` they occupy in the
+ * AEC_PROC_FRAME_LENGTH/2 point complex vector the forward transform wants, and zeroes every
+ * other slot. Each 16 bit tap lands in the top half of its 32 bit slot, so the expanded mantissas
+ * are 2^16 times the stored ones.
+ *
+ * @param[out] dst AEC_PROC_FRAME_LENGTH words, double word aligned
+ * @param[in]  src AEC_FRAME_ADVANCE taps, word aligned
+ */
+void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
+
+/**
+ * @brief Collect the non-zero h_hat taps from a full bit-reversed time domain vector
+ *
+ * Compress the non-zero h_hat values, keeping them in bit-reversed order. When combined with 
+ * @ref aec_h_hat_bitrev_scatter(), this applies a gradient constraint by zeroing h_hat values
+ * above the AEC_FRAME_ADVANCE index.
+ * 
+ * Each 32 bit tap is narrowed to 16 bit by an arithmetic right shift of `shr` (to the left,
+ * saturating, if negative), then rounding and saturation to the top half, so the gathered
+ * mantissas are 2^-(shr+16) times the full ones. Unlike vect_s32_to_vect_s16(), `shr` does not
+ * include the 16 bits the narrowing drops: with a `shr` of 0 this is the inverse of the widening
+ * aec_h_hat_bitrev_scatter() does.
+ *
+ * @param[out] dst AEC_FRAME_ADVANCE taps, word aligned
+ * @param[in]  src AEC_PROC_FRAME_LENGTH words, double word aligned. May be the buffer `dst`
+ *                 points into.
+ * @param[in]  shr Right shift applied to the 32 bit taps before their top halves are taken
+ */
+void aec_h_hat_bitrev_gather(int16_t *dst, const int32_t *src, const right_shift_t shr);
 
 /**
  * @brief Initialise AEC data structures for processing a new frame
@@ -294,7 +325,7 @@ void aec_calc_T(
 
 /** @brief Update filter
  *
- * This function updates the adaptive filter spectrum (`h_hat'). It calculates the delta update that is applied to the filter by scaling the X FIFO with the T values computed in `aec_compute_T()` and applies the delta update to `h_hat`.
+ * This function updates the adaptive filter taps (`h_hat'). It calculates the delta update that is applied to the filter by scaling the X FIFO with the T values computed in `aec_compute_T()` and applies the delta update to `h_hat`.
  * A gradient constraint FFT is then applied to constrain the length of each phase of the filter to avoid wrapping when calculating `y_hat`
  *
  * @param[inout] state AEC state structure. `state->h_hat[y_ch]` is updated
@@ -324,11 +355,11 @@ void aec_update_X_fifo_1d(
 
 //TODO pending documentation and examples for L2 APIs
 /**
- * @brief Calculate Error and Y_hat for a channel over a range of bins.
+ * @brief Calculate Error and Y_hat for a channel over all AEC_FD_FRAME_LENGTH bins.
  *
  * Each phase of `h_hat` is expanded from its bit-reversed storage and transformed to the frequency
  * domain on the fly. Because the storage is already bit-reversed, the forward transform needs no
- * index bit-reversal pass.
+ * bit-reversal pass.
  *
  * @ingroup aec_low_level_func
  */
@@ -340,15 +371,13 @@ void aec_l2_calc_Error_and_Y_hat(
         const bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases,
-        unsigned start_offset,
-        unsigned length,
         int32_t bypass_enabled);
 
 /**
  * @brief Adapt one phase of the adaptive filter
  *
  * The inverse transform of the delta update leaves its time domain result in bit-reversed index
- * order, which is the order `h_hat` is stored in, so no index bit-reversal pass is needed. The
+ * order, which is the order `h_hat` is stored in, so no bit-reversal pass is needed. The
  * gradient constraint is applied by discarding the taps that `h_hat` has no storage for.
  *
  * @ingroup aec_low_level_func
@@ -415,10 +444,6 @@ void aec_priv_copy_filter(
 void aec_priv_bfp_complex_s32_copy(
         bfp_complex_s32_t *dst,
         const bfp_complex_s32_t *src);
-
-void aec_priv_bfp_s32_copy(
-        bfp_s32_t *dst,
-        const bfp_s32_t *src);
 
 void aec_priv_bfp_s16_copy(
         bfp_s16_t *dst,

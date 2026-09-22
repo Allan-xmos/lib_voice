@@ -216,10 +216,6 @@ float_s32_t aec_calc_corr_factor(
  *      int16_t tap = state->h_hat[ch][ph].data[aec_h_hat_tap_index(n)];
  * \endcode
  *
- * The mapping is a permutation of `[0, AEC_FRAME_ADVANCE)` onto itself, so it can be used in either direction. It is
- * only needed by code that cares about the *order* of the taps; anything order independent (per-phase energy, copying
- * or zeroing a whole phase) can use the stored data directly.
- *
  * @param[in] n Position of the tap in the filter phase's impulse response, less than @ref AEC_FRAME_ADVANCE
  * @returns Index of that tap within the stored filter phase
  *

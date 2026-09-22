@@ -1,7 +1,7 @@
 set(LIB_NAME lib_voice)
 set(LIB_VERSION 1.1.0)
 set(LIB_DEPENDENT_MODULES
-    "lib_xcore_math(v3.0.0)"
+    "Allan-xmos/lib_xcore_math(feature/vx4_vect_s16_dot)"
     "ai_tools(v1.4.3.dev40)"
 )
 

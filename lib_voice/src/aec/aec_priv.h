@@ -29,7 +29,7 @@
  *   value, and can also be discarded.
  *
  * What remains is exactly the AEC_FRAME_ADVANCE taps of the filter, so bit-reversed storage costs
- * no more memory than natural order storage does.
+ * no more memory and saves the need for a computationally expensive bit-reversal pass.
  */
 ///@{
 /** Number of even bit-reversed slots, i.e. complex time domain elements in the first half of the frame. */
@@ -51,7 +51,7 @@ _Static_assert(AEC_H_HAT_BITREV_GROUP * AEC_H_HAT_BITREV_DROPPED == AEC_H_HAT_BI
         "h_hat bit-reversed storage needs the dropped slots to divide the slot count");
 
 /**
- * @brief Expand one stored h_hat phase into a full bit-reversed index time domain vector
+ * @brief Expand one stored 16b h_hat phase into a full 32b bit-reversed time domain vector
  *
  * Writes the AEC_FRAME_ADVANCE taps of `src` into the slots of `dst` they occupy in the
  * AEC_PROC_FRAME_LENGTH/2 point complex vector the forward transform wants, and zeroes every
@@ -64,12 +64,14 @@ _Static_assert(AEC_H_HAT_BITREV_GROUP * AEC_H_HAT_BITREV_DROPPED == AEC_H_HAT_BI
 void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
 
 /**
- * @brief Collect the taps h_hat stores out of a full bit-reversed index time domain vector
+ * @brief Collect the non-zero h_hat taps from a full bit-reversed time domain vector
  *
- * The inverse of aec_h_hat_bitrev_scatter()'s placement, without its widening: the
- * AEC_FRAME_ADVANCE 32 bit values in the slots h_hat stores are packed into `dst`, in h_hat's
- * order, and the slots the gradient constraint zeroes are dropped.
- *
+ * Compress the non-zero h_hat values, keeping them in bit-reversed order. When combined with 
+ * @ref aec_h_hat_bitrev_scatter(), this applies a gradient constraint by zeroing h_hat values
+ * above the AEC_FRAME_ADVANCE index.
+ * 
+ * Unlike aec_h_hat_bitrev_scatter(), this function keeps the taps in 32b.
+ * 
  * @param[out] dst AEC_FRAME_ADVANCE words, double word aligned
  * @param[in]  src AEC_PROC_FRAME_LENGTH words, double word aligned. May be the buffer `dst`
  *                 points into.
@@ -345,7 +347,7 @@ void aec_update_X_fifo_1d(
  *
  * Each phase of `h_hat` is expanded from its bit-reversed storage and transformed to the frequency
  * domain on the fly. Because the storage is already bit-reversed, the forward transform needs no
- * index bit-reversal pass.
+ * bit-reversal pass.
  *
  * @ingroup aec_low_level_func
  */
@@ -365,7 +367,7 @@ void aec_l2_calc_Error_and_Y_hat(
  * @brief Adapt one phase of the adaptive filter
  *
  * The inverse transform of the delta update leaves its time domain result in bit-reversed index
- * order, which is the order `h_hat` is stored in, so no index bit-reversal pass is needed. The
+ * order, which is the order `h_hat` is stored in, so no bit-reversal pass is needed. The
  * gradient constraint is applied by discarding the taps that `h_hat` has no storage for.
  *
  * @ingroup aec_low_level_func

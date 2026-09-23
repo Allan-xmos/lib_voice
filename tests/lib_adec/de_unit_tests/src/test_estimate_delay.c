@@ -59,7 +59,7 @@ int estimate_delay_fp(  dsp_complex_fp H_hat[1][NUM_PHASES_DELAY_EST][PHASE_CMPL
     return AEC_FRAME_ADVANCE * *peak_power_phase_index;
 }
 
-#define TEST_LEN (AEC_PROC_FRAME_LENGTH/2 + 1)
+#define TEST_LEN (AEC_FD_FRAME_LENGTH)
 void test_delay_estimate() {
     aec_state_t aec_state;
 

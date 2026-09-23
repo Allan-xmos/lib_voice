@@ -111,7 +111,7 @@ void aec_frame_init(
     //So T calculation cannot be parallelised across Y channels
     //Reuse X memory for calculating T
     for(unsigned ch=0; ch<num_x_channels; ch++) {
-        bfp_complex_s32_init(&main_state->T[ch], (complex_s32_t*)&main_state->shared_state->x[ch].data[0], 0, (AEC_PROC_FRAME_LENGTH/2)+1, 0);
+        bfp_complex_s32_init(&main_state->T[ch], (complex_s32_t*)&main_state->shared_state->x[ch].data[0], 0, AEC_FD_FRAME_LENGTH, 0);
     }
 
     //set Y_hat memory to 0 since it will be used in bfp_complex_s32_macc operation in aec_l2_calc_Error_and_Y_hat()
@@ -294,10 +294,8 @@ void aec_calc_freq_domain_energy(
         float_s32_t *fd_energy,
         const bfp_complex_s32_t *input)
 {
-    int32_t DWORD_ALIGNED scratch_mem[AEC_PROC_FRAME_LENGTH/2 + 1];
-#if (BFP_DEBUG_CHECK_LENGTHS)
-    xassert(input->length <= AEC_PROC_FRAME_LENGTH/2 + 1);
-#endif
+    int32_t DWORD_ALIGNED scratch_mem[AEC_FD_FRAME_LENGTH];
+
     bfp_s32_t scratch;
     bfp_s32_init(&scratch, scratch_mem, 0, input->length, 0);
     bfp_complex_s32_squared_mag(&scratch, input);

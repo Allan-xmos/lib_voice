@@ -5,7 +5,6 @@ add_library(lib_voice_compile_options INTERFACE)
 if(NOT CMAKE_SYSTEM_NAME STREQUAL XCORE_XS3A)
     target_compile_options(lib_voice_compile_options INTERFACE -fPIC)
     target_compile_features(lib_voice_compile_options INTERFACE cxx_std_11)
-    target_compile_definitions(lib_voice_compile_options INTERFACE LIBXCORE_XASSERT_IS_ASSERT)
 endif()
 
 ## aec

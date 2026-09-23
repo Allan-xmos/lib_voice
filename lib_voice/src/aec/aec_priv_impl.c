@@ -625,9 +625,9 @@ void aec_priv_update_total_X_energy(
         unsigned num_phases,
         unsigned recalc_bin)
 {
-    int32_t DWORD_ALIGNED energy_scratch[AEC_PROC_FRAME_LENGTH/2 + 1];
+    int32_t DWORD_ALIGNED energy_scratch[AEC_FD_FRAME_LENGTH];
     bfp_s32_t scratch;
-    bfp_s32_init(&scratch, energy_scratch, 0, AEC_PROC_FRAME_LENGTH/2+1, 0);
+    bfp_s32_init(&scratch, energy_scratch, 0, AEC_FD_FRAME_LENGTH, 0);
     //X_fifo ordered from newest to oldest phase
     //subtract oldest phase
     bfp_complex_s32_squared_mag(&scratch, &X_fifo[num_phases-1]);
@@ -688,7 +688,7 @@ void aec_priv_update_X_fifo_and_calc_sigmaXX(
     X_fifo[0].length = X->length;
 
     //update sigma_XX
-    int32_t DWORD_ALIGNED sigma_scratch_mem[AEC_PROC_FRAME_LENGTH/2 + 1];
+    int32_t DWORD_ALIGNED sigma_scratch_mem[AEC_FD_FRAME_LENGTH];
     bfp_s32_t scratch;
     bfp_s32_init(&scratch, sigma_scratch_mem, 0, AEC_FD_FRAME_LENGTH, 0);
     bfp_complex_s32_squared_mag(&scratch, X);
@@ -716,7 +716,7 @@ void aec_priv_calc_Error_and_Y_hat(
         unsigned num_phases,
         int32_t bypass_enabled)
 {
-    aec_l2_calc_Error_and_Y_hat(Error, Y_hat, Y, X_fifo, H_hat, num_x_channels, num_phases, 0, AEC_PROC_FRAME_LENGTH/2 + 1, bypass_enabled);
+    aec_l2_calc_Error_and_Y_hat(Error, Y_hat, Y, X_fifo, H_hat, num_x_channels, num_phases, 0, AEC_FD_FRAME_LENGTH, bypass_enabled);
 }
 
 void aec_priv_calc_coherence(
@@ -883,7 +883,7 @@ void aec_priv_calc_inv_X_energy_denom(
 
     int gamma_log2 = conf->aec_core_conf.gamma_log2;
     if(!is_shadow) { //frequency smoothing
-        int32_t norm_denom_buf[AEC_PROC_FRAME_LENGTH/2 + 1];
+        int32_t norm_denom_buf[AEC_FD_FRAME_LENGTH];
         bfp_s32_t norm_denom;
         bfp_s32_init(&norm_denom, &norm_denom_buf[0], 0, AEC_PROC_FRAME_LENGTH/2+1, 0);
 
@@ -912,7 +912,7 @@ void aec_priv_calc_inv_X_energy_denom(
     else
     {
         //TODO maybe fix this for AEC?
-        // int32_t temp[AEC_PROC_FRAME_LENGTH/2 + 1];
+        // int32_t temp[AEC_FD_FRAME_LENGTH];
         // bfp_s32_t temp_bfp;
         // bfp_s32_init(&temp_bfp, &temp[0], 0, AEC_PROC_FRAME_LENGTH/2+1, 0);
 

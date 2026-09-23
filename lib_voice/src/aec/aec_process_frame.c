@@ -364,7 +364,7 @@ void aec_process_frame(
      * main_state->shared_state->Y[ch].data and main_state->shared_state->y[ch].data point to the same memory address.
      * The spectral representation of the input is used after this function. Time domain input
      * BFP structure main_state->shared_state->y should not be used.
-     * main_state->shared_state->Y[ch].data points to AEC_PROC_FRAME_LENGTH/2 + 1 complex 32bit spectrum samples,
+     * main_state->shared_state->Y[ch].data points to AEC_FD_FRAME_LENGTH complex 32bit spectrum samples,
      * which represent the spectrum samples from DC to Nyquist frequency.
      * Same is true for reference spectrum samples pointed to by  main_state->shared_state->X[ch].data
      * as well.
@@ -392,7 +392,7 @@ void aec_process_frame(
      * frames are considered.
      *
      * For main filter, X energy is stored in BFP struct main_state->X_energy[ch]. For shadow filter, X energy is stored
-     * in BFP structure shadow_state->X_energy[ch]. These BFP structures point to AEC_PROC_FRAME_LENGTH/2 + 1, real
+     * in BFP structure shadow_state->X_energy[ch]. These BFP structures point to AEC_FD_FRAME_LENGTH, real
      * 32bit values where the value at index n is the nth X sample's energy summed over main_state->num_phases number
      * of frames in the X FIFO.
      */

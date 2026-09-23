@@ -10,7 +10,7 @@
 #define FLOAT_S32_ZERO (float_s32_t){0, -31}
 #define FLOAT_S32_ONE (float_s32_t){1073741824, -30}
 
-void aec_priv_main_init(
+uint8_t *aec_priv_main_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
@@ -18,8 +18,6 @@ void aec_priv_main_init(
         unsigned num_x_channels,
         unsigned num_phases)
 {
-    xassert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases)
-            <= sizeof(aec_memory_pool_t));
     memset(state, 0, sizeof(aec_filter_state_t));
     //reset shared_state. Only done in main_init()
     memset(shared_state, 0, sizeof(aec_shared_filter_state_t));
@@ -56,6 +54,7 @@ void aec_priv_main_init(
 
     //h_hat (time domain)
     for(unsigned ch=0; ch<num_y_channels; ch++) {
+        state->h_hat[ch] = &state->h_hat_phases[ch * num_x_channels * num_phases];
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
             bfp_s16_init(&state->h_hat[ch][ph], (int16_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
             available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int16_t));
@@ -63,6 +62,7 @@ void aec_priv_main_init(
     }
     //X_fifo
     for(unsigned ch=0; ch<num_x_channels; ch++) {
+        state->shared_state->X_fifo[ch] = &state->shared_state->X_fifo_phases[ch * num_phases];
         for(unsigned ph=0; ph<num_phases; ph++) {
             bfp_complex_s32_init(&state->shared_state->X_fifo[ch][ph], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
             available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
@@ -101,7 +101,7 @@ void aec_priv_main_init(
         available_mem_start += (AEC_FRAME_OVERLAP*sizeof(int32_t));
     }
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    xassert(memory_used <= sizeof(aec_memory_pool_t));
+    xassert(memory_used == AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -136,19 +136,24 @@ void aec_priv_main_init(
         shadow_params->shadow_reset_count[ch] = -(state->shared_state->config_params.shadow_filt_conf.shadow_reset_timer);
         shadow_params->shadow_better_count[ch] = 0;
     }
+    return available_mem_start;
 }
 
-void aec_priv_shadow_init(
+uint8_t *aec_priv_shadow_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_phases)
 {
     if(state == NULL) {
-        return;
+        return mem_pool;
     }
 
     memset(state, 0, sizeof(aec_filter_state_t));
+    //The shadow filter follows the main filter in the pool, which may have ended on an odd word. h_hat is accessed
+    //with double word loads and stores, so start on the next double word boundary. aec_memory_pool_t reserves a word
+    //for this.
+    mem_pool = (uint8_t*)(((uintptr_t)mem_pool + 7) & ~(uintptr_t)7);
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
     //initialise number of phases
@@ -158,11 +163,9 @@ void aec_priv_shadow_init(
     unsigned num_y_channels = state->shared_state->num_y_channels;
     unsigned num_x_channels = state->shared_state->num_x_channels;
 
-    xassert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_phases)
-            <= sizeof(aec_shadow_filt_memory_pool_t));
-
     //h_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
+        state->h_hat[ch] = &state->h_hat_phases[ch * num_x_channels * num_phases];
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
             bfp_s16_init(&state->h_hat[ch][ph], (int16_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
             available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int16_t));
@@ -202,7 +205,7 @@ void aec_priv_shadow_init(
     }
 
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    xassert(memory_used <= sizeof(aec_shadow_filt_memory_pool_t));
+    xassert(memory_used == AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_phases));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -211,6 +214,7 @@ void aec_priv_shadow_init(
     }
     //fractional regularisation scalefactor
     state->delta_scale = f64_to_float_s32((double)1e-3);
+    return available_mem_start;
 }
 
 void aec_priv_bfp_complex_s32_copy(

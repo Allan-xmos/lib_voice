@@ -71,12 +71,10 @@ _Static_assert(ADEC_DE_MODE_Y_CHANNELS <= AEC_MAX_Y_CHANNELS,
         "The AEC is not built for enough y channels to run ADEC");
 _Static_assert(ADEC_DE_MODE_X_CHANNELS <= AEC_MAX_X_CHANNELS,
         "The AEC is not built for enough x channels to run ADEC");
-_Static_assert(ADEC_DE_MODE_X_CHANNELS * ADEC_DE_MODE_MAIN_FILTER_PHASES <= AEC_LIB_MAX_PHASES,
+_Static_assert(ADEC_DE_MODE_Y_CHANNELS * ADEC_DE_MODE_X_CHANNELS * ADEC_DE_MODE_MAIN_FILTER_PHASES
+                <= AEC_LIB_MAX_PHASES,
         "ADEC is using more filter phases than AEC_LIB_MAX_PHASES allows. Build the AEC for more "
         "phases, or reduce ADEC_DE_MODE_MAIN_FILTER_PHASES");
-_Static_assert(ADEC_DE_MODE_X_CHANNELS * ADEC_DE_MODE_SHADOW_FILTER_PHASES <= AEC_LIB_MAX_PHASES,
-        "ADEC is using more shadow filter phases than AEC_LIB_MAX_PHASES allows. Reduce "
-        "ADEC_DE_MODE_SHADOW_FILTER_PHASES");
 _Static_assert(ADEC_DE_MODE_SHADOW_FILTER_PHASES <= ADEC_DE_MODE_MAIN_FILTER_PHASES,
         "The shadow filter reads the X FIFO filled by the main filter, so ADEC cannot run it with "
         "more phases than ADEC_DE_MODE_MAIN_FILTER_PHASES");

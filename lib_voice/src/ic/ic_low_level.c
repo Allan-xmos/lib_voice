@@ -37,9 +37,9 @@ void ic_frame_init(
     for(unsigned ch=0; ch<IC_Y_CHANNELS; ch++) {
         /* Create 512 samples frame */
         // Copy previous y samples
-        memcpy(state->y_bfp[ch].data, state->prev_y_bfp[ch].data, (IC_FRAME_LENGTH-IC_FRAME_ADVANCE)*sizeof(int32_t));
+        vpu_memcpy(state->y_bfp[ch].data, state->prev_y_bfp[ch].data, (IC_FRAME_LENGTH-IC_FRAME_ADVANCE)*sizeof(int32_t));
         // Copy and apply delay to current y samples
-        memcpy(&state->y_bfp[ch].data[IC_FRAME_LENGTH-IC_FRAME_ADVANCE], y_data, IC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(&state->y_bfp[ch].data[IC_FRAME_LENGTH-IC_FRAME_ADVANCE], y_data, IC_FRAME_ADVANCE*sizeof(int32_t));
         // Update exp just in case
         const exponent_t q0_31_exp = -31;
         state->y_bfp[ch].exp = q0_31_exp;
@@ -48,11 +48,11 @@ void ic_frame_init(
 
         /* Update previous samples */
         // Save a copy of the first 240 samples of prev_y_bfp that are about to get overwritten, in case it's needed in ic_reset_filter() to recreate the original 512 samples time-domain frame.
-        memcpy(&state->y_prev_samples_copy[ch][0], &state->prev_y_bfp[ch].data[0], IC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(&state->y_prev_samples_copy[ch][0], &state->prev_y_bfp[ch].data[0], IC_FRAME_ADVANCE*sizeof(int32_t));
         // Copy the last 32 samples to the beginning
-        memcpy(state->prev_y_bfp[ch].data, &state->prev_y_bfp[ch].data[IC_FRAME_ADVANCE], (IC_FRAME_LENGTH-(2*IC_FRAME_ADVANCE))*sizeof(int32_t));
+        vpu_memcpy(state->prev_y_bfp[ch].data, &state->prev_y_bfp[ch].data[IC_FRAME_ADVANCE], (IC_FRAME_LENGTH-(2*IC_FRAME_ADVANCE))*sizeof(int32_t));
         // Copy current frame to previous
-        memcpy(&state->prev_y_bfp[ch].data[(IC_FRAME_LENGTH-(2*IC_FRAME_ADVANCE))], y_data, IC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(&state->prev_y_bfp[ch].data[(IC_FRAME_LENGTH-(2*IC_FRAME_ADVANCE))], y_data, IC_FRAME_ADVANCE*sizeof(int32_t));
         // Update headroom
         bfp_s32_headroom(&state->prev_y_bfp[ch]);
         // Update exp just in case
@@ -62,9 +62,9 @@ void ic_frame_init(
     for(unsigned ch=0; ch<IC_X_CHANNELS; ch++) {
         /* Create 512 samples frame */
         // Copy previous x samples
-        memcpy(state->x_bfp[ch].data, state->prev_x_bfp[ch].data, (IC_FRAME_LENGTH-IC_FRAME_ADVANCE)*sizeof(int32_t));
+        vpu_memcpy(state->x_bfp[ch].data, state->prev_x_bfp[ch].data, (IC_FRAME_LENGTH-IC_FRAME_ADVANCE)*sizeof(int32_t));
         // Copy current x samples
-        memcpy(&state->x_bfp[ch].data[IC_FRAME_LENGTH-IC_FRAME_ADVANCE], x_data, IC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(&state->x_bfp[ch].data[IC_FRAME_LENGTH-IC_FRAME_ADVANCE], x_data, IC_FRAME_ADVANCE*sizeof(int32_t));
         // Update exp just in case
         state->x_bfp[ch].exp = q0_31_exp;
         // Update headroom
@@ -72,9 +72,9 @@ void ic_frame_init(
 
         /* Update previous samples */
         // Copy the last 32 samples to the beginning
-        memcpy(state->prev_x_bfp[ch].data, &state->prev_x_bfp[ch].data[IC_FRAME_ADVANCE], (IC_FRAME_LENGTH-(2*IC_FRAME_ADVANCE))*sizeof(int32_t));
+        vpu_memcpy(state->prev_x_bfp[ch].data, &state->prev_x_bfp[ch].data[IC_FRAME_ADVANCE], (IC_FRAME_LENGTH-(2*IC_FRAME_ADVANCE))*sizeof(int32_t));
         // Copy current frame to previous
-        memcpy(&state->prev_x_bfp[ch].data[(IC_FRAME_LENGTH-(2*IC_FRAME_ADVANCE))], x_data, IC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(&state->prev_x_bfp[ch].data[(IC_FRAME_LENGTH-(2*IC_FRAME_ADVANCE))], x_data, IC_FRAME_ADVANCE*sizeof(int32_t));
         // Update exp just in case
         state->prev_x_bfp[ch].exp = q0_31_exp;
         // Update headroom
@@ -93,7 +93,7 @@ void ic_frame_init(
         const exponent_t zero_exp = -1024;
         state->Y_hat_bfp[ch].exp = zero_exp;
         state->Y_hat_bfp[ch].hr = 0;
-        memset(&state->Y_hat_bfp[ch].data[0], 0, IC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
+        vect_complex_s32_set(&state->Y_hat_bfp[ch].data[0], 0, 0, IC_FD_FRAME_LENGTH);
     }
 }
 
@@ -310,7 +310,7 @@ void ic_mu_control_system(ic_state_t * state, float_s32_t vnr){
         state->leakage_alpha = ad_config->instability_recovery_leakage_alpha;
         ad_state->control_flag = UNSTABLE;
     }
-    //printf("MU: %ld %d\n", state->mu[0][0].mant, state->mu[0][0].exp);
+    //printf("MU: %ld %ld\n", (long)state->mu[0][0].mant, (long)state->mu[0][0].exp);
 }
 
 // Reset adaptive components and output an unprocessed frame
@@ -327,8 +327,8 @@ void ic_reset_filter(ic_state_t *state, int32_t output[IC_FRAME_ADVANCE]){
     // Getting unproccessed y frame from state->y_prev_samples_copy[ch] and state->prev_y_bfp[ch].data
     for(unsigned ch=0; ch<IC_Y_CHANNELS; ch++) {
         int32_t DWORD_ALIGNED buff[IC_FRAME_LENGTH];
-        memcpy(&buff[0], &state->y_prev_samples_copy[ch][0], IC_FRAME_ADVANCE*sizeof(int32_t));
-        memcpy(&buff[IC_FRAME_ADVANCE], &state->prev_y_bfp[ch].data[0], (IC_FRAME_LENGTH - IC_FRAME_ADVANCE)*sizeof(int32_t));
+        vpu_memcpy(&buff[0], &state->y_prev_samples_copy[ch][0], IC_FRAME_ADVANCE*sizeof(int32_t));
+        vpu_memcpy(&buff[IC_FRAME_ADVANCE], &state->prev_y_bfp[ch].data[0], (IC_FRAME_LENGTH - IC_FRAME_ADVANCE)*sizeof(int32_t));
         const exponent_t init_exp = -31;
         bfp_s32_t y, out;
         bfp_s32_init(&y, buff, init_exp, IC_FRAME_LENGTH, 1);

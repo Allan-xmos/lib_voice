@@ -38,7 +38,7 @@ void reset_stuff_on_AEC_mode_start(adec_state_t *adec_state, unsigned set_toggle
 
   init_pk_ave_ratio_history(adec_state);
 
-  memset(adec_state->peak_power_history, 0, ADEC_PEAK_LINREG_HISTORY_SIZE * sizeof(adec_state->peak_power_history[0]));
+  vect_s32_set((int32_t*)adec_state->peak_power_history, 0, ADEC_PEAK_LINREG_HISTORY_SIZE * sizeof(adec_state->peak_power_history[0]) / sizeof(int32_t));
   adec_state->peak_power_history_idx = 0;
   adec_state->peak_power_history_valid = 0;
 
@@ -64,14 +64,14 @@ void set_delay_params_from_signed_delay(int32_t measured_delay, int32_t *mic_del
     if (*mic_delay_samples >= ADEC_DE_DELAY_SAMPS){
         int32_t actual_delay = ADEC_DE_DELAY_SAMPS - 1; //-1 because we cannot support the actual maximum delay in the buffer (it wraps to zero)
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
-        printf("**Warning - too large a delay requested (%ld), setting to %ld\n", *mic_delay_samples, actual_delay);
+        printf("**Warning - too large a delay requested (%ld), setting to %ld\n", (long)*mic_delay_samples, (long)actual_delay);
 #endif
         *mic_delay_samples = actual_delay;
     }
     else if(*mic_delay_samples <= -(ADEC_DE_DELAY_SAMPS)) {
         int32_t actual_delay = -(ADEC_DE_DELAY_SAMPS - 1); //-1 because we cannot support the actual maximum delay in the buffer (it wraps to zero)
 #ifdef ENABLE_ADEC_DEBUG_PRINTS
-        printf("**Warning - too large a delay requested (%ld), setting to %ld\n", *mic_delay_samples, actual_delay);
+        printf("**Warning - too large a delay requested (%ld), setting to %ld\n", (long)*mic_delay_samples, (long)actual_delay);
 #endif
         *mic_delay_samples = actual_delay;
     }

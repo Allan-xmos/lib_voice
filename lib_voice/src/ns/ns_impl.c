@@ -60,13 +60,13 @@ void ns_priv_bfp_init(bfp_s32_t * a, int32_t * data, unsigned length, int32_t va
 // pack 512 frame using the input and previous frames
 void ns_priv_pack_input(bfp_s32_t * current, const int32_t * input, bfp_s32_t * prev){
 
-    memcpy(current->data, prev->data, (NS_PROC_FRAME_LENGTH - NS_FRAME_ADVANCE) * sizeof(int32_t));
-    memcpy(&current->data[NS_PROC_FRAME_LENGTH - NS_FRAME_ADVANCE], input, NS_FRAME_ADVANCE * sizeof(int32_t));
+    vpu_memcpy(current->data, prev->data, (NS_PROC_FRAME_LENGTH - NS_FRAME_ADVANCE) * sizeof(int32_t));
+    vpu_memcpy(&current->data[NS_PROC_FRAME_LENGTH - NS_FRAME_ADVANCE], input, NS_FRAME_ADVANCE * sizeof(int32_t));
     current->exp = NS_INT_EXP;
     bfp_s32_headroom(current);
 
-    memcpy(prev->data, &prev->data[NS_FRAME_ADVANCE], (NS_PROC_FRAME_LENGTH - (2 * NS_FRAME_ADVANCE)) * sizeof(int32_t));
-    memcpy(&prev->data[NS_PROC_FRAME_LENGTH - (2 * NS_FRAME_ADVANCE)], input, NS_FRAME_ADVANCE * sizeof(int32_t));
+    vpu_memcpy(prev->data, &prev->data[NS_FRAME_ADVANCE], (NS_PROC_FRAME_LENGTH - (2 * NS_FRAME_ADVANCE)) * sizeof(int32_t));
+    vpu_memcpy(&prev->data[NS_PROC_FRAME_LENGTH - (2 * NS_FRAME_ADVANCE)], input, NS_FRAME_ADVANCE * sizeof(int32_t));
     prev->exp = NS_INT_EXP;
     bfp_s32_headroom(prev);
 }
@@ -80,7 +80,7 @@ void ns_priv_form_output(int32_t * out, bfp_s32_t * in, bfp_s32_t * overlap){
 
     bfp_s32_add(&output, &in_half, overlap);
 
-    memcpy(overlap->data, &in->data[NS_FRAME_ADVANCE], NS_FRAME_ADVANCE * sizeof(int32_t));
+    vpu_memcpy(overlap->data, &in->data[NS_FRAME_ADVANCE], NS_FRAME_ADVANCE * sizeof(int32_t));
     overlap->exp = in->exp;
     bfp_s32_headroom(overlap);
 
@@ -271,7 +271,7 @@ void ns_process_frame(ns_state_t * ns,
 
     bfp_complex_s32_mag(&abs_Y_suppressed, curr_fft);
 
-    memcpy(abs_Y_original.data, abs_Y_suppressed.data, sizeof(int32_t) * NS_PROC_FRAME_BINS);
+    vpu_memcpy(abs_Y_original.data, abs_Y_suppressed.data, sizeof(int32_t) * NS_PROC_FRAME_BINS);
     abs_Y_original.exp = abs_Y_suppressed.exp;
     abs_Y_original.hr = abs_Y_suppressed.hr;
 

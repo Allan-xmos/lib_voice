@@ -145,7 +145,7 @@ void aec_forward_fft(
     bfp_complex_s32_t *temp = bfp_fft_forward_mono(input);
     temp->hr = bfp_complex_s32_headroom(temp); // TODO Workaround till https://github.com/xmos/lib_xcore_math/issues/96 is fixed
 
-    memcpy(output, temp, sizeof(bfp_complex_s32_t));
+    *output = *temp;
     bfp_fft_unpack_mono(output);
     input->length = len;
 }
@@ -202,7 +202,7 @@ void aec_inverse_fft(
     uint32_t len = input->length;
     bfp_fft_pack_mono(input);
     bfp_s32_t *temp = bfp_fft_inverse_mono(input);
-    memcpy(output, temp, sizeof(bfp_s32_t));
+    *output = *temp;
 
     input->length = len;
 }

@@ -13,11 +13,11 @@ void vnr_input_state_init(vnr_input_state_t *input_state) {
 void vnr_form_input_frame(vnr_input_state_t *input_state, bfp_complex_s32_t *X, complex_s32_t X_data[VNR_FD_FRAME_LENGTH], const int32_t *new_x_frame) {
     int32_t *x_data = (int32_t*)X_data;
     // Update current frame
-    memcpy(x_data, input_state->prev_input_samples, (VNR_PROC_FRAME_LENGTH - VNR_FRAME_ADVANCE)*sizeof(int32_t));
-    memcpy(&x_data[VNR_PROC_FRAME_LENGTH - VNR_FRAME_ADVANCE], new_x_frame, VNR_FRAME_ADVANCE*sizeof(int32_t));
+    vpu_memcpy(x_data, input_state->prev_input_samples, (VNR_PROC_FRAME_LENGTH - VNR_FRAME_ADVANCE)*sizeof(int32_t));
+    vpu_memcpy(&x_data[VNR_PROC_FRAME_LENGTH - VNR_FRAME_ADVANCE], new_x_frame, VNR_FRAME_ADVANCE*sizeof(int32_t));
 
     // Update previous samples
-    memcpy(input_state->prev_input_samples, &x_data[VNR_FRAME_ADVANCE], (VNR_PROC_FRAME_LENGTH - VNR_FRAME_ADVANCE)*sizeof(int32_t));
+    vpu_memcpy(input_state->prev_input_samples, &x_data[VNR_FRAME_ADVANCE], (VNR_PROC_FRAME_LENGTH - VNR_FRAME_ADVANCE)*sizeof(int32_t));
     
     // Calculate forward FFT
     vnr_priv_forward_fft(X, x_data);

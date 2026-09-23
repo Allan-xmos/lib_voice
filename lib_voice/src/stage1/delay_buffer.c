@@ -2,6 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <stdint.h>
 #include <string.h>
+#include "xmath/xmath.h"
 #include "delay_buffer.h"
 
 void delay_buffer_init(delay_buf_state_t *state, int default_delay_samples) {
@@ -42,12 +43,12 @@ void reset_partial_delay_buffer(delay_buf_state_t *delay_state, int32_t ch) {
             );
     if(reset_start < delay_state->curr_idx[ch]) {
         //reset_start hasn't wrapped around
-        memset(&delay_state->delay_buffer[ch][reset_start], 0, num_samples*sizeof(int32_t));
+        vect_s32_set(&delay_state->delay_buffer[ch][reset_start], 0, num_samples);
     }
     else {
         //reset_start has wrapped around
-        memset(&delay_state->delay_buffer[ch][0], 0, delay_state->curr_idx[ch]*sizeof(int32_t));
+        vect_s32_set(&delay_state->delay_buffer[ch][0], 0, delay_state->curr_idx[ch]);
         int remaining = num_samples - delay_state->curr_idx[ch];
-        memset(&delay_state->delay_buffer[ch][DELAY_BUF_MAX_DELAY_SAMPLES - remaining], 0, remaining*sizeof(int32_t));
+        vect_s32_set(&delay_state->delay_buffer[ch][DELAY_BUF_MAX_DELAY_SAMPLES - remaining], 0, remaining);
     }
 }

@@ -166,4 +166,48 @@ _Static_assert(AEC_SHADOW_POOL_BYTES(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS, AEC
                 == sizeof(aec_shadow_filt_memory_pool_t),
         "AEC_SHADOW_POOL_BYTES() no longer matches aec_shadow_filt_memory_pool_t - update it to "
         "match the allocations made by aec_priv_shadow_init()");
+
+/**
+ * @brief The whole AEC memory pool: @ref aec_memory_pool_t followed by
+ * @ref aec_shadow_filt_memory_pool_t.
+ *
+ * `aec_init()` allocates the main filter from the start of this pool and the shadow filter
+ * straight after it, at @ref AEC_SHADOW_POOL_OFFSET, so a runtime configuration with a smaller
+ * shadow filter than the compile time one can use the spare memory for a longer main filter. The
+ * ADEC delay estimation configuration relies on this, as it has no shadow filter.
+ *
+ * @ingroup aec_memory_pool
+ */
+typedef struct {
+    /** Sized for the compile time main filter and shared state */
+    aec_memory_pool_t main;
+    /** Sized for the compile time shadow filter */
+    aec_shadow_filt_memory_pool_t DWORD_ALIGNED shadow;
+}aec_memory_pools_t;
+
+/**
+ * @brief Offset of the shadow filter in @ref aec_memory_pools_t for a runtime configuration.
+ *
+ * The shadow filter starts on the first double word boundary after the main filter.
+ *
+ * @ingroup aec_memory_pool
+ */
+#define AEC_SHADOW_POOL_OFFSET(num_y, num_x, num_main_phases) \
+    ((AEC_MAIN_POOL_BYTES(num_y, num_x, num_main_phases) + 7) & ~(size_t)7)
+
+/**
+ * @brief Bytes `aec_init()` takes from @ref aec_memory_pools_t for a runtime configuration.
+ *
+ * AEC_POOL_BYTES(num_y, num_x, num_main_phases, num_shadow_phases) must always be
+ * <= sizeof(aec_memory_pools_t)
+ *
+ * @ingroup aec_memory_pool
+ */
+#define AEC_POOL_BYTES(num_y, num_x, num_main_phases, num_shadow_phases) ( \
+      AEC_SHADOW_POOL_OFFSET(num_y, num_x, num_main_phases) \
+    + AEC_SHADOW_POOL_BYTES(num_y, num_x, num_shadow_phases) )
+
+_Static_assert(AEC_POOL_BYTES(AEC_MAX_Y_CHANNELS, AEC_MAX_X_CHANNELS, AEC_MAIN_FILTER_PHASES,
+                              AEC_SHADOW_FILTER_PHASES) <= sizeof(aec_memory_pools_t),
+        "aec_memory_pools_t does not hold the compile time AEC configuration");
 #endif

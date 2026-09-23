@@ -24,8 +24,6 @@ void aec_priv_main_init(
         unsigned num_x_channels,
         unsigned num_phases)
 {
-    xassert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases)
-            <= sizeof(aec_memory_pool_t));
     memset(state, 0, sizeof(aec_filter_state_t));
     //reset shared_state. Only done in main_init()
     memset(shared_state, 0, sizeof(aec_shared_filter_state_t));
@@ -107,7 +105,7 @@ void aec_priv_main_init(
         available_mem_start += (32*sizeof(int32_t));
     }
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    xassert(memory_used <= sizeof(aec_memory_pool_t));
+    xassert(memory_used == AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -164,9 +162,6 @@ void aec_priv_shadow_init(
     unsigned num_y_channels = state->shared_state->num_y_channels;
     unsigned num_x_channels = state->shared_state->num_x_channels;
 
-    xassert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_phases)
-            <= sizeof(aec_shadow_filt_memory_pool_t));
-
     //h_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
@@ -208,7 +203,7 @@ void aec_priv_shadow_init(
     }
 
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    xassert(memory_used <= sizeof(aec_shadow_filt_memory_pool_t));
+    xassert(memory_used == AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_phases));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy

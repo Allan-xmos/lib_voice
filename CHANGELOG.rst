@@ -11,6 +11,9 @@ lib_voice change log
     reducing AEC memory use by around 25%. Its taps are stored in bit-reversed index order so that
     the per-phase transforms need no index bit-reversal pass; use `aec_h_hat_tap_index()` to read
     the filter in time order
+  * CHANGED: `aec_state_t` holds a single `aec_memory_pools_t` memory pool; the shadow filter is
+    allocated straight after the main filter, so a configuration with a shorter shadow filter can
+    have a longer main filter
   * CHANGED: `app_pipeline` example is now single-tile
 
   * Changes to dependencies:

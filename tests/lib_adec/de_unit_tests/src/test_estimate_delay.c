@@ -8,7 +8,7 @@
 #include "adec.h"
 
 //This is larger than AEC_MAIN_FILTER_PHASES, but AEC_MAX_Y_CHANNELS and AEC_MAX_X_CHANNELS are 2 so it fits the
-//phase budget, and ADEC_DE_MODE_MAIN_FILTER_PHASES is by definition a phase count aec_memory_pool_t holds.
+//phase budget, and ADEC_DE_MODE_MAIN_FILTER_PHASES is by definition a phase count aec_memory_pools_t holds.
 #define NUM_PHASES_DELAY_EST    ADEC_DE_MODE_MAIN_FILTER_PHASES
 //The AEC filter is stored in the time domain; each phase has AEC_FRAME_ADVANCE real taps.
 #define PHASE_LEN               AEC_FRAME_ADVANCE

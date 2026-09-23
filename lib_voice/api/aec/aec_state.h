@@ -375,10 +375,8 @@ typedef struct {
     aec_filter_state_t DWORD_ALIGNED shadow_state;
     /** AEC state shared between the main and shadow filter */
     aec_shared_filter_state_t DWORD_ALIGNED shared_state;
-    /** Memory pool for the AEC main filter */
-    aec_memory_pool_t DWORD_ALIGNED main_mem_pool;
-    /** Memory pool for the AEC shadow filter */
-    aec_shadow_filt_memory_pool_t DWORD_ALIGNED shadow_mem_pool;
+    /** Memory pool for the AEC main and shadow filters */
+    aec_memory_pools_t DWORD_ALIGNED mem_pool;
 }aec_state_t;
 
 #endif

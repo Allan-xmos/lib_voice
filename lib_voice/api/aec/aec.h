@@ -68,8 +68,7 @@ void aec_assert_config_supported(
  * the following must hold:
  * - num_y_channels <= @ref AEC_MAX_Y_CHANNELS
  * - num_x_channels <= @ref AEC_MAX_X_CHANNELS
- * - num_x_channels * num_main_filter_phases <= @ref AEC_LIB_MAX_PHASES
- * - num_x_channels * num_shadow_filter_phases <= @ref AEC_LIB_MAX_PHASES
+ * - num_y_channels * num_x_channels * num_main_filter_phases <= @ref AEC_LIB_MAX_PHASES
  * - num_shadow_filter_phases <= num_main_filter_phases, because the shadow filter reads the
  *   reference (X) FIFO that the main filter fills
  * - AEC_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases,

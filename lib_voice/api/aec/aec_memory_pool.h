@@ -6,6 +6,14 @@
 #include "xmath/xmath.h"
 #include "aec_defines.h"
 
+// TEMPORARY: lib_xcore_math's DWORD_ALIGNED is empty on vx4b as it only checks __xcore__. Revert
+// to DWORD_ALIGNED once lib_xcore_math also checks __VX4B__.
+#if defined(__VX4B__) && !defined(__xcore__)
+#define AEC_POOL_DWORD_ALIGNED __attribute__((aligned(8)))
+#else
+#define AEC_POOL_DWORD_ALIGNED DWORD_ALIGNED
+#endif
+
 /**
  * @defgroup aec_memory_pool AEC memory pool
  */
@@ -182,7 +190,7 @@ typedef struct {
     /** Sized for the compile time main filter and shared state */
     aec_memory_pool_t main;
     /** Sized for the compile time shadow filter */
-    aec_shadow_filt_memory_pool_t DWORD_ALIGNED shadow;
+    aec_shadow_filt_memory_pool_t AEC_POOL_DWORD_ALIGNED shadow;
 }aec_memory_pools_t;
 
 /**

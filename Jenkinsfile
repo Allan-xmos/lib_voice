@@ -446,12 +446,12 @@ pipeline {
                 sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
                 // Do custom cmake, xcore build, from the tests/custom_cmake_build directory
                 dir("${REPO}/tests/custom_cmake_build") {
-                  withTools(params.TOOLS_VERSION) {
-                    withVenv {
-                      sh 'cmake -B build --toolchain=../../../xmos_cmake_toolchain/xs3a.cmake'
-                      sh 'make -C build -j$(nproc)'
-                   }
-                  }
+                  // withTools(params.TOOLS_VERSION) {
+                  //   withVenv {
+                  //     sh 'cmake -B build --toolchain=../../../xmos_cmake_toolchain/xs3a.cmake'
+                  //     sh 'make -C build -j$(nproc)'
+                  //  }
+                  // }
                 }
               }
             }

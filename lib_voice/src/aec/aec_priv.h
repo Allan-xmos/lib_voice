@@ -51,6 +51,32 @@ _Static_assert(AEC_H_HAT_BITREV_GROUP * AEC_H_HAT_BITREV_DROPPED == AEC_H_HAT_BI
         "h_hat bit-reversed storage needs the dropped slots to divide the slot count");
 
 /**
+ * @brief Expand one stored h_hat phase into a full bit-reversed index time domain vector
+ *
+ * Writes the AEC_FRAME_ADVANCE taps of `src` into the slots of `dst` they occupy in the
+ * AEC_PROC_FRAME_LENGTH/2 point complex vector the forward transform wants, and zeroes every
+ * other slot. Each 16 bit tap lands in the top half of its 32 bit slot, so the expanded mantissas
+ * are 2^16 times the stored ones.
+ *
+ * @param[out] dst AEC_PROC_FRAME_LENGTH words, double word aligned
+ * @param[in]  src AEC_FRAME_ADVANCE taps, word aligned
+ */
+void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
+
+/**
+ * @brief Collect the taps h_hat stores out of a full bit-reversed index time domain vector
+ *
+ * The inverse of aec_h_hat_bitrev_scatter()'s placement, without its widening: the
+ * AEC_FRAME_ADVANCE 32 bit values in the slots h_hat stores are packed into `dst`, in h_hat's
+ * order, and the slots the gradient constraint zeroes are dropped.
+ *
+ * @param[out] dst AEC_FRAME_ADVANCE words, double word aligned
+ * @param[in]  src AEC_PROC_FRAME_LENGTH words, double word aligned. May be the buffer `dst`
+ *                 points into.
+ */
+void aec_h_hat_bitrev_gather(int32_t *dst, const int32_t *src);
+
+/**
  * @brief Initialise AEC data structures for processing a new frame
  *
  * This is the first function that is called when a new frame is available for processing.

@@ -24,16 +24,15 @@
 //tap in the top half of its slot, which is the widening that costs no instructions. The gather leaves the delta at
 //32 bit and its caller narrows it afterwards, because narrowing a contiguous vector is a job for the VPU.
 //
-//On XS3 these are the hand written aec_h_hat_bitrev.S, because the load/store offsets a group needs run past the
-//0..11 immediate range the encoding allows and the compiler answers that by recomputing addresses, at about five
-//instructions per element instead of two. The C below is the reference for what the assembly does, and is what
-//non-XS3 builds use.
-#if defined(__XS3A__)
-void aec_h_hat_bitrev_gather(int32_t *dst, const int32_t *src);
+//On XS3 and VX4 these are hand written assembly - aec_h_hat_bitrev.S and aec_h_hat_bitrev_vx4b.S - because the
+//load/store offsets a group needs run past the 0..11 immediate range both encodings allow and the compiler answers
+//that by recomputing addresses, at about five instructions per element instead of two. The C below is the reference
+//for what the assembly does, and is what other builds use.
+#if defined(__XS3A__) || defined(__VX4B__)
 //The assembly scatter writes only the slots h_hat stores, leaving the caller to zero the rest, because
 //vect_s32_set() clears the whole vector with the VPU faster than the scatter can store the zeros itself.
 void aec_h_hat_bitrev_scatter_kept(int32_t *dst, const int16_t *src);
-static inline void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src)
+void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src)
 {
     vect_s32_set(dst, 0, AEC_PROC_FRAME_LENGTH);
     aec_h_hat_bitrev_scatter_kept(dst, src);
@@ -41,13 +40,13 @@ static inline void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src)
 
 //The assembly hard codes the layout, so fail the build rather than mis-index if the frame sizes ever change it.
 _Static_assert(AEC_H_HAT_BITREV_DROPPED == 8 && AEC_H_HAT_BITREV_GROUP == 16,
-        "aec_h_hat_bitrev.S is written for the 8 group, 16 slot h_hat layout");
+        "aec_h_hat_bitrev.S and aec_h_hat_bitrev_vx4b.S are written for the 8 group, 16 slot h_hat layout");
 #else
 typedef int64_t h_hat_tap_pair_t;
 
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
 //constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front.
-static void aec_h_hat_bitrev_gather(
+void aec_h_hat_bitrev_gather(
         int32_t *dst_words,
         const int32_t *src_words)
 {
@@ -67,7 +66,7 @@ static void aec_h_hat_bitrev_gather(
 //for in the exponent it gives the transformed phase; it leaves the taps' headroom unchanged.
 //Every slot h_hat has no storage for is a tap the gradient constraint zeroes, so the whole vector is cleared first
 //- vect_s32_set() does that a vector at a time, faster than storing the zeros one slot at a time here would.
-static void aec_h_hat_bitrev_scatter(
+void aec_h_hat_bitrev_scatter(
         int32_t *dst,
         const int16_t *src)
 {

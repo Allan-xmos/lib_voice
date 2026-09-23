@@ -60,6 +60,7 @@ void aec_priv_main_init(
 
     //h_hat (time domain)
     for(unsigned ch=0; ch<num_y_channels; ch++) {
+        state->h_hat[ch] = &state->h_hat_phases[ch * num_x_channels * num_phases];
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
             bfp_s16_init(&state->h_hat[ch][ph], (int16_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
             available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int16_t));
@@ -67,6 +68,7 @@ void aec_priv_main_init(
     }
     //X_fifo
     for(unsigned ch=0; ch<num_x_channels; ch++) {
+        state->shared_state->X_fifo[ch] = &state->shared_state->X_fifo_phases[ch * num_phases];
         for(unsigned ph=0; ph<num_phases; ph++) {
             bfp_complex_s32_init(&state->shared_state->X_fifo[ch][ph], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
             available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
@@ -164,6 +166,7 @@ void aec_priv_shadow_init(
 
     //h_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
+        state->h_hat[ch] = &state->h_hat_phases[ch * num_x_channels * num_phases];
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
             bfp_s16_init(&state->h_hat[ch][ph], (int16_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
             available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int16_t));

@@ -120,6 +120,11 @@
  * parameters passed in should be such that num_y_channels * num_x_channels * num_main_filter_phases is less than equal
  * to AEC_LIB_MAX_PHASES.
  *
+ * Because the limit is on the total, a configuration with fewer channels can have longer filters. For example, the
+ * ADEC delay estimation configuration of 1 y-channel, 1 x-channel and 30 phases fits a build with a total of 40.
+ * Every phase array in the AEC state (aec_filter_state_t::h_hat_phases, aec_filter_state_t::X_fifo_1d,
+ * aec_shared_filter_state_t::X_fifo_phases and de_output_t::phase_power) holds at most this many phases.
+ *
  * This define is only used when defining data structures within the AEC state structure. The AEC algorithm
  * implementation uses the num_main_filter_phases and num_shadow_filter_phases values that are passed into aec_init().
  *

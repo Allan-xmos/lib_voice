@@ -21,10 +21,10 @@ void aec_assert_config_supported(
     xassert(num_y_channels <= AEC_MAX_Y_CHANNELS);
     xassert(num_x_channels <= AEC_MAX_X_CHANNELS);
 
-    // Check config fits in aec_filter_state_t
-    xassert((size_t)num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
-    xassert((size_t)num_x_channels * num_shadow_filter_phases <= AEC_LIB_MAX_PHASES);
+    // Check config fits in aec_filter_state_t. The shadow filter is no longer than the main one, so
+    // checking the main filter covers both
     xassert(num_shadow_filter_phases <= num_main_filter_phases);
+    xassert((size_t)num_y_channels * num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
 
     // Check this filter config will fit in the memory pool
     xassert(AEC_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases,

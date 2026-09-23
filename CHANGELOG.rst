@@ -14,6 +14,9 @@ lib_voice change log
   * CHANGED: `aec_state_t` holds a single `aec_memory_pools_t` memory pool; the shadow filter is
     allocated straight after the main filter, so a configuration with a shorter shadow filter can
     have a longer main filter
+  * CHANGED: `aec_filter_state_t::h_hat` and `aec_shared_filter_state_t::X_fifo` are arrays of row
+    pointers into storage sized by `AEC_LIB_MAX_PHASES`, which limits the total phase count
+    (`num_y_channels * num_x_channels * num_main_filter_phases`) rather than the length of each row
   * CHANGED: `app_pipeline` example is now single-tile
 
   * Changes to dependencies:

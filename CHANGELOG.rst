@@ -23,7 +23,6 @@ UNRELEASED
 -----
 
   * ADDED: Initial `vx4b` support
-
   * CHANGED: `app_pipeline` example is now single-tile
 
   * Changes to dependencies:

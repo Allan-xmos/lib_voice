@@ -18,7 +18,8 @@ void aec_assert_config_supported(
         unsigned num_main_filter_phases,
         unsigned num_shadow_filter_phases)
 {
-    xassert(num_y_channels <= AEC_MAX_Y_CHANNELS);
+    // The total phase check below only bounds the X_fifo rows with at least one y channel
+    xassert(num_y_channels >= 1 && num_y_channels <= AEC_MAX_Y_CHANNELS);
     xassert(num_x_channels <= AEC_MAX_X_CHANNELS);
 
     // Check config fits in aec_filter_state_t. The shadow filter is no longer than the main one, so
@@ -28,7 +29,7 @@ void aec_assert_config_supported(
 
     // Check this filter config will fit in the memory pool
     xassert(AEC_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases,
-                           num_shadow_filter_phases) <= sizeof(aec_memory_pools_t));
+                           num_shadow_filter_phases) <= sizeof(aec_memory_pool_t));
 }
 
 void aec_init(
@@ -47,11 +48,12 @@ void aec_init(
 
     // The shadow filter is allocated straight after the main filter, so a shorter shadow filter
     // leaves room for a longer main filter
-    uint8_t *mem_pool = (uint8_t*)&aec_state->mem_pool;
-    aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, mem_pool, num_y_channels, num_x_channels, num_main_filter_phases);
-    aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state,
-            mem_pool + AEC_SHADOW_POOL_OFFSET(num_y_channels, num_x_channels, num_main_filter_phases),
-            num_shadow_filter_phases);
+    uint8_t *pool_start = (uint8_t*)&aec_state->mem_pool;
+    uint8_t *pool_next = aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, pool_start, num_y_channels, num_x_channels, num_main_filter_phases);
+    pool_next = aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state, pool_next, num_shadow_filter_phases);
+    // aec_assert_config_supported() checked AEC_POOL_BYTES() fits the pool, so the allocations must be within it
+    xassert((size_t)(pool_next - pool_start) <= AEC_POOL_BYTES(num_y_channels, num_x_channels,
+            num_main_filter_phases, num_shadow_filter_phases));
     aec_state->shared_state.tdist = tdist;
 }
 

@@ -406,7 +406,9 @@ void aec_l2_bfp_s32_unify_exponent(
         uint32_t desired_index,
         uint32_t min_headroom);
 
-void aec_priv_main_init(
+// aec_priv_main_init() and aec_priv_shadow_init() allocate their buffers sequentially from mem_pool and return the
+// first byte after them. aec_priv_shadow_init() first rounds mem_pool up to a double word boundary.
+uint8_t *aec_priv_main_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
@@ -414,7 +416,7 @@ void aec_priv_main_init(
         unsigned num_x_channels,
         unsigned num_phases);
 
-void aec_priv_shadow_init(
+uint8_t *aec_priv_shadow_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,

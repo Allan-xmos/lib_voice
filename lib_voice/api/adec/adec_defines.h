@@ -80,8 +80,8 @@ _Static_assert(ADEC_DE_MODE_SHADOW_FILTER_PHASES <= ADEC_DE_MODE_MAIN_FILTER_PHA
         "more phases than ADEC_DE_MODE_MAIN_FILTER_PHASES");
 _Static_assert(AEC_POOL_BYTES(ADEC_DE_MODE_Y_CHANNELS, ADEC_DE_MODE_X_CHANNELS,
                               ADEC_DE_MODE_MAIN_FILTER_PHASES, ADEC_DE_MODE_SHADOW_FILTER_PHASES)
-                <= sizeof(aec_memory_pools_t),
-        "ADEC does not fit aec_memory_pools_t. Build the AEC for more phases, or reduce "
+                <= sizeof(aec_memory_pool_t),
+        "ADEC does not fit aec_memory_pool_t. Build the AEC for more phases, or reduce "
         "ADEC_DE_MODE_MAIN_FILTER_PHASES");
 _Static_assert(ADEC_DE_DELAY_SAMPS <= ADEC_DE_MODE_MAIN_FILTER_PHASES * AEC_FRAME_ADVANCE,
         "The delay estimation filter is shorter than the delay range ADEC searches, so the delay "

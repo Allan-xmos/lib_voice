@@ -148,10 +148,8 @@ Memory pools
 ^^^^^^^^^^^^
 
 AEC binds internal BFP structures to a preallocated memory pool,
-:c:type:`aec_memory_pools_t`, made up of:
-
-- :c:type:`aec_memory_pool_t` (main filter + shared state)
-- :c:type:`aec_shadow_filt_memory_pool_t` (shadow filter)
+:c:type:`aec_memory_pool_t`, which holds the main filter, the shadow filter and the state they
+share.
 
 The pool is sized by the compile-time macros above.
 At initialisation, :c:func:`aec_init()` maps the pool to internal BFP structures

@@ -16,7 +16,7 @@
 #define FLOAT_S32_ZERO (float_s32_t){0, -31}
 #define FLOAT_S32_ONE (float_s32_t){1073741824, -30}
 
-void aec_priv_main_init(
+uint8_t *aec_priv_main_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
@@ -142,19 +142,24 @@ void aec_priv_main_init(
         shadow_params->shadow_reset_count[ch] = -(state->shared_state->config_params.shadow_filt_conf.shadow_reset_timer);
         shadow_params->shadow_better_count[ch] = 0;
     }
+    return available_mem_start;
 }
 
-void aec_priv_shadow_init(
+uint8_t *aec_priv_shadow_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_phases)
 {
     if(state == NULL) {
-        return;
+        return mem_pool;
     }
 
     memset(state, 0, sizeof(aec_filter_state_t));
+    //The shadow filter follows the main filter in the pool, which may have ended on an odd word. h_hat is accessed
+    //with double word loads and stores, so start on the next double word boundary. aec_memory_pool_t reserves a word
+    //for this.
+    mem_pool = (uint8_t*)(((uintptr_t)mem_pool + 7) & ~(uintptr_t)7);
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
     //initialise number of phases
@@ -215,6 +220,7 @@ void aec_priv_shadow_init(
     }
     //fractional regularisation scalefactor
     state->delta_scale = f64_to_float_s32((double)1e-3);
+    return available_mem_start;
 }
 
 void aec_priv_bfp_complex_s32_copy(

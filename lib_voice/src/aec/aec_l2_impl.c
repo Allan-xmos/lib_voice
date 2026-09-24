@@ -15,9 +15,9 @@
 
 //The gather and scatter below move a whole complex element - a pair of taps - at a time, so that one load and one
 //store moves each one rather than a pair of each. That needs the pair to be aligned to its own width, which holds
-//for every buffer they are used on: aec_state_t declares both AEC memory pools DWORD_ALIGNED and every allocation
-//ahead of h_hat in them is a whole number of double words, and the FFT scratch buffers here are declared
-//DWORD_ALIGNED.
+//for every buffer they are used on: aec_state_t declares the AEC memory pool DWORD_ALIGNED and aec_init() rounds
+//every allocation from it up to a whole number of double words (AEC_POOL_ALIGN()), and the FFT scratch buffers here
+//are declared DWORD_ALIGNED.
 //
 //h_hat stores 16 bit taps while the transforms work at 32 bit, so the two directions are not symmetric. The scatter
 //widens as it goes - a pair of taps is one word in h_hat and a double word in the transform buffer - putting each

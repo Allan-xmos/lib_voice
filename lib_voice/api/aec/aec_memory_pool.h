@@ -11,6 +11,24 @@
  */
 
 /**
+ * @brief Round a pool allocation of `bytes` bytes up to a whole number of double words.
+ *
+ * `aec_init()` rounds every buffer it takes from @ref aec_memory_pool_t up to this size, so every
+ * buffer starts on a double word boundary whatever the runtime configuration.
+ *
+ * @ingroup aec_memory_pool
+ */
+#define AEC_POOL_ALIGN(bytes) (((bytes) + 7) & ~(size_t)7)
+
+/**
+ * @brief Number of `type` elements an `n` element pool buffer takes up once rounded up by
+ * @ref AEC_POOL_ALIGN.
+ *
+ * @ingroup aec_memory_pool
+ */
+#define AEC_POOL_LEN(type, n) (AEC_POOL_ALIGN((n) * sizeof(type)) / sizeof(type))
+
+/**
  * @brief aec_memory_pool_t
  *
  * Memory pool for the AEC main filter, shadow filter and shared state buffers.
@@ -45,42 +63,50 @@
  * initialisation, all access to this memory occurs exclusively through the BFP
  * structures owned by the AEC state.
  *
+ * Every buffer `aec_init()` allocates is rounded up to a whole number of double words
+ * (@ref AEC_POOL_ALIGN), so each one starts on a double word boundary and can be accessed with
+ * double word loads and stores. Each row of the members below is rounded up the same way
+ * (@ref AEC_POOL_LEN) so that the pool reserves that padding too.
+ *
  * @ingroup aec_memory_pool
  */
 typedef struct {
     /** Memory pointed to by aec_shared_filter_state_t::y and aec_shared_filter_state_t::Y*/
-    int32_t mic_input_frame[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
+    int32_t DWORD_ALIGNED mic_input_frame[AEC_MAX_Y_CHANNELS]
+                                         [AEC_POOL_LEN(int32_t, AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING)];
     /** Memory pointed to by aec_shared_filter_state_t::x and aec_shared_filter_state_t::X. Also reused for main filter
      * aec_filter_state_t::T*/
-    int32_t ref_input_frame[AEC_MAX_X_CHANNELS][AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
+    int32_t DWORD_ALIGNED ref_input_frame[AEC_MAX_X_CHANNELS]
+                                         [AEC_POOL_LEN(int32_t, AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING)];
     /** Memory pointed to by aec_shared_filter_state_t::prev_y*/
-    int32_t mic_prev_samples[AEC_MAX_Y_CHANNELS][AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED mic_prev_samples[AEC_MAX_Y_CHANNELS]
+                                          [AEC_POOL_LEN(int32_t, AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)];
     /** Memory pointed to by aec_shared_filter_state_t::prev_x*/
-    int32_t ref_prev_samples[AEC_MAX_X_CHANNELS][AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED ref_prev_samples[AEC_MAX_X_CHANNELS]
+                                          [AEC_POOL_LEN(int32_t, AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)];
     /** Memory pointed to by main and shadow filter aec_filter_state_t::h_hat. The filters are stored in the time domain
      * as AEC_FRAME_ADVANCE length real 16bit phases.*/
-    int16_t phase_pool_h_hat[AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * (AEC_MAIN_FILTER_PHASES + AEC_SHADOW_FILTER_PHASES)
-                             * AEC_FRAME_ADVANCE];
+    int16_t DWORD_ALIGNED phase_pool_h_hat[AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS
+                                           * (AEC_MAIN_FILTER_PHASES + AEC_SHADOW_FILTER_PHASES)]
+                                          [AEC_POOL_LEN(int16_t, AEC_FRAME_ADVANCE)];
     /** Memory pointed to by aec_shared_filter_state_t::X_fifo, main filter aec_filter_state_t::X_fifo_1d and shadow
      * filter aec_filter_state_t::X_fifo_1d*/
-    complex_s32_t phase_pool_X_fifo[(AEC_MAX_X_CHANNELS*AEC_MAIN_FILTER_PHASES) * AEC_FD_FRAME_LENGTH];
+    complex_s32_t DWORD_ALIGNED phase_pool_X_fifo[AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES]
+                                                 [AEC_POOL_LEN(complex_s32_t, AEC_FD_FRAME_LENGTH)];
     /** Memory pointed to by main and shadow filter aec_filter_state_t::Error and aec_filter_state_t::error*/
-    complex_s32_t Error[2 * AEC_MAX_Y_CHANNELS][AEC_FD_FRAME_LENGTH];
+    complex_s32_t DWORD_ALIGNED Error[2 * AEC_MAX_Y_CHANNELS][AEC_POOL_LEN(complex_s32_t, AEC_FD_FRAME_LENGTH)];
     /** Memory pointed to by main and shadow filter aec_filter_state_t::Y_hat and aec_filter_state_t::y_hat*/
-    complex_s32_t Y_hat[2 * AEC_MAX_Y_CHANNELS][AEC_FD_FRAME_LENGTH];
+    complex_s32_t DWORD_ALIGNED Y_hat[2 * AEC_MAX_Y_CHANNELS][AEC_POOL_LEN(complex_s32_t, AEC_FD_FRAME_LENGTH)];
     /** Memory pointed to by shadow filter aec_filter_state_t::T*/
-    complex_s32_t T[AEC_MAX_X_CHANNELS][AEC_FD_FRAME_LENGTH];
+    complex_s32_t DWORD_ALIGNED T[AEC_MAX_X_CHANNELS][AEC_POOL_LEN(complex_s32_t, AEC_FD_FRAME_LENGTH)];
     /** Memory pointed to by main and shadow filter aec_filter_state_t::X_energy*/
-    int32_t X_energy[2 * AEC_MAX_X_CHANNELS][AEC_FD_FRAME_LENGTH];
+    int32_t DWORD_ALIGNED X_energy[2 * AEC_MAX_X_CHANNELS][AEC_POOL_LEN(int32_t, AEC_FD_FRAME_LENGTH)];
     /** Memory pointed to by aec_shared_filter_state_t::sigma_XX*/
-    int32_t sigma_XX[AEC_MAX_X_CHANNELS][AEC_FD_FRAME_LENGTH];
+    int32_t DWORD_ALIGNED sigma_XX[AEC_MAX_X_CHANNELS][AEC_POOL_LEN(int32_t, AEC_FD_FRAME_LENGTH)];
     /** Memory pointed to by main and shadow filter aec_filter_state_t::inv_X_energy*/
-    int32_t inv_X_energy[2 * AEC_MAX_X_CHANNELS][AEC_FD_FRAME_LENGTH];
+    int32_t DWORD_ALIGNED inv_X_energy[2 * AEC_MAX_X_CHANNELS][AEC_POOL_LEN(int32_t, AEC_FD_FRAME_LENGTH)];
     /** Memory pointed to by main and shadow filter aec_filter_state_t::overlap*/
-    int32_t overlap[2 * AEC_MAX_Y_CHANNELS][AEC_UNUSED_TAPS_PER_PHASE*2];
-    /** Room to start the shadow filter on a double word boundary. Every buffer is a whole number of words, so this
-     * never needs more than one.*/
-    int32_t shadow_alignment[1];
+    int32_t DWORD_ALIGNED overlap[2 * AEC_MAX_Y_CHANNELS][AEC_POOL_LEN(int32_t, AEC_UNUSED_TAPS_PER_PHASE * 2)];
 }aec_memory_pool_t;
 
 /**
@@ -90,13 +116,13 @@ typedef struct {
  * @ingroup aec_memory_pool
  */
 #define AEC_MAIN_POOL_BYTES(num_y, num_x, num_main_phases) ( \
-      ((num_y) + (num_x)) * (AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) * sizeof(int32_t) \
-    + ((num_y) + (num_x)) * (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE) * sizeof(int32_t) \
-    + (num_y) * (num_x) * (num_main_phases) * AEC_FRAME_ADVANCE * sizeof(int16_t) \
-    + (num_x) * (num_main_phases) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
-    + 2 * (num_y) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
-    + 3 * (num_x) * AEC_FD_FRAME_LENGTH * sizeof(int32_t) \
-    + (num_y) * (AEC_UNUSED_TAPS_PER_PHASE * 2) * sizeof(int32_t) )
+      ((num_y) + (num_x)) * AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) * sizeof(int32_t)) \
+    + ((num_y) + (num_x)) * AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE) * sizeof(int32_t)) \
+    + (num_y) * (num_x) * (num_main_phases) * AEC_POOL_ALIGN(AEC_FRAME_ADVANCE * sizeof(int16_t)) \
+    + (num_x) * (num_main_phases) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)) \
+    + 2 * (num_y) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)) \
+    + 3 * (num_x) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(int32_t)) \
+    + (num_y) * AEC_POOL_ALIGN((AEC_UNUSED_TAPS_PER_PHASE * 2) * sizeof(int32_t)) )
 
 /**
  * @brief Bytes the shadow filter takes from @ref aec_memory_pool_t for a runtime configuration.
@@ -104,17 +130,17 @@ typedef struct {
  * @ingroup aec_memory_pool
  */
 #define AEC_SHADOW_POOL_BYTES(num_y, num_x, num_shadow_phases) ( \
-      (num_y) * (num_x) * (num_shadow_phases) * AEC_FRAME_ADVANCE * sizeof(int16_t) \
-    + (2 * (num_y) + (num_x)) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
-    + 2 * (num_x) * AEC_FD_FRAME_LENGTH * sizeof(int32_t) \
-    + (num_y) * (AEC_UNUSED_TAPS_PER_PHASE * 2) * sizeof(int32_t) )
+      (num_y) * (num_x) * (num_shadow_phases) * AEC_POOL_ALIGN(AEC_FRAME_ADVANCE * sizeof(int16_t)) \
+    + (2 * (num_y) + (num_x)) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)) \
+    + 2 * (num_x) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(int32_t)) \
+    + (num_y) * AEC_POOL_ALIGN((AEC_UNUSED_TAPS_PER_PHASE * 2) * sizeof(int32_t)) )
 
 /**
  * @brief Bytes `aec_init()` reserves in @ref aec_memory_pool_t for a runtime configuration.
  *
- * This includes a word for aligning the shadow filter to a double word boundary, whether or not
- * this configuration needs it. It is a compile time constant for compile time arguments, so it can
- * be used in a `_Static_assert` to check a fixed runtime configuration against the pool.
+ * This includes rounding every buffer up to a whole number of double words (@ref AEC_POOL_ALIGN).
+ * It is a compile time constant for compile time arguments, so it can be used in a
+ * `_Static_assert` to check a fixed runtime configuration against the pool.
  *
  * AEC_POOL_BYTES(num_y, num_x, num_main_phases, num_shadow_phases) must always be
  * <= sizeof(aec_memory_pool_t)
@@ -123,7 +149,6 @@ typedef struct {
  */
 #define AEC_POOL_BYTES(num_y, num_x, num_main_phases, num_shadow_phases) ( \
       AEC_MAIN_POOL_BYTES(num_y, num_x, num_main_phases) \
-    + sizeof(int32_t) \
     + AEC_SHADOW_POOL_BYTES(num_y, num_x, num_shadow_phases) )
 
 /* Assert that the compile-time pool size matches the calculated byte requirement for the maximum

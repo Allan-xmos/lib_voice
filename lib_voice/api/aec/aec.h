@@ -60,7 +60,7 @@ void aec_assert_config_supported(
  * for the lifetime of the AEC instance.
  * Any change to the number of channels or filter phases requires calling
  * `aec_init()` again to rebind internal state to the memory pools.
- * See @ref aec_memory_pools_t, @ref aec_memory_pool_t and @ref aec_shadow_filt_memory_pool_t for details
+ * See @ref aec_memory_pool_t for details
  * on memory pool sizing and usage.
  *
  * \par Preconditions
@@ -72,7 +72,7 @@ void aec_assert_config_supported(
  * - num_shadow_filter_phases <= num_main_filter_phases, because the shadow filter reads the
  *   reference (X) FIFO that the main filter fills
  * - AEC_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases,
- *   num_shadow_filter_phases) <= sizeof(@ref aec_memory_pools_t). The shadow filter is allocated
+ *   num_shadow_filter_phases) <= sizeof(@ref aec_memory_pool_t). The shadow filter is allocated
  *   straight after the main filter, so a shorter shadow filter leaves room for a longer main one
  *
  * @param[inout] aec_state                AEC state object

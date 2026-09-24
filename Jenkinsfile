@@ -425,7 +425,7 @@ pipeline {
                       withTools(params.TOOLS_VERSION) {
                         withVenv {
                           dir("tests") {
-                            xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
+                            xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON", jobs: 8)
                           }
                         }
                       }
@@ -449,7 +449,7 @@ pipeline {
                     withTools(params.TOOLS_VERSION) {
                       withVenv {
                         dir("tests") {
-                          xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: speedupOpt())
+                          xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: speedupOpt(), jobs: 8)
                           stash name: 'xcommon_cmake_build_xcore', includes: '**/bin/**/*.xe'
                         }
                       }

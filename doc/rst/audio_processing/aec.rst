@@ -147,14 +147,16 @@ avoiding dynamic memory allocation at runtime. There are two layers of configura
 Memory pools
 ^^^^^^^^^^^^
 
-AEC binds internal BFP structures to preallocated memory pools:
+AEC binds internal BFP structures to a preallocated memory pool,
+:c:type:`aec_memory_pool_t`, which holds the main filter, the shadow filter and the state they
+share.
 
-- :c:type:`aec_memory_pool_t` (main filter + shared state)
-- :c:type:`aec_shadow_filt_memory_pool_t` (shadow filter)
-
-The pools must be allocated with capacity matching the compile-time macros above.
-At initialisation, :c:func:`aec_init()` maps the pools to internal BFP structures
-sized to the runtime configuration.
+The pool is sized by the compile-time macros above.
+At initialisation, :c:func:`aec_init()` maps the pool to internal BFP structures
+sized to the runtime configuration, allocating the main filter first and the shadow filter
+straight after it. A runtime configuration with a shorter shadow filter can therefore use the
+spare memory for a longer main filter; for example, the ADEC delay estimation configuration has
+no shadow filter.
 The pools must remain valid for the lifetime of the AEC instance.
 
 .. _aec-preconditions:

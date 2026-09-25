@@ -18,19 +18,18 @@ void aec_assert_config_supported(
         unsigned num_main_filter_phases,
         unsigned num_shadow_filter_phases)
 {
-    xassert(num_y_channels <= AEC_MAX_Y_CHANNELS);
+    // The total phase check below only bounds the X_fifo rows with at least one y channel
+    xassert(num_y_channels >= 1 && num_y_channels <= AEC_MAX_Y_CHANNELS);
     xassert(num_x_channels <= AEC_MAX_X_CHANNELS);
 
-    // Check config fits in aec_filter_state_t
-    xassert((size_t)num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
-    xassert((size_t)num_x_channels * num_shadow_filter_phases <= AEC_LIB_MAX_PHASES);
+    // Check config fits in aec_filter_state_t. The shadow filter is no longer than the main one, so
+    // checking the main filter covers both
     xassert(num_shadow_filter_phases <= num_main_filter_phases);
+    xassert((size_t)num_y_channels * num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
 
-    // Check this filter config will fit in the memory pools
-    xassert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases)
-            <= sizeof(aec_memory_pool_t));
-    xassert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
-            <= sizeof(aec_shadow_filt_memory_pool_t));
+    // Check this filter config will fit in the memory pool
+    xassert(AEC_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases,
+                           num_shadow_filter_phases) <= sizeof(aec_memory_pool_t));
 }
 
 void aec_init(
@@ -47,8 +46,14 @@ void aec_init(
     aec_assert_config_supported(num_y_channels, num_x_channels, num_main_filter_phases,
             num_shadow_filter_phases);
 
-    aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, (uint8_t*)&aec_state->main_mem_pool, num_y_channels, num_x_channels, num_main_filter_phases);
-    aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state, (uint8_t*)&aec_state->shadow_mem_pool, num_shadow_filter_phases);
+    // The shadow filter is allocated straight after the main filter, so a shorter shadow filter
+    // leaves room for a longer main filter
+    uint8_t *pool_start = (uint8_t*)&aec_state->mem_pool;
+    uint8_t *pool_next = aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, pool_start, num_y_channels, num_x_channels, num_main_filter_phases);
+    pool_next = aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state, pool_next, num_shadow_filter_phases);
+    // aec_assert_config_supported() checked AEC_POOL_BYTES() fits the pool, so the allocations must be within it
+    xassert((size_t)(pool_next - pool_start) <= AEC_POOL_BYTES(num_y_channels, num_x_channels,
+            num_main_filter_phases, num_shadow_filter_phases));
     aec_state->shared_state.tdist = tdist;
 }
 

@@ -16,7 +16,14 @@
 #define FLOAT_S32_ZERO (float_s32_t){0, -31}
 #define FLOAT_S32_ONE (float_s32_t){1073741824, -30}
 
-void aec_priv_main_init(
+//DWORD_ALIGNED only aligns aec_memory_pool_t on xcore, so only check the pool alignment there
+#if defined(__xcore__) || defined(__VX4B__)
+#define AEC_ASSERT_POOL_ALIGNED(p) xassert(((uintptr_t)(p) & 7) == 0)
+#else
+#define AEC_ASSERT_POOL_ALIGNED(p)
+#endif
+
+uint8_t *aec_priv_main_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
@@ -24,12 +31,13 @@ void aec_priv_main_init(
         unsigned num_x_channels,
         unsigned num_phases)
 {
-    xassert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases)
-            <= sizeof(aec_memory_pool_t));
     memset(state, 0, sizeof(aec_filter_state_t));
     //reset shared_state. Only done in main_init()
     memset(shared_state, 0, sizeof(aec_shared_filter_state_t));
 
+    //Every buffer below is rounded up to a whole number of double words (AEC_POOL_ALIGN()), so they all start on a
+    //double word boundary as long as the pool does
+    AEC_ASSERT_POOL_ALIGNED(mem_pool);
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
     state->shared_state = shared_state;
@@ -42,72 +50,74 @@ void aec_priv_main_init(
     //y
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_s32_init(&state->shared_state->y[ch], (int32_t*)available_mem_start, AEC_INPUT_EXP, (AEC_PROC_FRAME_LENGTH), 0); //input data is 1.31 so initialising with exp AEC_INPUT_EXP
-        available_mem_start += ((AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING)*sizeof(int32_t)); //2 extra samples of memory allocated. state->shared_state->y[ch].length is still AEC_PROC_FRAME_LENGTH though
+        available_mem_start += AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING)*sizeof(int32_t)); //2 extra samples of memory allocated. state->shared_state->y[ch].length is still AEC_PROC_FRAME_LENGTH though
     }
     //x
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->shared_state->x[ch], (int32_t*)available_mem_start, AEC_INPUT_EXP, (AEC_PROC_FRAME_LENGTH), 0); //input data is 1.31 so initialising with exp -31
-        available_mem_start += ((AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING)*sizeof(int32_t)); //2 extra samples of memory allocated. state->shared_state->x[ch].length is still AEC_PROC_FRAME_LENGTH though
+        available_mem_start += AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING)*sizeof(int32_t)); //2 extra samples of memory allocated. state->shared_state->x[ch].length is still AEC_PROC_FRAME_LENGTH though
     }
     //prev_y
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_s32_init(&state->shared_state->prev_y[ch], (int32_t*)available_mem_start, AEC_INPUT_EXP, (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE), 0); //input data is 1.31 so initialising with exp -31
-        available_mem_start += ((AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
+        available_mem_start += AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
     }
     //prev_x
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->shared_state->prev_x[ch], (int32_t*)available_mem_start, AEC_INPUT_EXP, (AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE), 0); //input data is 1.31 so initialising with exp -31
-        available_mem_start += ((AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
+        available_mem_start += AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE)*sizeof(int32_t));
     }
 
     //h_hat (time domain)
     for(unsigned ch=0; ch<num_y_channels; ch++) {
+        state->h_hat[ch] = &state->h_hat_phases[ch * num_x_channels * num_phases];
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
             bfp_s16_init(&state->h_hat[ch][ph], (int16_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
-            available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int16_t));
+            available_mem_start += AEC_POOL_ALIGN(AEC_FRAME_ADVANCE*sizeof(int16_t));
         }
     }
     //X_fifo
     for(unsigned ch=0; ch<num_x_channels; ch++) {
+        state->shared_state->X_fifo[ch] = &state->shared_state->X_fifo_phases[ch * num_phases];
         for(unsigned ph=0; ph<num_phases; ph++) {
             bfp_complex_s32_init(&state->shared_state->X_fifo[ch][ph], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-            available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
+            available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
         }
     }
     //initialise Error
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_complex_s32_init(&state->Error[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
     //Initiaise Y_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_complex_s32_init(&state->Y_hat[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
 
     //X_energy
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
     //sigma_XX
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->shared_state->sigma_XX[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
     //inv_X_energy
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->inv_X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
 
     //overlap
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_s32_init(&state->overlap[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, 32, 0);
-        available_mem_start += (32*sizeof(int32_t));
+        available_mem_start += AEC_POOL_ALIGN(32*sizeof(int32_t));
     }
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    xassert(memory_used <= sizeof(aec_memory_pool_t));
+    xassert(memory_used == AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -142,19 +152,23 @@ void aec_priv_main_init(
         shadow_params->shadow_reset_count[ch] = -(state->shared_state->config_params.shadow_filt_conf.shadow_reset_timer);
         shadow_params->shadow_better_count[ch] = 0;
     }
+    return available_mem_start;
 }
 
-void aec_priv_shadow_init(
+uint8_t *aec_priv_shadow_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
         unsigned num_phases)
 {
     if(state == NULL) {
-        return;
+        return mem_pool;
     }
 
     memset(state, 0, sizeof(aec_filter_state_t));
+    //The shadow filter follows the main filter in the pool. Every main filter buffer is rounded up to a whole number
+    //of double words, so this is still double word aligned.
+    AEC_ASSERT_POOL_ALIGNED(mem_pool);
     uint8_t *available_mem_start = (uint8_t*)mem_pool;
 
     //initialise number of phases
@@ -164,51 +178,49 @@ void aec_priv_shadow_init(
     unsigned num_y_channels = state->shared_state->num_y_channels;
     unsigned num_x_channels = state->shared_state->num_x_channels;
 
-    xassert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_phases)
-            <= sizeof(aec_shadow_filt_memory_pool_t));
-
     //h_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
+        state->h_hat[ch] = &state->h_hat_phases[ch * num_x_channels * num_phases];
         for(unsigned ph=0; ph<(num_x_channels * num_phases); ph++) {
             bfp_s16_init(&state->h_hat[ch][ph], (int16_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_ADVANCE, 0);
-            available_mem_start += (AEC_FRAME_ADVANCE*sizeof(int16_t));
+            available_mem_start += AEC_POOL_ALIGN(AEC_FRAME_ADVANCE*sizeof(int16_t));
         }
     }
     //initialise Error
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_complex_s32_init(&state->Error[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
     //Initiaise Y_hat
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_complex_s32_init(&state->Y_hat[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
     //initialise T
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_complex_s32_init(&state->T[ch], (complex_s32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
     }
 
     //X_energy
     for(unsigned ch=0; ch<num_x_channels; ch++) {
        bfp_s32_init(&state->X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-       available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
+       available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
     //inv_X_energy
     for(unsigned ch=0; ch<num_x_channels; ch++) {
         bfp_s32_init(&state->inv_X_energy[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-        available_mem_start += (AEC_FD_FRAME_LENGTH*sizeof(int32_t));
+        available_mem_start += AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH*sizeof(int32_t));
     }
 
     //overlap
     for(unsigned ch=0; ch<num_y_channels; ch++) {
         bfp_s32_init(&state->overlap[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, 32, 0);
-        available_mem_start += (32*sizeof(int32_t));
+        available_mem_start += AEC_POOL_ALIGN(32*sizeof(int32_t));
     }
 
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    xassert(memory_used <= sizeof(aec_shadow_filt_memory_pool_t));
+    xassert(memory_used == AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_phases));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -217,6 +229,7 @@ void aec_priv_shadow_init(
     }
     //fractional regularisation scalefactor
     state->delta_scale = f64_to_float_s32((double)1e-3);
+    return available_mem_start;
 }
 
 void aec_priv_bfp_complex_s32_copy(

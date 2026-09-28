@@ -2,12 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include "vnr.h"
-#if defined(__XS3A__) || defined(__VX4B__)
-#include <xcore/assert.h>
-#else
-#include <assert.h>
-#define xassert(c) assert(c)
-#endif
+#include "vnr_features_priv.h"
 
 
 void vnr_state_init(vnr_state_t *vnr)

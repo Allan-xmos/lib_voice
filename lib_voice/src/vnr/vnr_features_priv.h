@@ -5,6 +5,14 @@
 
 #include "vnr_state.h"
 
+// Duplicate of the xassert fallback in aec_priv.h, as VNR does not depend on AEC
+#if defined(__xcore__) || defined(__riscv_xxcore)
+#include <xcore/assert.h>
+#else
+#include <assert.h>
+#define xassert(c) assert(c)
+#endif
+
 /** Exponent of VNR input data. 
  * NOT USER MODIFIABLE.
  */

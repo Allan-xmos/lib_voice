@@ -3,12 +3,6 @@
 #include "aec.h"
 #include "aec_priv.h"
 
-#if defined(__XS3A__) || defined(__VX4B__)
-#include <xcore/assert.h>
-#else
-#include <assert.h>
-#define xassert(c) assert(c)
-#endif
 
 // helper functions
 enum e_td_ema {Y_EMA, X_EMA, ERROR_EMA};

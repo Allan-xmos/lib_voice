@@ -1,13 +1,8 @@
 // Copyright 2022-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#if defined(__XS3A__) || defined(__VX4B__)
-#include <xcore/assert.h>
-#else
-#include <assert.h>
-#define xassert(c) assert(c)
-#endif
 #include "aec.h"
+#include "aec_priv.h"
 #include "adec.h"
 
 void adec_estimate_delay (

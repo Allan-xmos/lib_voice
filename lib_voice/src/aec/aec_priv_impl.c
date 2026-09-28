@@ -3,12 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#if defined(__XS3A__) || defined(__VX4B__)
-#include <xcore/assert.h>
-#else
-#include <assert.h>
-#define xassert(c) assert(c)
-#endif
 #include "aec.h"
 #include "aec_priv.h"
 #include "xmath/xmath.h"

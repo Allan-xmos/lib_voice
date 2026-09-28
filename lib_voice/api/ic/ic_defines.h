@@ -3,6 +3,11 @@
 #ifndef IC_DEFINES_H
 #define IC_DEFINES_H
 
+// XC cannot parse the IC headers
+#ifdef __XC__
+#error PLEASE CALL IC FROM C TO AVOID STRUCT INCOMPATIBILITY ISSUES
+#endif
+
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
@@ -137,11 +142,5 @@
  * @ingroup ic_defines
  */
 #define FFT_PADDING 2
-
-// For unit tests
-#ifdef __XC__
-#undef DWORD_ALIGNED
-#define DWORD_ALIGNED
-#endif
 
 #endif

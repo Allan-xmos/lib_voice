@@ -3,6 +3,11 @@
 #ifndef AEC_DEFINES_H
 #define AEC_DEFINES_H
 
+// XC cannot parse the AEC headers
+#ifdef __XC__
+#error PLEASE CALL AEC FROM C TO AVOID STRUCT INCOMPATIBILITY ISSUES
+#endif
+
 #ifdef __aec_conf_h_exists__
     #include "aec_conf.h"
 #endif

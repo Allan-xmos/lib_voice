@@ -125,7 +125,7 @@ static void h_hat_forward_fft(
 /**
  * Transform each filter phase in turn and accumulate X * H_hat into Y_hat over the requested chunk.
  * 
- * This avoids a VX4 compiler bug related to stack frame handling when large scratch buffers are used.
+ * TODO: This avoids a prototype VX4 compiler bug related to stack frame handling when large scratch buffers are used.
  */
 __attribute__((noinline))
 static void aec_l2_accumulate_Y_hat(

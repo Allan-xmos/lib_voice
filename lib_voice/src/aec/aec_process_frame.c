@@ -10,7 +10,7 @@ enum e_fft {Y_FFT, X_FFT, ERROR_FFT};
 
 #define REF_ACTIVE_THRESHOLD f64_to_float_s32(pow(10, REF_ACTIVE_THRESHOLD_DB/20.0))
 
-#if defined(__XS3A__) || defined(__VX4B__)
+#if defined(__xcore__) || defined(__riscv_xxcore)
 #include <xcore/parallel.h>
 DECLARE_JOB(calc_time_domain_ema_energy_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t *, int32_t*, int, int, enum e_td_ema));
 DECLARE_JOB(fft_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int, enum e_fft));
@@ -273,7 +273,7 @@ void filter_adapt_task(const aec_par_tasks_t *s, aec_filter_state_t *main_state,
     }
 }
 
-#if defined(__XS3A__) || defined(__VX4B__)
+#if defined(__xcore__) || defined(__riscv_xxcore)
 
 #define PAR_THREADS_PJOBS(FUNC, ARR, NUM_THREADS, ...)        \
 do {                                                            \

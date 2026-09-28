@@ -136,7 +136,7 @@ _Static_assert(AEC_SHADOW_FILTER_PHASES <= AEC_MAIN_FILTER_PHASES,
  *
  * @ingroup aec_defines
  */
-#define AEC_UNUSED_TAPS_PER_PHASE (16)
+#define AEC_FRAME_OVERLAP (AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))
 
 /** Extra 2 samples you need to allocate in time domain so that the full spectrum (DC to nyquist) can be stored
  * after the in-place FFT. NOT USER MODIFIABLE.

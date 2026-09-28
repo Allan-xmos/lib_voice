@@ -68,7 +68,7 @@ typedef struct {
     /** Memory pointed to by main filter aec_filter_state_t::inv_X_energy*/
     int32_t inv_X_energy[AEC_MAX_X_CHANNELS][AEC_FD_FRAME_LENGTH];
     /** Memory pointed to by main filter aec_filter_state_t::overlap*/
-    int32_t overlap[AEC_MAX_Y_CHANNELS][AEC_UNUSED_TAPS_PER_PHASE*2];
+    int32_t overlap[AEC_MAX_Y_CHANNELS][AEC_FRAME_OVERLAP];
 }aec_memory_pool_t;
 
 /**
@@ -118,7 +118,7 @@ typedef struct {
     /** Memory pointed to by shadow_filter aec_filter_state_t::inv_X_energy*/
     int32_t inv_X_energy[AEC_MAX_X_CHANNELS][AEC_FD_FRAME_LENGTH];
     /** Memory pointed to by shadow filter aec_filter_state_t::overlap*/
-    int32_t overlap[AEC_MAX_Y_CHANNELS][AEC_UNUSED_TAPS_PER_PHASE*2];
+    int32_t overlap[AEC_MAX_Y_CHANNELS][AEC_FRAME_OVERLAP];
 }aec_shadow_filt_memory_pool_t;
 
 /**
@@ -138,7 +138,7 @@ typedef struct {
     + (num_x) * (num_main_phases) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + 2 * (num_y) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + 3 * (num_x) * AEC_FD_FRAME_LENGTH * sizeof(int32_t) \
-    + (num_y) * (AEC_UNUSED_TAPS_PER_PHASE * 2) * sizeof(int32_t) )
+    + (num_y) * (AEC_FRAME_OVERLAP) * sizeof(int32_t) )
 
 /**
  * @brief Bytes `aec_init()` takes from @ref aec_shadow_filt_memory_pool_t for a runtime
@@ -150,7 +150,7 @@ typedef struct {
       (num_y) * (num_x) * (num_shadow_phases) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + (2 * (num_y) + (num_x)) * AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t) \
     + 2 * (num_x) * AEC_FD_FRAME_LENGTH * sizeof(int32_t) \
-    + (num_y) * (AEC_UNUSED_TAPS_PER_PHASE * 2) * sizeof(int32_t) )
+    + (num_y) * (AEC_FRAME_OVERLAP) * sizeof(int32_t) )
 
 /* Assert that the compile-time pool sizes match the calculated byte requirements for the maximum
 configuration */

@@ -103,8 +103,8 @@ void aec_priv_main_init(
 
     //overlap
     for(unsigned ch=0; ch<num_y_channels; ch++) {
-        bfp_s32_init(&state->overlap[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, 32, 0);
-        available_mem_start += (32*sizeof(int32_t));
+        bfp_s32_init(&state->overlap[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_OVERLAP, 0);
+        available_mem_start += (AEC_FRAME_OVERLAP*sizeof(int32_t));
     }
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
     xassert(memory_used <= sizeof(aec_memory_pool_t));
@@ -203,8 +203,8 @@ void aec_priv_shadow_init(
 
     //overlap
     for(unsigned ch=0; ch<num_y_channels; ch++) {
-        bfp_s32_init(&state->overlap[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, 32, 0);
-        available_mem_start += (32*sizeof(int32_t));
+        bfp_s32_init(&state->overlap[ch], (int32_t*)available_mem_start, AEC_ZEROVAL_EXP, AEC_FRAME_OVERLAP, 0);
+        available_mem_start += (AEC_FRAME_OVERLAP*sizeof(int32_t));
     }
 
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
@@ -770,12 +770,12 @@ void aec_priv_calc_coherence(
 
 float_s32_t aec_priv_calc_corr_factor(bfp_s32_t *y, bfp_s32_t *yhat) {
     // abs(sigma_yyhat)/(sigma_abs(y)abs(yhat))
-    int32_t DWORD_ALIGNED y_abs_mem[AEC_FRAME_ADVANCE];
-    int32_t DWORD_ALIGNED yhat_abs_mem[AEC_FRAME_ADVANCE];
+    int32_t DWORD_ALIGNED y_abs_mem[AEC_FRAME_ADVANCE - AEC_FRAME_OVERLAP];
+    int32_t DWORD_ALIGNED yhat_abs_mem[AEC_FRAME_ADVANCE - AEC_FRAME_OVERLAP];
     bfp_s32_t y_abs, yhat_abs;
 
-    bfp_s32_init(&y_abs, &y_abs_mem[0], 0, y->length, 0);
-    bfp_s32_init(&yhat_abs, &yhat_abs_mem[0], 0, yhat->length, 0);
+    bfp_s32_init(&y_abs, &y_abs_mem[0], 0, AEC_FRAME_ADVANCE - AEC_FRAME_OVERLAP, 0);
+    bfp_s32_init(&yhat_abs, &yhat_abs_mem[0], 0, AEC_FRAME_ADVANCE - AEC_FRAME_OVERLAP, 0);
 
     bfp_s32_abs(&y_abs, y);
     bfp_s32_abs(&yhat_abs, yhat);
@@ -799,14 +799,14 @@ float_s32_t aec_priv_calc_corr_factor(bfp_s32_t *y, bfp_s32_t *yhat) {
 }
 
 // Hanning window structure used in the windowing operation done to remove discontinuities from the filter error
-static const uq1_31 WOLA_window_q31[AEC_UNUSED_TAPS_PER_PHASE*2] = {
+static const uq1_31 WOLA_window_q31[AEC_FRAME_OVERLAP] = {
        4861986,   19403913,   43494088,   76914346,  119362028,  170452721,  229723740,  296638317,
      370590464,  450910459,  536870911,  627693349,  722555272,  820597594,  920932429, 1022651130,
     1124832516, 1226551217, 1326886052, 1424928374, 1519790297, 1610612735, 1696573187, 1776893182,
     1850845329, 1917759906, 1977030925, 2028121618, 2070569300, 2103989558, 2128079733, 2142621660
 };
 
-static const uq1_31 WOLA_window_flpd_q31[AEC_UNUSED_TAPS_PER_PHASE*2] = {
+static const uq1_31 WOLA_window_flpd_q31[AEC_FRAME_OVERLAP] = {
     2142621660, 2128079733, 2103989558, 2070569300, 2028121618, 1977030925, 1917759906, 1850845329,
     1776893182, 1696573187, 1610612735, 1519790297, 1424928374, 1326886052, 1226551217, 1124832516,
     1022651130, 920932429, 820597594, 722555272, 627693349, 536870911, 450910459, 370590464,
@@ -819,15 +819,15 @@ void aec_priv_create_output(
         bfp_s32_t *error)
 {
     bfp_s32_t win, win_flpd;
-    bfp_s32_init(&win, (int32_t*)&WOLA_window_q31[0], AEC_WINDOW_EXP, (AEC_UNUSED_TAPS_PER_PHASE*2), 0);
-    bfp_s32_init(&win_flpd, (int32_t*)&WOLA_window_flpd_q31[0], AEC_WINDOW_EXP, (AEC_UNUSED_TAPS_PER_PHASE*2) , 0);
+    bfp_s32_init(&win, (int32_t*)&WOLA_window_q31[0], AEC_WINDOW_EXP, (AEC_FRAME_OVERLAP), 0);
+    bfp_s32_init(&win_flpd, (int32_t*)&WOLA_window_flpd_q31[0], AEC_WINDOW_EXP, (AEC_FRAME_OVERLAP) , 0);
 
     //zero first 240 samples
     vect_s32_set(error->data, 0, AEC_FRAME_ADVANCE);
 
     bfp_s32_t chunks[2];
-    bfp_s32_init(&chunks[0], &error->data[AEC_FRAME_ADVANCE], error->exp, AEC_UNUSED_TAPS_PER_PHASE*2, 1); //240-272 fwd win
-    bfp_s32_init(&chunks[1], &error->data[2*AEC_FRAME_ADVANCE], error->exp, AEC_UNUSED_TAPS_PER_PHASE*2, 1); //480-512 flpd win
+    bfp_s32_init(&chunks[0], &error->data[AEC_FRAME_ADVANCE], error->exp, AEC_FRAME_OVERLAP, 1); //240-272 fwd win
+    bfp_s32_init(&chunks[1], &error->data[2*AEC_FRAME_ADVANCE], error->exp, AEC_FRAME_OVERLAP, 1); //480-512 flpd win
 
     //window error
     bfp_s32_mul(&chunks[0], &chunks[0], &win);
@@ -849,8 +849,8 @@ void aec_priv_create_output(
 
         //overlap add
         //split output into 2 chunks. chunk[0] with first 32 samples of output. chunk[1] has rest of the 240-32 samples of output
-        bfp_s32_init(&chunks[0], &output->data[0], output->exp, AEC_UNUSED_TAPS_PER_PHASE*2, 1);
-        bfp_s32_init(&chunks[1], &output->data[AEC_UNUSED_TAPS_PER_PHASE*2], output->exp, AEC_FRAME_ADVANCE-(AEC_UNUSED_TAPS_PER_PHASE*2), 1);
+        bfp_s32_init(&chunks[0], &output->data[0], output->exp, AEC_FRAME_OVERLAP, 1);
+        bfp_s32_init(&chunks[1], &output->data[AEC_FRAME_OVERLAP], output->exp, AEC_FRAME_ADVANCE-(AEC_FRAME_OVERLAP), 1);
 
         //Add previous frame's overlap to first 32 samples of output
         bfp_s32_add(&chunks[0], &chunks[0], overlap);
@@ -860,7 +860,7 @@ void aec_priv_create_output(
     }
 
     //update overlap
-    vpu_memcpy(overlap->data, &error->data[2*AEC_FRAME_ADVANCE], (AEC_UNUSED_TAPS_PER_PHASE*2)*sizeof(int32_t));
+    vpu_memcpy(overlap->data, &error->data[2*AEC_FRAME_ADVANCE], (AEC_FRAME_OVERLAP)*sizeof(int32_t));
     overlap->hr = error->hr;
     overlap->exp = error->exp;
 }
@@ -885,7 +885,7 @@ void aec_priv_calc_inv_X_energy_denom(
     if(!is_shadow) { //frequency smoothing
         int32_t norm_denom_buf[AEC_FD_FRAME_LENGTH];
         bfp_s32_t norm_denom;
-        bfp_s32_init(&norm_denom, &norm_denom_buf[0], 0, AEC_PROC_FRAME_LENGTH/2+1, 0);
+        bfp_s32_init(&norm_denom, &norm_denom_buf[0], 0, AEC_FD_FRAME_LENGTH, 0);
 
         bfp_s32_t sigma_times_gamma;
         bfp_s32_init(&sigma_times_gamma, sigma_XX->data, sigma_XX->exp+gamma_log2, sigma_XX->length, 0);

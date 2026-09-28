@@ -235,14 +235,13 @@ float_s32_t aec_calc_corr_factor(
         aec_filter_state_t *state,
         unsigned ch) {
     // We need yhat[240:480-32] and y[240:480-32]
-    int frame_window = 32;
 
     // y[240:480] is prev_y[0:240].
     bfp_s32_t y_subset;
-    bfp_s32_init(&y_subset, state->shared_state->prev_y[ch].data, state->shared_state->prev_y[ch].exp, AEC_FRAME_ADVANCE-frame_window, 1);
+    bfp_s32_init(&y_subset, state->shared_state->prev_y[ch].data, state->shared_state->prev_y[ch].exp, AEC_FRAME_ADVANCE-AEC_FRAME_OVERLAP, 1);
 
     bfp_s32_t yhat_subset;
-    bfp_s32_init(&yhat_subset, &state->y_hat[ch].data[AEC_FRAME_ADVANCE], state->y_hat[ch].exp, AEC_FRAME_ADVANCE-frame_window, 1);
+    bfp_s32_init(&yhat_subset, &state->y_hat[ch].data[AEC_FRAME_ADVANCE], state->y_hat[ch].exp, AEC_FRAME_ADVANCE-AEC_FRAME_OVERLAP, 1);
 
     float_s32_t corr_factor = aec_priv_calc_corr_factor(&y_subset, &yhat_subset);
     return corr_factor;
@@ -297,7 +296,7 @@ void aec_calc_freq_domain_energy(
     int32_t DWORD_ALIGNED scratch_mem[AEC_FD_FRAME_LENGTH];
 
     bfp_s32_t scratch;
-    bfp_s32_init(&scratch, scratch_mem, 0, input->length, 0);
+    bfp_s32_init(&scratch, scratch_mem, 0, AEC_FD_FRAME_LENGTH, 0);
     bfp_complex_s32_squared_mag(&scratch, input);
 
     float_s64_t sum64 = bfp_s32_sum(&scratch);

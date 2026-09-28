@@ -84,7 +84,7 @@ void vnr_priv_mel_compute(float_s32_t *filter_output, const bfp_complex_s32_t *X
     // out_spect = np.abs(X_spect)**2
     int32_t DWORD_ALIGNED squared_mag_data[VNR_FD_FRAME_LENGTH];
     bfp_s32_t squared_mag;
-    bfp_s32_init(&squared_mag, squared_mag_data, 0, X->length, 0);
+    bfp_s32_init(&squared_mag, squared_mag_data, 0, VNR_FD_FRAME_LENGTH, 0);
     bfp_complex_s32_squared_mag(&squared_mag, X);
 #if HEADROOM_CHECK
     headroom_t reported_hr = squared_mag.hr;

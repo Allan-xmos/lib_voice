@@ -100,7 +100,7 @@ def test_pink_convergence(adapt_config, channel_count, target):
     filter_td_file = f"{filter_dir}/{testname}_h_td_xc.npy"
     filter_fd_file = f"{filter_dir}/{testname}_H_fd_xc.npy"
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:channel_count], in_data_32bit[:,channel_count:], f"{testname}", adapt=nFrames, h_hat_dump=filter_fd_file, adapt_mode=run_xc.adapt_mode_dict[adapt_config], num_y_channels=channel_count, num_x_channels=channel_count, target=target)
-    output_wav_file, _ = sf.read(dut_output_file)
+    output_wav_file, _ = sf.read(dut_output_file, always_2d=True)
     error = output_wav_file
     _, leq_error = wtf.leq_smooth(error[:, 0], fs, 0.05)
     time = np.arange(len(leq_error))*0.05

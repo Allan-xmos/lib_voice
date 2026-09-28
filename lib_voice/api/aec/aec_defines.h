@@ -125,13 +125,18 @@
  *
  * @ingroup aec_defines
  */
-#define AEC_LIB_MAX_PHASES (AEC_MAX_Y_CHANNELS * AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES)
+#define AEC_LIB_MAX_PHASES (AEC_MAX_X_CHANNELS * AEC_MAIN_FILTER_PHASES * AEC_MAX_Y_CHANNELS)
+
+/* The shadow filter reads phases from the X FIFO that the main filter fills, so it can never be
+longer than the main filter. aec_init() enforces the same rule on its runtime arguments. */
+_Static_assert(AEC_SHADOW_FILTER_PHASES <= AEC_MAIN_FILTER_PHASES,
+        "AEC_SHADOW_FILTER_PHASES must be less than or equal to AEC_MAIN_FILTER_PHASES");
 
 /** Overlap data length
  *
  * @ingroup aec_defines
  */
-#define AEC_UNUSED_TAPS_PER_PHASE (16)
+#define AEC_FRAME_OVERLAP (AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE))
 
 /** Extra 2 samples you need to allocate in time domain so that the full spectrum (DC to nyquist) can be stored
  * after the in-place FFT. NOT USER MODIFIABLE.

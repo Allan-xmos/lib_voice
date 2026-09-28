@@ -89,7 +89,29 @@ There are two pipelines supported in this example: Standard Architecture and Alt
 Building one or the other config is controlled via the ``ALT_ARCH_MODE`` define.
 The build system will automatically create both configs called ``app_pipeline_std_arch`` and ``app_pipeline_alt_arch``.
 
-To create the pipeline, the application must first initialise all the individual components:
+Each config builds the AEC for its own channels and filter phases, and generates its own AEC schedule ``tdist``,
+using ``AEC_SCHEDULE_CONFIG_<config>`` as described in :ref:`aec-schedules`:
+
+.. literalinclude:: ../../../examples/app_pipeline/CMakeLists.txt
+    :language: cmake
+    :start-at: # Set AEC channels and phases
+    :end-at: set(AEC_SCHEDULE_CONFIG_alt_arch
+
+The Standard Architecture config uses 2 mic channels and a 10 phase main filter.
+The Alternating Architecture config uses 1 mic channel and a 15 phase main filter, which gives it a longer tail.
+Both run the AEC on 1 thread with 2 reference channels and a 5 phase shadow filter.
+
+To create the pipeline, the application must first initialise all the individual components.
+Stage1 needs two AEC configurations, both of which use the generated ``tdist`` schedule:
+
+- The normal mode configuration uses the compile-time maximums set by ``AEC_SCHEDULE_CONFIG_<config>``,
+  so this code is the same for both architectures.
+- The delay estimation mode configuration is used while ADEC measures the delay.
+  It is built from the ``ADEC_DE_MODE_*`` defines in ``adec_defines.h`` (by default 1 mic channel, 1 reference channel,
+  30 main filter phases and no shadow filter).
+  The delay estimation AEC shares the memory pool of the normal mode AEC.
+  ``adec_defines.h`` checks at compile time that this configuration fits the pool,
+  and :c:func:`stage1_init()` checks both configurations again when it runs.
 
 .. literalinclude:: ../../../examples/app_pipeline/src/pipeline.c
     :language: c
@@ -105,6 +127,12 @@ After the pipeline has been initialised, the data can be run through it.
 All the modules in the example can run on separate threads.
 To exchange information between the pipeline stages
 the metadata struct will need to be created to be populated and consumed by the different modules.
+
+The Stage1 input and output buffers are sized by ``AP_MAX_Y_CHANNELS``, which is set to :c:macro:`STAGE1_MAX_Y_CHANNELS`,
+not by :c:macro:`AEC_MAX_Y_CHANNELS`.
+These are the same in the Standard Architecture.
+In the Alternating Architecture, the AEC is built for 1 mic channel but Stage1 still carries 2,
+because the IC needs both mic channels when the AEC is disabled.
 
 .. literalinclude:: ../../../examples/app_pipeline/src/pipeline.c
     :language: c

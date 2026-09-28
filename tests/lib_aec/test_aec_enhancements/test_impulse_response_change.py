@@ -114,7 +114,7 @@ def test_impulse_response_change(adapt_config, target):
     print("Run AEC XC")
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict[adapt_config], num_y_channels=y_channel_count, num_x_channels=x_channel_count, target=target)
 
-    output_wav_file, _ = sf.read(dut_output_file)
+    output_wav_file, _ = sf.read(dut_output_file, always_2d=True)
     error_xc = output_wav_file[:,0]
     _, leq_error = wtf.leq_smooth(error_xc, fs, 0.05)
     change_index, = np.where(leq_error == leq_error.max())

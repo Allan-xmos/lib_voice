@@ -6,6 +6,27 @@
 #include "aec.h"
 #include "aec_priv.h"
 
+void aec_assert_config_supported(
+        unsigned num_y_channels,
+        unsigned num_x_channels,
+        unsigned num_main_filter_phases,
+        unsigned num_shadow_filter_phases)
+{
+    xassert(num_y_channels <= AEC_MAX_Y_CHANNELS);
+    xassert(num_x_channels <= AEC_MAX_X_CHANNELS);
+
+    // Check config fits in aec_filter_state_t
+    xassert((size_t)num_x_channels * num_main_filter_phases <= AEC_LIB_MAX_PHASES);
+    xassert((size_t)num_x_channels * num_shadow_filter_phases <= AEC_LIB_MAX_PHASES);
+    xassert(num_shadow_filter_phases <= num_main_filter_phases);
+
+    // Check this filter config will fit in the memory pools
+    xassert(AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases)
+            <= sizeof(aec_memory_pool_t));
+    xassert(AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
+            <= sizeof(aec_shadow_filt_memory_pool_t));
+}
+
 void aec_init(
         aec_state_t *aec_state,
         unsigned num_y_channels,
@@ -15,8 +36,11 @@ void aec_init(
         const aec_task_distribution_t *tdist
     )
 {
-    assert(tdist);
-    assert(tdist->thread_count <= 3); // hardcoded in PAR_THREADS_PJOBS macro
+    xassert(tdist);
+    xassert(tdist->thread_count <= 3); // hardcoded in PAR_THREADS_PJOBS macro
+    aec_assert_config_supported(num_y_channels, num_x_channels, num_main_filter_phases,
+            num_shadow_filter_phases);
+
     aec_priv_main_init(&aec_state->main_state, &aec_state->shared_state, (uint8_t*)&aec_state->main_mem_pool, num_y_channels, num_x_channels, num_main_filter_phases);
     aec_priv_shadow_init(&aec_state->shadow_state, &aec_state->shared_state, (uint8_t*)&aec_state->shadow_mem_pool, num_shadow_filter_phases);
     aec_state->shared_state.tdist = tdist;
@@ -81,7 +105,7 @@ void aec_frame_init(
     //So T calculation cannot be parallelised across Y channels
     //Reuse X memory for calculating T
     for(unsigned ch=0; ch<num_x_channels; ch++) {
-        bfp_complex_s32_init(&main_state->T[ch], (complex_s32_t*)&main_state->shared_state->x[ch].data[0], 0, (AEC_PROC_FRAME_LENGTH/2)+1, 0);
+        bfp_complex_s32_init(&main_state->T[ch], (complex_s32_t*)&main_state->shared_state->x[ch].data[0], 0, AEC_FD_FRAME_LENGTH, 0);
     }
 
     //set Y_hat memory to 0 since it will be used in bfp_complex_s32_macc operation in aec_l2_calc_Error_and_Y_hat()
@@ -205,14 +229,13 @@ float_s32_t aec_calc_corr_factor(
         aec_filter_state_t *state,
         unsigned ch) {
     // We need yhat[240:480-32] and y[240:480-32]
-    int frame_window = 32;
 
     // y[240:480] is prev_y[0:240].
     bfp_s32_t y_subset;
-    bfp_s32_init(&y_subset, state->shared_state->prev_y[ch].data, state->shared_state->prev_y[ch].exp, AEC_FRAME_ADVANCE-frame_window, 1);
+    bfp_s32_init(&y_subset, state->shared_state->prev_y[ch].data, state->shared_state->prev_y[ch].exp, AEC_FRAME_ADVANCE-AEC_FRAME_OVERLAP, 1);
 
     bfp_s32_t yhat_subset;
-    bfp_s32_init(&yhat_subset, &state->y_hat[ch].data[AEC_FRAME_ADVANCE], state->y_hat[ch].exp, AEC_FRAME_ADVANCE-frame_window, 1);
+    bfp_s32_init(&yhat_subset, &state->y_hat[ch].data[AEC_FRAME_ADVANCE], state->y_hat[ch].exp, AEC_FRAME_ADVANCE-AEC_FRAME_OVERLAP, 1);
 
     float_s32_t corr_factor = aec_priv_calc_corr_factor(&y_subset, &yhat_subset);
     return corr_factor;
@@ -264,12 +287,10 @@ void aec_calc_freq_domain_energy(
         float_s32_t *fd_energy,
         const bfp_complex_s32_t *input)
 {
-    int32_t DWORD_ALIGNED scratch_mem[AEC_PROC_FRAME_LENGTH/2 + 1];
-#if (BFP_DEBUG_CHECK_LENGTHS)
-    assert(input->length <= AEC_PROC_FRAME_LENGTH/2 + 1);
-#endif
+    int32_t DWORD_ALIGNED scratch_mem[AEC_FD_FRAME_LENGTH];
+
     bfp_s32_t scratch;
-    bfp_s32_init(&scratch, scratch_mem, 0, input->length, 0);
+    bfp_s32_init(&scratch, scratch_mem, 0, AEC_FD_FRAME_LENGTH, 0);
     bfp_complex_s32_squared_mag(&scratch, input);
 
     float_s64_t sum64 = bfp_s32_sum(&scratch);

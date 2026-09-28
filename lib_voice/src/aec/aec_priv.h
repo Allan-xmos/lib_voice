@@ -7,6 +7,13 @@
 #include <string.h>
 #include "xmath/xmath.h"
 
+#if defined(__xcore__) || defined(__riscv_xxcore)
+#include <xcore/assert.h>
+#else
+#include <assert.h>
+#define xassert(c) assert(c)
+#endif
+
 //private AEC functions and defines
 
 #define AEC_INPUT_EXP (-31) /// Exponent of AEC input and output

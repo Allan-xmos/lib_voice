@@ -31,6 +31,7 @@ target_compile_options(lib_voice_module_aec
 target_link_libraries(lib_voice_module_aec
     INTERFACE
         lib_xcore_math
+        lib_voice_compile_options
 )
 ## Create an alias
 add_library(lib_voice::aec ALIAS lib_voice_module_aec)
@@ -181,6 +182,7 @@ target_compile_options(lib_voice_module_lib_adec
 target_link_libraries(lib_voice_module_lib_adec
     INTERFACE
         lib_voice::aec
+        lib_voice_compile_options
 )
 ## Create an alias
 add_library(lib_voice::adec ALIAS lib_voice_module_lib_adec)

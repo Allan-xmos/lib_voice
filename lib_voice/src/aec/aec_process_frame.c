@@ -3,13 +3,14 @@
 #include "aec.h"
 #include "aec_priv.h"
 
+
 // helper functions
 enum e_td_ema {Y_EMA, X_EMA, ERROR_EMA};
 enum e_fft {Y_FFT, X_FFT, ERROR_FFT};
 
 #define REF_ACTIVE_THRESHOLD f64_to_float_s32(pow(10, REF_ACTIVE_THRESHOLD_DB/20.0))
 
-#if defined(__XS3A__) || defined(__VX4B__)
+#if defined(__xcore__) || defined(__riscv_xxcore)
 #include <xcore/parallel.h>
 DECLARE_JOB(calc_time_domain_ema_energy_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t *, int32_t*, int, int, enum e_td_ema));
 DECLARE_JOB(fft_task, (const aec_par_tasks_and_channels_t*, aec_filter_state_t*, aec_filter_state_t*, int, int, enum e_fft));
@@ -45,7 +46,7 @@ void calc_time_domain_ema_energy_task(const aec_par_tasks_and_channels_t* s, aec
 
                 aec_calc_time_domain_ema_energy(&state->error_ema_energy[ch], &temp, 0, AEC_FRAME_ADVANCE, &state->shared_state->config_params);
             }
-            else{assert(0);}
+            else{xassert(0);}
         }
     }
 }
@@ -79,7 +80,7 @@ void fft_task(const aec_par_tasks_and_channels_t *s, aec_filter_state_t *main_st
                         &shadow_state->error[ch]
                         ); //error_shad -> Error_shad
             }
-            else{assert(0);}
+            else{xassert(0);}
         }
     }
 }
@@ -272,7 +273,7 @@ void filter_adapt_task(const aec_par_tasks_t *s, aec_filter_state_t *main_state,
     }
 }
 
-#if defined(__XS3A__) || defined(__VX4B__)
+#if defined(__xcore__) || defined(__riscv_xxcore)
 
 #define PAR_THREADS_PJOBS(FUNC, ARR, NUM_THREADS, ...)        \
 do {                                                            \
@@ -357,7 +358,7 @@ void aec_process_frame(
      * main_state->shared_state->Y[ch].data and main_state->shared_state->y[ch].data point to the same memory address.
      * The spectral representation of the input is used after this function. Time domain input
      * BFP structure main_state->shared_state->y should not be used.
-     * main_state->shared_state->Y[ch].data points to AEC_PROC_FRAME_LENGTH/2 + 1 complex 32bit spectrum samples,
+     * main_state->shared_state->Y[ch].data points to AEC_FD_FRAME_LENGTH complex 32bit spectrum samples,
      * which represent the spectrum samples from DC to Nyquist frequency.
      * Same is true for reference spectrum samples pointed to by  main_state->shared_state->X[ch].data
      * as well.
@@ -385,7 +386,7 @@ void aec_process_frame(
      * frames are considered.
      *
      * For main filter, X energy is stored in BFP struct main_state->X_energy[ch]. For shadow filter, X energy is stored
-     * in BFP structure shadow_state->X_energy[ch]. These BFP structures point to AEC_PROC_FRAME_LENGTH/2 + 1, real
+     * in BFP structure shadow_state->X_energy[ch]. These BFP structures point to AEC_FD_FRAME_LENGTH, real
      * 32bit values where the value at index n is the nth X sample's energy summed over main_state->num_phases number
      * of frames in the X FIFO.
      */

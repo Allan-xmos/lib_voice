@@ -23,6 +23,25 @@
  */
 
 /**
+ * @brief Assert that a runtime AEC configuration is supported by this build
+ *
+ * Checks the AEC configuration will fit in the @ref aec_phase_pool_capacity and the 
+ * @ref aec_filter_state_t structures and the associated memory pools.
+ *
+ * @param[in] num_y_channels           Number of microphone input channels
+ * @param[in] num_x_channels           Number of reference input channels
+ * @param[in] num_main_filter_phases   Number of phases in the main filter
+ * @param[in] num_shadow_filter_phases Number of phases in the shadow filter
+ *
+ * @ingroup aec_func
+ */
+void aec_assert_config_supported(
+        unsigned num_y_channels,
+        unsigned num_x_channels,
+        unsigned num_main_filter_phases,
+        unsigned num_shadow_filter_phases);
+
+/**
  * @brief Initialise the AEC for a given configuration
  *
  * This initializes the aggregated AEC state for the
@@ -45,17 +64,18 @@
  * on memory pool sizing and usage.
  *
  * \par Preconditions
- * \anchor aec_phase_pool_capacity The runtime configuration must be a subset of compile-time limits. This means:
+ * \anchor aec_phase_pool_capacity The runtime configuration must fit the compile-time one. All of
+ * the following must hold:
  * - num_y_channels <= @ref AEC_MAX_Y_CHANNELS
  * - num_x_channels <= @ref AEC_MAX_X_CHANNELS
- * - Total phase-pool demand should not exceed pool capacity, i.e.:
- *   (num_y_channels * num_x_channels * num_main_filter_phases) +
- *   (num_x_channels * num_main_filter_phases) <=
- *   (@ref AEC_MAX_Y_CHANNELS * @ref AEC_MAX_X_CHANNELS * @ref AEC_MAIN_FILTER_PHASES) +
- *   (@ref AEC_MAX_X_CHANNELS * @ref AEC_MAIN_FILTER_PHASES)
- * - and
- *   (num_y_channels * num_x_channels * num_shadow_filter_phases) <=
- *   (@ref AEC_MAX_Y_CHANNELS * @ref AEC_MAX_X_CHANNELS * @ref AEC_SHADOW_FILTER_PHASES)
+ * - num_x_channels * num_main_filter_phases <= @ref AEC_LIB_MAX_PHASES
+ * - num_x_channels * num_shadow_filter_phases <= @ref AEC_LIB_MAX_PHASES
+ * - num_shadow_filter_phases <= num_main_filter_phases, because the shadow filter reads the
+ *   reference (X) FIFO that the main filter fills
+ * - AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_main_filter_phases)
+ *   <= sizeof(@ref aec_memory_pool_t)
+ * - AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_shadow_filter_phases)
+ *   <= sizeof(@ref aec_shadow_filt_memory_pool_t)
  *
  * @param[inout] aec_state                AEC state object
  * @param[in]    num_y_channels           Number of microphone input channels

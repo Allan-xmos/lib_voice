@@ -96,7 +96,7 @@ def test_dropped_samples(drop_amount, room, target):
     #run XC
     print("Run AEC XC")
     dut_input_file, dut_output_file = run_xc.run_aec_xc(in_data_32bit[:,:y_channel_count], in_data_32bit[:,y_channel_count:], testname, adapt_mode=run_xc.adapt_mode_dict['AEC_ADAPTION_AUTO'], num_y_channels=y_channel_count, num_x_channels=x_channel_count, target=target)
-    output_wav_file, _ = sf.read(dut_output_file)
+    output_wav_file, _ = sf.read(dut_output_file, always_2d=True)
     error = output_wav_file
     _, leq_error = wtf.leq_smooth(error[:, 0], fs, 0.05)
     time = np.arange(len(leq_error))*0.05

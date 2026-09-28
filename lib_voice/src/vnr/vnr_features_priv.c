@@ -25,7 +25,7 @@ void vnr_priv_forward_fft(bfp_complex_s32_t *X, int32_t *x_data) {
     headroom_t actual_hr = bfp_complex_s32_headroom(temp);
     if(reported_hr != actual_hr) {
         printf("ERROR: bfp_fft_forward_mono(), reported hr %d, actual %d\n",reported_hr, actual_hr);
-        assert(0);
+        xassert(0);
     }
 #endif
     //printf("post fft hr = reported %d, actual %d\n",temp->hr, bfp_complex_s32_headroom(temp));
@@ -84,14 +84,14 @@ void vnr_priv_mel_compute(float_s32_t *filter_output, const bfp_complex_s32_t *X
     // out_spect = np.abs(X_spect)**2
     int32_t DWORD_ALIGNED squared_mag_data[VNR_FD_FRAME_LENGTH];
     bfp_s32_t squared_mag;
-    bfp_s32_init(&squared_mag, squared_mag_data, 0, X->length, 0);
+    bfp_s32_init(&squared_mag, squared_mag_data, 0, VNR_FD_FRAME_LENGTH, 0);
     bfp_complex_s32_squared_mag(&squared_mag, X);
 #if HEADROOM_CHECK
     headroom_t reported_hr = squared_mag.hr;
     headroom_t actual_hr = bfp_s32_headroom(&squared_mag);
     if(reported_hr != actual_hr) {
         printf("ERROR: bfp_complex_s32_squared_mag(), reported hr %d, actual %d\n",reported_hr, actual_hr);
-        assert(0);
+        xassert(0);
     }
 #endif
 

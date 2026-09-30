@@ -29,8 +29,8 @@
  * encodings, which is why the constants live in callee saved registers rather than in the free
  * temporaries outside it.
  *
- *   void aec_h_hat_bitrev_scatter_kept(int32_t *dst, const int16_t *src);
- *   void aec_h_hat_bitrev_gather      (int32_t *dst, const int32_t *src);
+ *   void aec_h_hat_bitrev_scatter_kept(complex_s32_t *dst, const complex_s16_t *src);
+ *   void aec_h_hat_bitrev_gather      (complex_s32_t *dst, const complex_s32_t *src);
  *
  * The layout constants below are the AEC_H_HAT_BITREV_* macros of aec_priv.h, which cannot be
  * included here. aec_l2_impl.c static asserts that they still agree.
@@ -66,9 +66,10 @@
 #define step_p16_last   s5
 #define count           s6
 
-// a0 = dst (AEC_PROC_FRAME_LENGTH words, double word aligned), a1 = src (AEC_FRAME_ADVANCE 16 bit
-// taps, word aligned). Only the kept double words are written, so the caller has to have zeroed
-// the destination first - vect_s32_set() does that with the VPU, faster than this can store them.
+// a0 = dst (AEC_PROC_FRAME_LENGTH/2 complex elements, double word aligned), a1 = src
+// (AEC_FRAME_ADVANCE/2 complex 16 bit elements, word aligned). Only the kept double words are
+// written, so the caller has to have zeroed the destination first - vect_complex_s32_set() does
+// that with the VPU, faster than this can store them.
 //
 // SCATTER_ELEMENT moves one element in three issue slots: the lw with whatever `lane` carries
 // beside it, the shift and mask together, then the store. The source word's low half is the even
@@ -165,9 +166,10 @@ FUNCTION_NAME:
 #define step_wide_last  s3
 #define step_narrow_last s4
 
-// a0 = dst (AEC_FRAME_ADVANCE words), a1 = src (AEC_PROC_FRAME_LENGTH words). Both double word
-// aligned. src may be the buffer dst points into: the destination index of a move is never ahead
-// of its source index and the moves run in increasing order, so an in place gather is safe.
+// a0 = dst (AEC_FRAME_ADVANCE/2 complex elements), a1 = src (AEC_PROC_FRAME_LENGTH/2 complex
+// elements). Both double word aligned. src may be the buffer dst points into: the destination
+// index of a move is never ahead of its source index and the moves run in increasing order, so an
+// in place gather is safe.
 //
 // The dst base only moves twice a group, because the second block's destination offsets still fit
 // the immediate from the first block's base. STEP_WIDE doubles as the dst advance after it, being

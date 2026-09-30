@@ -66,10 +66,10 @@ _Static_assert(AEC_H_HAT_BITREV_GROUP * AEC_H_HAT_BITREV_DROPPED == AEC_H_HAT_BI
  * `td[2c+1]` as its real and imaginary parts, and is moved as a unit. Each 16 bit tap lands in
  * the top half of its 32 bit word, so the expanded mantissas are 2^16 times the stored ones.
  *
- * @param[out] dst AEC_PROC_FRAME_LENGTH words, double word aligned
- * @param[in]  src AEC_FRAME_ADVANCE taps, word aligned
+ * @param[out] dst AEC_PROC_FRAME_LENGTH/2 complex elements, double word aligned
+ * @param[in]  src AEC_FRAME_ADVANCE/2 complex elements, word aligned
  */
-void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
+void aec_h_hat_bitrev_scatter(complex_s32_t *dst, const complex_s16_t *src);
 
 /**
  * @brief Collect the non-zero h_hat taps from a full bit-reversed time domain vector
@@ -84,11 +84,11 @@ void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
  *
  * Unlike aec_h_hat_bitrev_scatter(), this function keeps the taps in 32b.
  * 
- * @param[out] dst AEC_FRAME_ADVANCE words, double word aligned
- * @param[in]  src AEC_PROC_FRAME_LENGTH words, double word aligned. May be the buffer `dst`
- *                 points into.
+ * @param[out] dst AEC_FRAME_ADVANCE/2 complex elements, double word aligned
+ * @param[in]  src AEC_PROC_FRAME_LENGTH/2 complex elements, double word aligned. May be the
+ *                 buffer `dst` points into.
  */
-void aec_h_hat_bitrev_gather(int32_t *dst, const int32_t *src);
+void aec_h_hat_bitrev_gather(complex_s32_t *dst, const complex_s32_t *src);
 
 /**
  * @brief Initialise AEC data structures for processing a new frame

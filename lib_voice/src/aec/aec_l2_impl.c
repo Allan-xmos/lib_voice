@@ -30,11 +30,11 @@
 //for what the assembly does, and is what other builds use.
 #if defined(__XS3A__) || defined(__VX4B__)
 //The assembly scatter writes only the slots h_hat stores, leaving the caller to zero the rest, because
-//vect_s32_set() clears the whole vector with the VPU faster than the scatter can store the zeros itself.
-void aec_h_hat_bitrev_scatter_kept(int32_t *dst, const int16_t *src);
-void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src)
+//vect_complex_s32_set() clears the whole vector with the VPU faster than the scatter can store the zeros itself.
+void aec_h_hat_bitrev_scatter_kept(complex_s32_t *dst, const complex_s16_t *src);
+void aec_h_hat_bitrev_scatter(complex_s32_t *dst, const complex_s16_t *src)
 {
-    vect_s32_set(dst, 0, AEC_PROC_FRAME_LENGTH);
+    vect_complex_s32_set(dst, 0, 0, AEC_PROC_FRAME_LENGTH/2);
     aec_h_hat_bitrev_scatter_kept(dst, src);
 }
 
@@ -44,17 +44,18 @@ _Static_assert(AEC_H_HAT_BITREV_DROPPED == 8 && AEC_H_HAT_BITREV_GROUP == 16,
 #else
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
 //constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front.
-//The taps in `src` are treated as complex numbers, with the real and imaginary parts stored in adjacent words.
+//Each complex element of `src` is a pair of taps. When moving in place, a destination element is either the same
+//object as its source or disjoint from it, so plain assignment is safe.
 void aec_h_hat_bitrev_gather(
-        int32_t *dst,
-        const int32_t *src)
+        complex_s32_t *dst,
+        const complex_s32_t *src)
 {
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
         for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
-            memmove(&dst[2*i], &src[4*i], 2*sizeof(*dst)); //the odd slot beside each one holds taps AEC_PROC_FRAME_LENGTH/2 onwards
+            dst[i] = src[2*i]; //the odd slot beside each one holds taps AEC_PROC_FRAME_LENGTH/2 onwards
         }
-        dst += 2*(AEC_H_HAT_BITREV_GROUP-1); //past the dropped even slot, which holds the taps between
-        src += 4*AEC_H_HAT_BITREV_GROUP;     //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
+        dst += AEC_H_HAT_BITREV_GROUP-1;     //past the dropped even slot, which holds the taps between
+        src += 2*AEC_H_HAT_BITREV_GROUP;     //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
     }
 }
 
@@ -65,19 +66,18 @@ void aec_h_hat_bitrev_gather(
  * Every slot h_hat has no storage for is a tap the gradient constraint zeroes, so the whole vector is cleared first.
  */
 void aec_h_hat_bitrev_scatter(
-        int32_t *dst,
-        const int16_t *src)
+        complex_s32_t *dst,
+        const complex_s16_t *src)
 {
-    vect_s32_set(dst, 0, AEC_PROC_FRAME_LENGTH);
+    vect_complex_s32_set(dst, 0, 0, AEC_PROC_FRAME_LENGTH/2);
 
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
         for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
-            dst[4*i]   = ((int32_t)src[2*i]) * (1 << 16);   //a stored pair of taps, the real and imaginary parts of one
-            dst[4*i+1] = ((int32_t)src[2*i+1]) * (1 << 16); //complex element; the odd slot beside it holds taps
-                                                            //AEC_PROC_FRAME_LENGTH/2 onwards, and stays zero
+            dst[2*i].re = ((int32_t)src[i].re) * (1 << 16); //a stored pair of taps; the odd slot beside it holds taps
+            dst[2*i].im = ((int32_t)src[i].im) * (1 << 16); //AEC_PROC_FRAME_LENGTH/2 onwards, and stays zero
         }
-        dst += 4*AEC_H_HAT_BITREV_GROUP;     //past the dropped even slot, which holds the taps between
-        src += 2*(AEC_H_HAT_BITREV_GROUP-1); //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
+        dst += 2*AEC_H_HAT_BITREV_GROUP;     //past the dropped even slot, which holds the taps between
+        src += AEC_H_HAT_BITREV_GROUP-1;     //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
     }
 }
 #endif
@@ -99,18 +99,18 @@ unsigned aec_h_hat_tap_index(unsigned n)
 static void h_hat_forward_fft(
         bfp_complex_s32_t *H_hat_ph,
         const bfp_s16_t *h_hat_ph,
-        int32_t *scratch)
+        complex_s32_t *scratch)
 {
     //fft_dit_forward() requires 2 bits of headroom, do this on the compressed taps
     headroom_t hr = vect_s16_headroom(h_hat_ph->data, AEC_FRAME_ADVANCE);
     right_shift_t shr = 2 - (right_shift_t)hr;
 
     //Expand from compressed 16b to bit-reversed 32b taps
-    aec_h_hat_bitrev_scatter(scratch, h_hat_ph->data);
-    vect_s32_shl(scratch, scratch, AEC_PROC_FRAME_LENGTH, -shr);
+    aec_h_hat_bitrev_scatter(scratch, (const complex_s16_t*)h_hat_ph->data);
+    vect_s32_shl((int32_t*)scratch, (const int32_t*)scratch, AEC_PROC_FRAME_LENGTH, -shr);
 
     //Scatter shifts by 2^16 when going to 32b
-    bfp_complex_s32_init(H_hat_ph, (complex_s32_t*)scratch, h_hat_ph->exp - 16 + shr, AEC_PROC_FRAME_LENGTH/2, 0);
+    bfp_complex_s32_init(H_hat_ph, scratch, h_hat_ph->exp - 16 + shr, AEC_PROC_FRAME_LENGTH/2, 0);
     H_hat_ph->hr = hr + shr;
 
     // The coeffs are already bit reversed, so use DIT FFT
@@ -135,7 +135,7 @@ static void aec_l2_accumulate_Y_hat(
         unsigned length)
 {
     //Scratch to FFT the current filter phase from time domain to frequency domain
-    int32_t DWORD_ALIGNED h_fft_scratch[AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
+    complex_s32_t DWORD_ALIGNED h_fft_scratch[AEC_FD_FRAME_LENGTH];
     for(unsigned ph=0; ph<phases; ph++) {
         bfp_complex_s32_t H_hat_ph;
         h_hat_forward_fft(&H_hat_ph, &h_hat[ph], h_fft_scratch);
@@ -211,7 +211,7 @@ void aec_l2_adapt_plus_ifft(
     //Save the non-zero taps in bit-reversed order. The gradient constraint is applied as
     //the discarded taps are effectively zeroed. Although delta_scratch is complex, after the mono
     //inverse FFT it holds the real time domain delta, packed two taps to each complex element.
-    aec_h_hat_bitrev_gather((int32_t*)delta_scratch, (const int32_t*)delta_scratch);
+    aec_h_hat_bitrev_gather(delta_scratch, delta_scratch);
 
     // Narrow delta to 16-bit taps before adding to h_hat, this can be done inplace
     int32_t *delta_words = (int32_t*)delta_scratch;

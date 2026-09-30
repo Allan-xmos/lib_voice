@@ -39,8 +39,8 @@
  * with a load from the register they advance; both lanes of a bundle read their operands before
  * either writes, so the load still sees the old base.
  *
- *   void aec_h_hat_bitrev_scatter_kept(int32_t *dst, const int16_t *src);
- *   void aec_h_hat_bitrev_gather      (int32_t *dst, const int32_t *src);
+ *   void aec_h_hat_bitrev_scatter_kept(complex_s32_t *dst, const complex_s16_t *src);
+ *   void aec_h_hat_bitrev_gather      (complex_s32_t *dst, const complex_s32_t *src);
  *
  * The layout constants below are the AEC_H_HAT_BITREV_* macros of aec_priv.h, which cannot be
  * included here. aec_l2_impl.c static asserts that they still agree.
@@ -68,9 +68,10 @@
 .align 16
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
-// r0 = dst (AEC_PROC_FRAME_LENGTH words, double word aligned), r1 = src (AEC_FRAME_ADVANCE 16 bit
-// taps, word aligned). Only the kept double words are written, so the caller has to have zeroed
-// the destination first - vect_s32_set() does that with the VPU, faster than this can store them.
+// r0 = dst (AEC_PROC_FRAME_LENGTH/2 complex elements, double word aligned), r1 = src
+// (AEC_FRAME_ADVANCE/2 complex 16 bit elements, word aligned). Only the kept double words are
+// written, so the caller has to have zeroed the destination first - vect_complex_s32_set() does
+// that with the VPU, faster than this can store them.
 //
 // SCATTER_ELEMENT moves one element: r4 holds the source word, whose low half is the even tap and
 // whose high half is the odd tap. r5 takes the even tap shifted up into the top of its word, and
@@ -152,9 +153,10 @@ FUNCTION_NAME:
 .align 16
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
-// r0 = dst (AEC_FRAME_ADVANCE words), r1 = src (AEC_PROC_FRAME_LENGTH words). Both double word
-// aligned. src may be the buffer dst points into: the destination index of a move is never ahead
-// of its source index and the moves run in increasing order, so an in place gather is safe.
+// r0 = dst (AEC_FRAME_ADVANCE/2 complex elements), r1 = src (AEC_PROC_FRAME_LENGTH/2 complex
+// elements). Both double word aligned. src may be the buffer dst points into: the destination
+// index of a move is never ahead of its source index and the moves run in increasing order, so an
+// in place gather is safe.
 //
 // ldd and std leave no lane free, so the updates pair with each other instead. src moves on every
 // 6 elements and dst, whose offsets step half as far, on every 12.

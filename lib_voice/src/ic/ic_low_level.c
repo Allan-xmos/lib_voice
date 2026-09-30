@@ -7,8 +7,8 @@
 #include "aec.h"
 #include "aec_priv.h"
 
-/* The IC filter is the AEC filter share the same underlying implementation, so must be the same size. */
-_Static_assert(IC_FRAME_LENGTH == AEC_PROC_FRAME_LENGTH,
+ /* The IC and AEC filters share the same underlying implementation, so must use the same frame sizes. */
+ _Static_assert(IC_FRAME_LENGTH == AEC_PROC_FRAME_LENGTH,
         "The IC filter uses the AEC's bit-reversed tap layout, which is derived from AEC_PROC_FRAME_LENGTH");
 _Static_assert(IC_FRAME_ADVANCE == AEC_FRAME_ADVANCE,
         "The IC filter uses the AEC's bit-reversed tap layout, which is derived from AEC_FRAME_ADVANCE");

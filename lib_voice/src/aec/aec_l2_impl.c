@@ -42,22 +42,18 @@ void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src)
 _Static_assert(AEC_H_HAT_BITREV_DROPPED == 8 && AEC_H_HAT_BITREV_GROUP == 16,
         "aec_h_hat_bitrev.S and aec_h_hat_bitrev_vx4b.S are written for the 8 group, 16 slot h_hat layout");
 #else
-typedef int64_t h_hat_tap_pair_t;
-
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
 //constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front.
 void aec_h_hat_bitrev_gather(
-        int32_t *dst_words,
-        const int32_t *src_words)
+        int32_t *dst,
+        const int32_t *src)
 {
-    h_hat_tap_pair_t *dst = (h_hat_tap_pair_t*)dst_words;
-    const h_hat_tap_pair_t *src = (const h_hat_tap_pair_t*)src_words;
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
         for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
-            dst[i] = src[2*i]; //the odd slot beside each one holds taps AEC_PROC_FRAME_LENGTH/2 onwards
+            memmove(&dst[2*i], &src[4*i], 2*sizeof(*dst)); //the odd slot beside each one holds taps AEC_PROC_FRAME_LENGTH/2 onwards
         }
-        dst += AEC_H_HAT_BITREV_GROUP-1; //past the dropped even slot, which holds the taps between
-        src += 2*AEC_H_HAT_BITREV_GROUP; //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
+        dst += 2*(AEC_H_HAT_BITREV_GROUP-1); //past the dropped even slot, which holds the taps between
+        src += 4*AEC_H_HAT_BITREV_GROUP;     //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
     }
 }
 

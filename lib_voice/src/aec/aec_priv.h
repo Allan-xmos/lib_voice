@@ -91,6 +91,24 @@ void aec_h_hat_bitrev_scatter(complex_s32_t *dst, const complex_s16_t *src);
 void aec_h_hat_bitrev_gather(complex_s32_t *dst, const complex_s32_t *src);
 
 /**
+ * @brief Implementation of aec_h_hat_bitrev_gather(), with the layout's strides in bytes as arguments
+ *
+ * The strides are always the same, but are passed at run time so the compiler cannot fold them into constant
+ * offsets, which on XS3 costs an instruction per access to rebuild the address. It is not static for the same
+ * reason. Call aec_h_hat_bitrev_gather() instead.
+ */
+void aec_h_hat_bitrev_gather_strided(complex_s32_t *dst, const complex_s32_t *src,
+        int dst_step, int src_step, int group_skip);
+
+/**
+ * @brief Implementation of aec_h_hat_bitrev_scatter(), with the layout's strides in bytes as arguments
+ *
+ * See aec_h_hat_bitrev_gather_strided() for why. Call aec_h_hat_bitrev_scatter() instead.
+ */
+void aec_h_hat_bitrev_scatter_strided(complex_s32_t *dst, const complex_s16_t *src,
+        int block_step, int group_skip);
+
+/**
  * @brief Initialise AEC data structures for processing a new frame
  *
  * This is the first function that is called when a new frame is available for processing.

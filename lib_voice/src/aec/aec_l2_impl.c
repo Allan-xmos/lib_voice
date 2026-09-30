@@ -24,20 +24,12 @@
 //tap in the top half of its slot, which is the widening that costs no instructions. The gather leaves the delta at
 //32 bit and its caller narrows it afterwards, because narrowing a contiguous vector is a job for the VPU.
 
-//How the gather and scatter are written is set by what the compilers do with them, measured on XS3 and VX4:
-// - The pair of taps in each slot moves as a single int64_t, never as a complex_s32_t struct copy, and a pair of 16
-//   bit taps as a single word, so that each is one load or store where the target has one. The may_alias types
-//   make those accesses legal on objects declared as complex elements.
-// - Each group of kept slots is unrolled into blocks whose word offsets fit the 0..11 immediate range of XS3's ldw
-//   and stw, with the pointers advanced between blocks.
-// - XS3 has no immediate or indexed ldd/std the compiler will use, so a double word is only ever addressed by a
-//   pointer register. Given constant strides the compiler folds the pointer steps into large constant offsets and
-//   then spends an instruction rebuilding each address. The strides are therefore passed in at run time to the
-//   externally visible *_strided() functions below, which forces a single register add per step. This costs VX4
-//   nothing, since its loads and stores take a register base with an offset either way.
-//These give about 2.2x (gather) and 2.4x (scatter) on XS3 and 1.3x and 1.6x on VX4 over the simple loops.
-_Static_assert(AEC_H_HAT_BITREV_GROUP == 16,
-        "the unrolled h_hat gather and scatter below assume 15 kept slots per group");
+//On XS3 these moves cost more in address arithmetic than in the loads and stores themselves, and that shapes the code
+//below. Each pair of taps moves as a single int64_t or uint32_t rather than as a struct. Each group of kept slots is
+//written out as blocks small enough for every offset to fit the load/store immediates. The step between blocks is a
+//run time argument of a non-static function: given a constant, the compiler folds the steps into offsets outside the
+//immediate range and rebuilds each address. The same shape also compiles well for VX4.
+_Static_assert(AEC_H_HAT_BITREV_GROUP == 16, "the h_hat gather and scatter below move 15 kept slots per group");
 
 #if defined(__XS3A__)
 #define AEC_DUAL_ISSUE __attribute__((dual_issue))
@@ -45,82 +37,76 @@ _Static_assert(AEC_H_HAT_BITREV_GROUP == 16,
 #define AEC_DUAL_ISSUE
 #endif
 
-//Unrolling the group loops as well would undo the blocking.
-#if defined(__clang__)
-#define AEC_NO_UNROLL _Pragma("clang loop unroll(disable)")
-#else
-#define AEC_NO_UNROLL
-#endif
-
-typedef int64_t  __attribute__((may_alias)) aec_tap_pair32_t;
-typedef int32_t  __attribute__((may_alias)) aec_tap32_t;
-typedef uint32_t __attribute__((may_alias)) aec_tap_pair16_t;
-
-#define AEC_ADVANCE_BYTES(p, bytes) ((p) = (__typeof__(p))((char*)(p) + (bytes)))
+static inline void gather_5_pairs(int64_t *d, const int64_t *s)
+{
+    d[0] = s[0];
+    d[1] = s[2];
+    d[2] = s[4];
+    d[3] = s[6];
+    d[4] = s[8];
+}
 
 __attribute__((noinline)) AEC_DUAL_ISSUE
-void aec_h_hat_bitrev_gather_strided(
+void aec_h_hat_bitrev_gather_blocks(
         complex_s32_t *dst,
         const complex_s32_t *src,
-        int dst_step,
-        int src_step,
-        int group_skip)
+        unsigned block_step)
 {
-    //In place the copy only ever moves data towards the front, and each element is read before it is overwritten.
-    aec_tap_pair32_t *d = (aec_tap_pair32_t*)dst;
-    const aec_tap_pair32_t *s = (const aec_tap_pair32_t*)src;
-#define GATHER_ONE() do { *d = *s; AEC_ADVANCE_BYTES(d, dst_step); AEC_ADVANCE_BYTES(s, src_step); } while(0)
-    AEC_NO_UNROLL
+    int64_t *d = (int64_t*)dst;
+    const int64_t *s = (const int64_t*)src;
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
-        GATHER_ONE(); GATHER_ONE(); GATHER_ONE(); GATHER_ONE(); GATHER_ONE();
-        GATHER_ONE(); GATHER_ONE(); GATHER_ONE(); GATHER_ONE(); GATHER_ONE();
-        GATHER_ONE(); GATHER_ONE(); GATHER_ONE(); GATHER_ONE(); GATHER_ONE();
-        AEC_ADVANCE_BYTES(s, group_skip);
+        gather_5_pairs(d, s);      s += block_step;
+        gather_5_pairs(d + 5, s);  s += block_step;
+        gather_5_pairs(d + 10, s); s += block_step + 2;
+        d += 15;
     }
-#undef GATHER_ONE
 }
 
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
-//constraint zeroes. `src` may be the buffer `dst` points into.
+//constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front, and
+//reads each slot before anything is written over it.
 void aec_h_hat_bitrev_gather(
         complex_s32_t *dst,
         const complex_s32_t *src)
 {
-    //Take every even slot; the odd slot beside each holds taps AEC_PROC_FRAME_LENGTH/2 onwards. Each group then
-    //skips its dropped even slot, which holds the taps between AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and
-    //that slot's odd partner.
-    aec_h_hat_bitrev_gather_strided(dst, src, sizeof(complex_s32_t), 2*sizeof(complex_s32_t),
-                                    2*sizeof(complex_s32_t));
+    //Every even slot is kept; the odd slot beside each holds taps AEC_PROC_FRAME_LENGTH/2 onwards. A block of five
+    //kept slots spans ten. Each group then skips its dropped even slot, which holds the taps between AEC_FRAME_ADVANCE
+    //and AEC_PROC_FRAME_LENGTH/2, and that slot's odd partner.
+    aec_h_hat_bitrev_gather_blocks(dst, src, 10);
+}
+
+//Widen one pair of 16 bit taps, the even one in the low half of `w`, into the top halves of two words.
+static inline void widen_pair(int32_t *d, uint32_t w)
+{
+    d[0] = w << 16;
+    d[1] = w & 0xFFFF0000;
+}
+
+static inline void widen_3_pairs(int32_t *d, const uint32_t *s)
+{
+    widen_pair(&d[0], s[0]);
+    widen_pair(&d[4], s[1]);
+    widen_pair(&d[8], s[2]);
 }
 
 __attribute__((noinline)) AEC_DUAL_ISSUE
-void aec_h_hat_bitrev_scatter_strided(
+void aec_h_hat_bitrev_scatter_blocks(
         complex_s32_t *dst,
         const complex_s16_t *src,
-        int block_step,
-        int group_skip)
+        unsigned block_step)
 {
     vect_complex_s32_set(dst, 0, 0, AEC_PROC_FRAME_LENGTH/2);
 
-    //Each source word is a pair of 16 bit taps, the even one in the low half. Shifting and masking put each in the
-    //top half of its own word.
-    aec_tap32_t *restrict d = (aec_tap32_t*)dst;
-    const aec_tap_pair16_t *restrict s = (const aec_tap_pair16_t*)src;
-#define WIDEN(k, j) do { const uint32_t w = s[k];                                                   \
-                         d[4*(j)]   = (int32_t)(w << 16);                                           \
-                         d[4*(j)+1] = (int32_t)(w & 0xFFFF0000u); } while(0)
-#define SCATTER_BLOCK(k, step) do { WIDEN(k, 0); WIDEN((k)+1, 1); WIDEN((k)+2, 2);                  \
-                                    AEC_ADVANCE_BYTES(d, step); } while(0)
-    AEC_NO_UNROLL
+    int32_t *d = (int32_t*)dst;
+    const uint32_t *s = (const uint32_t*)src;
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
-        SCATTER_BLOCK(0, block_step); SCATTER_BLOCK(3, block_step);
-        SCATTER_BLOCK(6, block_step); SCATTER_BLOCK(9, block_step);
-        s += 12;
-        SCATTER_BLOCK(0, block_step + group_skip);
-        s += 3;
+        widen_3_pairs(d, s);      d += block_step;
+        widen_3_pairs(d, s + 3);  d += block_step;
+        widen_3_pairs(d, s + 6);  d += block_step;
+        widen_3_pairs(d, s + 9);  d += block_step;
+        widen_3_pairs(d, s + 12); d += block_step + 4;
+        s += 15;
     }
-#undef SCATTER_BLOCK
-#undef WIDEN
 }
 
 /**
@@ -133,9 +119,9 @@ void aec_h_hat_bitrev_scatter(
         complex_s32_t *dst,
         const complex_s16_t *src)
 {
-    //A block of three stored pairs fills three even slots and steps over their odd partners, which hold taps
-    //AEC_PROC_FRAME_LENGTH/2 onwards and stay zero. Each group then steps over its dropped even slot and partner.
-    aec_h_hat_bitrev_scatter_strided(dst, src, 6*sizeof(complex_s32_t), 2*sizeof(complex_s32_t));
+    //A block of three stored pairs fills three even slots, twelve words, stepping over their odd partners, which hold
+    //taps AEC_PROC_FRAME_LENGTH/2 onwards and stay zero. Each group then steps over its dropped even slot and partner.
+    aec_h_hat_bitrev_scatter_blocks(dst, src, 12);
 }
 
 unsigned aec_h_hat_tap_index(unsigned n)

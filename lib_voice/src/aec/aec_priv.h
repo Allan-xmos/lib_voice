@@ -91,22 +91,22 @@ void aec_h_hat_bitrev_scatter(complex_s32_t *dst, const complex_s16_t *src);
 void aec_h_hat_bitrev_gather(complex_s32_t *dst, const complex_s32_t *src);
 
 /**
- * @brief Implementation of aec_h_hat_bitrev_gather(), with the layout's strides in bytes as arguments
+ * @brief Implementation of aec_h_hat_bitrev_gather(), taking the source step between blocks of five kept slots
  *
- * The strides are always the same, but are passed at run time so the compiler cannot fold them into constant
+ * The step is always the same, 10 slots, but is passed at run time so the compiler cannot fold it into constant
  * offsets, which on XS3 costs an instruction per access to rebuild the address. It is not static for the same
  * reason. Call aec_h_hat_bitrev_gather() instead.
  */
-void aec_h_hat_bitrev_gather_strided(complex_s32_t *dst, const complex_s32_t *src,
-        int dst_step, int src_step, int group_skip);
+void aec_h_hat_bitrev_gather_blocks(complex_s32_t *dst, const complex_s32_t *src, unsigned block_step);
 
 /**
- * @brief Implementation of aec_h_hat_bitrev_scatter(), with the layout's strides in bytes as arguments
+ * @brief Implementation of aec_h_hat_bitrev_scatter(), taking the destination step, in words, between blocks of three
+ *        stored pairs
  *
- * See aec_h_hat_bitrev_gather_strided() for why. Call aec_h_hat_bitrev_scatter() instead.
+ * The step is always 12. See aec_h_hat_bitrev_gather_blocks() for why it is an argument. Call
+ * aec_h_hat_bitrev_scatter() instead.
  */
-void aec_h_hat_bitrev_scatter_strided(complex_s32_t *dst, const complex_s16_t *src,
-        int block_step, int group_skip);
+void aec_h_hat_bitrev_scatter_blocks(complex_s32_t *dst, const complex_s16_t *src, unsigned block_step);
 
 /**
  * @brief Initialise AEC data structures for processing a new frame

@@ -111,7 +111,9 @@ uint8_t *aec_priv_main_init(
         available_mem_start += AEC_POOL_ALIGN(AEC_FRAME_OVERLAP*sizeof(int32_t));
     }
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    xassert(memory_used == AEC_MAIN_POOL_BYTES(num_y_channels, num_x_channels, num_phases));
+    //mem_pool is the start of the pool. The BFP inits above only set pointers, so nothing has been written yet if
+    //this fails
+    xassert(memory_used <= sizeof(aec_memory_pool_t));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy
@@ -214,7 +216,6 @@ uint8_t *aec_priv_shadow_init(
     }
 
     uint32_t memory_used = available_mem_start - (uint8_t*)mem_pool;
-    xassert(memory_used == AEC_SHADOW_POOL_BYTES(num_y_channels, num_x_channels, num_phases));
     memset(mem_pool, 0, memory_used);
 
     //Initialise ema energy

@@ -29,7 +29,7 @@ void test_bad_state(const char *conf_file_name, const char *input_file_name, con
     // at a shared exponent python picks to suit the taps. The taps themselves are int16 valued - they go into the
     // IC's 16 bit filter - but stay one per int32 word here so the conf file is a flat word array.
     int num_taps_py, adapt_mode, h_hat_exp;
-    // Num words to accomodate h_hat data
+    // Num words to accommodate h_hat data
     int num_taps_c = IC_Y_CHANNELS * IC_X_CHANNELS * IC_FILTER_PHASES * IC_FRAME_ADVANCE;
     file_read(&conf_file, &num_taps_py, sizeof(int32_t));
     assert((num_taps_py == num_taps_c) && "num_taps does not match with python");

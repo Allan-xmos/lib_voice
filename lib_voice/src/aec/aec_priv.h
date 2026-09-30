@@ -22,7 +22,7 @@
 /** @name h_hat bit-reversed storage layout
  *
  * The AEC adaptive filter is stored in the time domain, with its taps held in the bit-reversed
- * index order that the low level FFT functions work in. See aec_state_t::h_hat for why.
+ * index order that the low level FFT functions work in. See aec_state_t::h_hat for more details.
  *
  * An AEC_PROC_FRAME_LENGTH point real FFT is computed as an AEC_PROC_FRAME_LENGTH/2 point complex
  * FFT over a vector whose element `c` holds the real time domain samples `td[2c]` and `td[2c+1]`.
@@ -62,8 +62,9 @@ _Static_assert(AEC_H_HAT_BITREV_GROUP * AEC_H_HAT_BITREV_DROPPED == AEC_H_HAT_BI
  *
  * Writes the AEC_FRAME_ADVANCE taps of `src` into the slots of `dst` they occupy in the
  * AEC_PROC_FRAME_LENGTH/2 point complex vector the forward transform wants, and zeroes every
- * other slot. Each 16 bit tap lands in the top half of its 32 bit slot, so the expanded mantissas
- * are 2^16 times the stored ones.
+ * other slot. Each slot is one complex element, a pair of adjacent real taps `td[2c]` and
+ * `td[2c+1]` as its real and imaginary parts, and is moved as a unit. Each 16 bit tap lands in
+ * the top half of its 32 bit word, so the expanded mantissas are 2^16 times the stored ones.
  *
  * @param[out] dst AEC_PROC_FRAME_LENGTH words, double word aligned
  * @param[in]  src AEC_FRAME_ADVANCE taps, word aligned
@@ -76,7 +77,11 @@ void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
  * Compress the non-zero h_hat values, keeping them in bit-reversed order. When combined with 
  * @ref aec_h_hat_bitrev_scatter(), this applies a gradient constraint by zeroing h_hat values
  * above the AEC_FRAME_ADVANCE index.
- * 
+ *
+ * `src` is the complex vector the mono inverse transform leaves, so each slot is a pair of
+ * adjacent real taps `td[2c]` and `td[2c+1]` as its real and imaginary parts, and is moved as a
+ * unit.
+ *
  * Unlike aec_h_hat_bitrev_scatter(), this function keeps the taps in 32b.
  * 
  * @param[out] dst AEC_FRAME_ADVANCE words, double word aligned

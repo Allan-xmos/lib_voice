@@ -110,32 +110,6 @@ typedef struct {
 }aec_memory_pool_t;
 
 /**
- * @brief Bytes the main filter and shared state take from @ref aec_memory_pool_t for a runtime
- * configuration.
- *
- * @ingroup aec_memory_pool
- */
-#define AEC_MAIN_POOL_BYTES(num_y, num_x, num_main_phases) ( \
-      ((num_y) + (num_x)) * AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) * sizeof(int32_t)) \
-    + ((num_y) + (num_x)) * AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE) * sizeof(int32_t)) \
-    + (num_y) * (num_x) * (num_main_phases) * AEC_POOL_ALIGN(AEC_FRAME_ADVANCE * sizeof(int16_t)) \
-    + (num_x) * (num_main_phases) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)) \
-    + 2 * (num_y) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)) \
-    + 3 * (num_x) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(int32_t)) \
-    + (num_y) * AEC_POOL_ALIGN((AEC_FRAME_OVERLAP) * sizeof(int32_t)) )
-
-/**
- * @brief Bytes the shadow filter takes from @ref aec_memory_pool_t for a runtime configuration.
- *
- * @ingroup aec_memory_pool
- */
-#define AEC_SHADOW_POOL_BYTES(num_y, num_x, num_shadow_phases) ( \
-      (num_y) * (num_x) * (num_shadow_phases) * AEC_POOL_ALIGN(AEC_FRAME_ADVANCE * sizeof(int16_t)) \
-    + (2 * (num_y) + (num_x)) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)) \
-    + 2 * (num_x) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(int32_t)) \
-    + (num_y) * AEC_POOL_ALIGN((AEC_FRAME_OVERLAP) * sizeof(int32_t)) )
-
-/**
  * @brief Bytes `aec_init()` reserves in @ref aec_memory_pool_t for a runtime configuration.
  *
  * This includes rounding every buffer up to a whole number of double words (@ref AEC_POOL_ALIGN).
@@ -148,8 +122,13 @@ typedef struct {
  * @ingroup aec_memory_pool
  */
 #define AEC_POOL_BYTES(num_y, num_x, num_main_phases, num_shadow_phases) ( \
-      AEC_MAIN_POOL_BYTES(num_y, num_x, num_main_phases) \
-    + AEC_SHADOW_POOL_BYTES(num_y, num_x, num_shadow_phases) )
+      ((num_y) + (num_x)) * AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING) * sizeof(int32_t)) \
+    + ((num_y) + (num_x)) * AEC_POOL_ALIGN((AEC_PROC_FRAME_LENGTH - AEC_FRAME_ADVANCE) * sizeof(int32_t)) \
+    + (num_y) * (num_x) * ((num_main_phases) + (num_shadow_phases)) * AEC_POOL_ALIGN(AEC_FRAME_ADVANCE * sizeof(int16_t)) \
+    + (num_x) * (num_main_phases) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)) \
+    + (4 * (num_y) + (num_x)) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(complex_s32_t)) \
+    + 5 * (num_x) * AEC_POOL_ALIGN(AEC_FD_FRAME_LENGTH * sizeof(int32_t)) \
+    + 2 * (num_y) * AEC_POOL_ALIGN(AEC_FRAME_OVERLAP * sizeof(int32_t)) )
 
 /* Assert that the compile-time pool size matches the calculated byte requirement for the maximum
 configuration */

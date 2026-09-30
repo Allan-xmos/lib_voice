@@ -91,19 +91,11 @@ void aec_h_hat_bitrev_scatter(complex_s32_t *dst, const complex_s16_t *src);
 void aec_h_hat_bitrev_gather(complex_s32_t *dst, const complex_s32_t *src);
 
 /**
- * @brief Implementation of aec_h_hat_bitrev_gather(), taking the source step between blocks of five kept slots
- *
- * The step is always the same, 10 slots, but is passed at run time so the compiler cannot fold it into constant
- * offsets, which on XS3 costs an instruction per access to rebuild the address. It is not static for the same
- * reason. Call aec_h_hat_bitrev_gather() instead.
- */
-void aec_h_hat_bitrev_gather_blocks(complex_s32_t *dst, const complex_s32_t *src, unsigned block_step);
-
-/**
  * @brief Implementation of aec_h_hat_bitrev_scatter(), taking the destination step, in words, between blocks of three
  *        stored pairs
  *
- * The step is always 12. See aec_h_hat_bitrev_gather_blocks() for why it is an argument. Call
+ * The step is always 12, but is passed at run time so the compiler cannot fold it into constant offsets, which on XS3
+ * costs an instruction per access to rebuild the address. It is not static for the same reason. Call
  * aec_h_hat_bitrev_scatter() instead.
  */
 void aec_h_hat_bitrev_scatter_blocks(complex_s32_t *dst, const complex_s16_t *src, unsigned block_step);

@@ -26,9 +26,9 @@
 
 //On XS3 these moves cost more in address arithmetic than in the loads and stores themselves, and that shapes the code
 //below. Each pair of taps moves as a single int64_t or uint32_t rather than as a struct. Each group of kept slots is
-//written out as blocks small enough for every offset to fit the load/store immediates. The step between blocks is a
-//run time argument of a non-static function: given a constant, the compiler folds the steps into offsets outside the
-//immediate range and rebuilds each address. The same shape also compiles well for VX4.
+//written out as blocks small enough for every offset to fit the load/store immediates. In the scatter the step between
+//blocks is a run time argument of a non-static function: given a constant, the compiler folds the steps into offsets
+//outside the immediate range and rebuilds each address. The same shape also compiles well for VX4.
 _Static_assert(AEC_H_HAT_BITREV_GROUP == 16, "the h_hat gather and scatter below move 15 kept slots per group");
 
 #if defined(__XS3A__)
@@ -46,25 +46,10 @@ static inline void gather_5_pairs(int64_t *d, const int64_t *s)
     d[4] = s[8];
 }
 
-__attribute__((noinline)) AEC_DUAL_ISSUE
-void aec_h_hat_bitrev_gather_blocks(
-        complex_s32_t *dst,
-        const complex_s32_t *src,
-        unsigned block_step)
-{
-    int64_t *d = (int64_t*)dst;
-    const int64_t *s = (const int64_t*)src;
-    for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
-        gather_5_pairs(d, s);      s += block_step;
-        gather_5_pairs(d + 5, s);  s += block_step;
-        gather_5_pairs(d + 10, s); s += block_step + 2;
-        d += 15;
-    }
-}
-
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
 //constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front, and
-//reads each slot before anything is written over it.
+//reads each slot before anything is written over it. Not inlined, so that it keeps its dual issue attribute.
+__attribute__((noinline)) AEC_DUAL_ISSUE
 void aec_h_hat_bitrev_gather(
         complex_s32_t *dst,
         const complex_s32_t *src)
@@ -72,7 +57,14 @@ void aec_h_hat_bitrev_gather(
     //Every even slot is kept; the odd slot beside each holds taps AEC_PROC_FRAME_LENGTH/2 onwards. A block of five
     //kept slots spans ten. Each group then skips its dropped even slot, which holds the taps between AEC_FRAME_ADVANCE
     //and AEC_PROC_FRAME_LENGTH/2, and that slot's odd partner.
-    aec_h_hat_bitrev_gather_blocks(dst, src, 10);
+    int64_t *d = (int64_t*)dst;
+    const int64_t *s = (const int64_t*)src;
+    for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
+        gather_5_pairs(d, s);      s += 10;
+        gather_5_pairs(d + 5, s);  s += 10;
+        gather_5_pairs(d + 10, s); s += 12;
+        d += 15;
+    }
 }
 
 //Widen one pair of 16 bit taps, the even one in the low half of `w`, into the top halves of two words.

@@ -23,25 +23,7 @@
 //widens as it goes - a pair of taps is one word in h_hat and a double word in the transform buffer - putting each
 //tap in the top half of its slot, which is the widening that costs no instructions. The gather leaves the delta at
 //32 bit and its caller narrows it afterwards, because narrowing a contiguous vector is a job for the VPU.
-//
-//On XS3 and VX4 these are hand written assembly - aec_h_hat_bitrev.S and aec_h_hat_bitrev_vx4b.S - because the
-//load/store offsets a group needs run past the 0..11 immediate range both encodings allow and the compiler answers
-//that by recomputing addresses, at about five instructions per element instead of two. The C below is the reference
-//for what the assembly does, and is what other builds use.
-#if defined(__XS3A__) || defined(__VX4B__)
-//The assembly scatter writes only the slots h_hat stores, leaving the caller to zero the rest, because
-//vect_complex_s32_set() clears the whole vector with the VPU faster than the scatter can store the zeros itself.
-void aec_h_hat_bitrev_scatter_kept(complex_s32_t *dst, const complex_s16_t *src);
-void aec_h_hat_bitrev_scatter(complex_s32_t *dst, const complex_s16_t *src)
-{
-    vect_complex_s32_set(dst, 0, 0, AEC_PROC_FRAME_LENGTH/2);
-    aec_h_hat_bitrev_scatter_kept(dst, src);
-}
 
-//The assembly hard codes the layout, so fail the build rather than mis-index if the frame sizes ever change it.
-_Static_assert(AEC_H_HAT_BITREV_DROPPED == 8 && AEC_H_HAT_BITREV_GROUP == 16,
-        "aec_h_hat_bitrev.S and aec_h_hat_bitrev_vx4b.S are written for the 8 group, 16 slot h_hat layout");
-#else
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
 //constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front.
 //Each complex element of `src` is a pair of taps. When moving in place, a destination element is either the same
@@ -80,7 +62,6 @@ void aec_h_hat_bitrev_scatter(
         src += AEC_H_HAT_BITREV_GROUP-1;     //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
     }
 }
-#endif
 
 unsigned aec_h_hat_tap_index(unsigned n)
 {

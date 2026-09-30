@@ -6,8 +6,10 @@
  * XS3 implementations of the h_hat bit-reversed gather and scatter described in aec_priv.h.
  *
  * Both move whole complex time domain elements - pairs of taps - so a single load and a single
- * store moves each one. That is the widest move available here: the VPU can only move contiguous
- * runs, and these are strided.
+ * store moves each one. The filter is real, but the mono FFT packs each pair of adjacent taps as
+ * the real and imaginary parts of one element to halve the transform size, so a pair is the unit
+ * the bit-reversal permutes. That is the widest move available here: the VPU can only move
+ * contiguous runs, and these are strided.
  *
  * h_hat holds 16 bit taps and the transforms work at 32 bit, so an element is one word on the
  * packed side and a double word on the strided side. The scatter therefore widens as it moves:

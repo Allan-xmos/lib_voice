@@ -14,7 +14,6 @@ endif()
 # Note that a test's wav channel layout is not consistent, some 4ch inputs are passed to tests with
 # a single y channel. This is overridden by the test's own CMakeLists configuration using
 # AP_MAX_Y_CHANNELS (e.g. test_adec and test_bin_adec).
-
 if(NOT DEFINED DE_UNIT_TESTS_BUILD_CONFIG)
 set(
     DE_UNIT_TESTS_BUILD_CONFIG

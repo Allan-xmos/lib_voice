@@ -299,7 +299,7 @@ pipeline {
                     xcoreBuild(archiveBins: false, buildDir: "build_xs3a")
                     // setting TOOLS_VERSION to be the vx4b tools
                     withEnv(["TOOLS_VERSION=${params.TOOLS_VX4_VERSION}"]) {
-                      xcoreBuild(archiveBins: false, buildDir: "build_vx4b", cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416")
+                      xcoreBuild(archiveBins: false, buildDir: "build_vx4b", cmakeOpts: "-DAPP_HW_TARGET=XK-EVK-XU416", jobs: 8)
                     }
                   }
                 }
@@ -371,7 +371,7 @@ pipeline {
                       dir("tests") {
                         script {
                           def speedupOpt = (env.FULL_TEST == "1") ? "" : "-DTEST_SPEEDUP_FACTOR=4"
-                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "${speedupOpt} -DAPP_HW_TARGET=XK-EVK-XU416")
+                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "${speedupOpt} -DAPP_HW_TARGET=XK-EVK-XU416", jobs: 8)
                         }
                         stash name: 'vx4b_build_xcore', includes: '**/bin/**/*.xe'
                       }

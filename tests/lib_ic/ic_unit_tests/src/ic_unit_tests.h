@@ -5,30 +5,12 @@
 
 #include "unity.h"
 
-#ifdef __XC__
-#include <xs1.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-
-#include <xclib.h>
-
-#include "audio_test_tools.h"
-extern "C" {
-    #include "ic_state.h"
-    #include "ic_low_level.h"
-}
-
-#else
-
 #include <stdio.h>
 #include <xcore/assert.h>
 #include <math.h>
 #include "ic_state.h"
 #include "ic_low_level.h"
 #include "pseudo_rand.h"
-
-#endif // __XC__
 
 
 #define TEST_ASM 1

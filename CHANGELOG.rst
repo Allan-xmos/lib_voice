@@ -18,6 +18,15 @@ lib_voice change log
     pointers into storage sized by `AEC_LIB_MAX_PHASES`, which limits the total phase count
     (`num_y_channels * num_x_channels * num_main_filter_phases`) rather than the length of each row
   * CHANGED: `app_pipeline` example is now single-tile
+  * CHANGED: Alternating architecture control moved out of Stage1 into the AEC and IC.
+    `ALT_ARCH_MODE` is defined in the new `alt_arch.h`, `HOLD_AEC_LIMIT_SECONDS` in `aec_defines.h`.
+    Stage1 passes mic channels the AEC is not configured for through from the delayed mic input
+  * CHANGED: `aec_process_frame()` takes a `ref_active_flag` output, reporting the reference
+    active flag held for `HOLD_AEC_LIMIT_SECONDS`. It is reported in the standard architecture too,
+    so the AGC now sees far-end activity there. In `ALT_ARCH_MODE` the AEC bypasses itself while
+    the flag is clear
+  * CHANGED: `ic_process_frame()` arguments reordered to match `aec_process_frame()`, and a
+    `ref_active_flag` input added. In `ALT_ARCH_MODE` the IC bypasses itself while it is set
 
   * Changes to dependencies:
 

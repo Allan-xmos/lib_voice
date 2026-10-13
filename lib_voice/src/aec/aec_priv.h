@@ -350,7 +350,7 @@ void aec_update_X_fifo_1d(
 
 //TODO pending documentation and examples for L2 APIs
 /**
- * @brief Calculate Error and Y_hat for a channel over a range of bins.
+ * @brief Calculate Error and Y_hat for a channel over all AEC_FD_FRAME_LENGTH bins.
  *
  * Each phase of `h_hat` is expanded from its bit-reversed storage and transformed to the frequency
  * domain on the fly. Because the storage is already bit-reversed, the forward transform needs no
@@ -366,8 +366,6 @@ void aec_l2_calc_Error_and_Y_hat(
         const bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases,
-        unsigned start_offset,
-        unsigned length,
         int32_t bypass_enabled);
 
 /**
@@ -441,10 +439,6 @@ void aec_priv_copy_filter(
 void aec_priv_bfp_complex_s32_copy(
         bfp_complex_s32_t *dst,
         const bfp_complex_s32_t *src);
-
-void aec_priv_bfp_s32_copy(
-        bfp_s32_t *dst,
-        const bfp_s32_t *src);
 
 void aec_priv_bfp_s16_copy(
         bfp_s16_t *dst,

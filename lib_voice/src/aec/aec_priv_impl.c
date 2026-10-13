@@ -223,16 +223,6 @@ void aec_priv_bfp_complex_s32_copy(
     dst->hr = src->hr;
 }
 
-void aec_priv_bfp_s32_copy(
-        bfp_s32_t *dst,
-        const bfp_s32_t *src)
-{
-    //This assumes that both dst and src are same length
-    memcpy(dst->data, src->data, dst->length*sizeof(int32_t));
-    dst->exp = src->exp;
-    dst->hr = src->hr;
-}
-
 void aec_priv_bfp_s16_copy(
         bfp_s16_t *dst,
         const bfp_s16_t *src)
@@ -746,7 +736,7 @@ void aec_priv_calc_Error_and_Y_hat(
         unsigned num_phases,
         int32_t bypass_enabled)
 {
-    aec_l2_calc_Error_and_Y_hat(Error, Y_hat, Y, X_fifo, h_hat, num_x_channels, num_phases, 0, AEC_PROC_FRAME_LENGTH/2 + 1, bypass_enabled);
+    aec_l2_calc_Error_and_Y_hat(Error, Y_hat, Y, X_fifo, h_hat, num_x_channels, num_phases, bypass_enabled);
 }
 
 void aec_priv_calc_coherence(

@@ -123,8 +123,8 @@ static void h_hat_forward_fft(
 }
 
 /**
- * Transform each filter phase in turn and accumulate X * H_hat into Y_hat over the requested chunk.
- * 
+ * Transform each filter phase in turn and accumulate X * H_hat into Y_hat.
+ *
  * This avoids a VX4 compiler bug related to stack frame handling when large scratch buffers are used.
  */
 __attribute__((noinline))
@@ -132,9 +132,7 @@ static void aec_l2_accumulate_Y_hat(
         bfp_complex_s32_t *Y_hat,
         const bfp_complex_s32_t *X_fifo,
         const bfp_s16_t *h_hat,
-        unsigned phases,
-        unsigned start_offset,
-        unsigned length)
+        unsigned phases)
 {
     //Scratch to FFT the current filter phase from time domain to frequency domain
     int32_t DWORD_ALIGNED h_fft_scratch[AEC_PROC_FRAME_LENGTH + AEC_FFT_PADDING];
@@ -143,9 +141,9 @@ static void aec_l2_accumulate_Y_hat(
         h_hat_forward_fft(&H_hat_ph, &h_hat[ph], h_fft_scratch);
 
         bfp_complex_s32_t X_chunk, H_hat_chunk;
-        bfp_complex_s32_init(&X_chunk, &X_fifo[ph].data[start_offset], X_fifo[ph].exp, length, 0);
+        bfp_complex_s32_init(&X_chunk, X_fifo[ph].data, X_fifo[ph].exp, AEC_FD_FRAME_LENGTH, 0);
         X_chunk.hr = X_fifo[ph].hr;
-        bfp_complex_s32_init(&H_hat_chunk, &H_hat_ph.data[start_offset], H_hat_ph.exp, length, 0);
+        bfp_complex_s32_init(&H_hat_chunk, H_hat_ph.data, H_hat_ph.exp, AEC_FD_FRAME_LENGTH, 0);
         H_hat_chunk.hr = H_hat_ph.hr;
         bfp_complex_s32_macc(Y_hat, &X_chunk, &H_hat_chunk);
     }
@@ -159,30 +157,39 @@ void aec_l2_calc_Error_and_Y_hat(
         const bfp_s16_t *h_hat,
         unsigned num_x_channels,
         unsigned num_phases,
-        unsigned start_offset,
-        unsigned length,
         int32_t bypass_enabled)
 {
-    if(!length) {
-        return;
-    }
     if(bypass_enabled) { //Copy Y into Error. Set Y_hat to 0
-        vpu_memcpy(Error->data, &Y->data[start_offset], length*sizeof(complex_s32_t));
+        vpu_memcpy(Error->data, Y->data, AEC_FD_FRAME_LENGTH*sizeof(complex_s32_t));
         Error->exp = Y->exp;
         Error->hr = Y->hr;
 
-        vect_complex_s32_set(Y_hat->data, 0, 0, length);
+        vect_complex_s32_set(Y_hat->data, 0, 0, AEC_FD_FRAME_LENGTH);
         Y_hat->exp = AEC_ZEROVAL_EXP;
         Y_hat->hr = AEC_ZEROVAL_HR;
     }
     else {
-        aec_l2_accumulate_Y_hat(Y_hat, X_fifo, h_hat, num_x_channels * num_phases, start_offset, length);
+        aec_l2_accumulate_Y_hat(Y_hat, X_fifo, h_hat, num_x_channels * num_phases);
 
         bfp_complex_s32_t Y_chunk;
-        bfp_complex_s32_init(&Y_chunk, &Y->data[start_offset], Y->exp, length, 0);
+        bfp_complex_s32_init(&Y_chunk, Y->data, Y->exp, AEC_FD_FRAME_LENGTH, 0);
         Y_chunk.hr = Y->hr;
         bfp_complex_s32_sub(Error, &Y_chunk, Y_hat);
     }
+}
+
+/**
+ * delta_h = ifft(prod), computed in place over the delta_scratch buffer. This mirrors
+ * bfp_fft_inverse_mono(), but skips the fft_index_bit_reversal() and stores the bit-reversed
+ * coefficients.
+ */
+static inline void h_hat_inverse_fft(bfp_complex_s32_t *H_hat)
+{
+    bfp_fft_pack_mono(H_hat);
+    //fft_dif_inverse() requires 2 bits of headroom
+    bfp_complex_s32_use_exponent(H_hat, H_hat->exp - H_hat->hr + 2);
+    fft_mono_adjust(H_hat->data, AEC_PROC_FRAME_LENGTH, 1);
+    fft_dif_inverse(H_hat->data, AEC_PROC_FRAME_LENGTH/2, &H_hat->hr, &H_hat->exp);
 }
 
 /**
@@ -202,13 +209,8 @@ void aec_l2_adapt_plus_ifft(
     //prod = T * conj(X)
     bfp_complex_s32_conj_mul(&prod, T_ph, X_fifo_ph);
 
-    //delta_h = ifft(prod), computed in place over the delta_scratch buffer. This mirrors bfp_fft_inverse_mono(),
-    //but skips the fft_index_bit_reversal() and stores the bit-reversed coefficients.
-    bfp_fft_pack_mono(&prod);
-    //fft_dif_inverse() requires 2 bits of headroom
-    bfp_complex_s32_use_exponent(&prod, prod.exp - prod.hr + 2);
-    fft_mono_adjust(prod.data, AEC_PROC_FRAME_LENGTH, 1);
-    fft_dif_inverse(prod.data, AEC_PROC_FRAME_LENGTH/2, &prod.hr, &prod.exp);
+    // Perform the inverse FFT on the product to get the time-domain delta_h
+    h_hat_inverse_fft(&prod);
 
     //Save the non-zero taps in bit-reversed order. The gradient constraint is applied as
     //the discarded taps are effectively zeroed.

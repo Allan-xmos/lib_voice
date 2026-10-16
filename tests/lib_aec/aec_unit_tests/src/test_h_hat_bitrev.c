@@ -26,13 +26,18 @@ typedef struct {
     int32_t guard[GUARD_WORDS];
 } packed_vector_t;
 
-//The narrowing the gather does: the top half of each word, rounded and saturated symmetrically as vdepth16 does.
+//The narrowing the gather does: the top half of each word. VX4 truncates; everything else rounds and saturates
+//symmetrically as vdepth16 does.
 static int16_t narrow(int32_t x)
 {
+#if defined(__VX4B__)
+    return (int16_t)(x >> 16);
+#else
     int64_t r = (((int64_t)x) + (1 << 15)) >> 16;
     if(r > INT16_MAX) r = INT16_MAX;
     if(r < -INT16_MAX) r = -INT16_MAX;
     return (int16_t)r;
+#endif
 }
 
 //Leave the VPU in 16 bit mode, as whatever ran before the gather in the AEC may have done.
@@ -159,7 +164,7 @@ void test_aec_h_hat_bitrev_round_trip()
     unsigned seed = 0x3B94F26E;
     for(int itt=0; itt<ITERS; itt++) {
         //h_hat -> scatter -> gather has to give back the stored taps, in their stored order. The one exception is
-        //INT16_MIN, which the gather's symmetric saturation brings back as -INT16_MAX.
+        //INT16_MIN, which a symmetrically saturating gather brings back as -INT16_MAX.
         for(unsigned i=0; i<AEC_FRAME_ADVANCE; i++) {
             taps[i] = (itt == 0) ? ((i & 1) ? INT16_MIN : INT16_MAX) : pseudo_rand_int16(&seed);
         }
@@ -168,7 +173,7 @@ void test_aec_h_hat_bitrev_round_trip()
         aec_h_hat_bitrev_gather(packed.data, (const int32_t*)full);
         check_guard(packed.guard);
         for(unsigned k=0; k<AEC_FRAME_ADVANCE; k++) {
-            const int16_t expected = (taps[k] == INT16_MIN) ? -INT16_MAX : taps[k];
+            const int16_t expected = narrow(((int32_t)taps[k]) * (1 << 16));
             TEST_ASSERT_EQUAL_INT16(expected, packed.data[k]);
         }
 

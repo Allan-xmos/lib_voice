@@ -22,8 +22,8 @@
 //h_hat stores 16 bit taps while the transforms work at 32 bit, so each direction changes the width as it moves. The
 //scatter widens - a pair of taps is one word in h_hat and a double word in the transform buffer - putting each tap
 //in the top half of its slot, which is the widening that costs no instructions. The gather narrows the other way,
-//keeping the top half of each word with the rounding and symmetric saturation of the VPU's vdepth16, the same as
-//vect_s32_to_vect_s16() with a shift of 16.
+//keeping the top half of each word. On VX4 that is a byte lookup, which truncates; elsewhere it has the rounding and
+//symmetric saturation of the VPU's vdepth16, the same as vect_s32_to_vect_s16() with a shift of 16.
 //
 //On XS3 and VX4 these are hand written assembly - aec_h_hat_bitrev_scatter.S and aec_h_hat_bitrev_gather.S - because
 //the load/store offsets a group needs run past the 0..11 immediate range both encodings allow and the compiler

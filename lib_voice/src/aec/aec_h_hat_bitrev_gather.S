@@ -82,7 +82,8 @@ FUNCTION_NAME:
     // for the fft_size/loop_count
     ldc n_loop, NGROUPS
 
-    { ldc _16, 16 ; ldc _12, 12 }
+    { ldc r11, 0 ; ldc _16, 16 }
+    { ldc _12, 12 ; vsetc r11 }
     { ldaw r11, sp[6] ; shl _64, _16, 2 }
     { mkmsk msk16, _16 ; mkmsk msk12, _12 }
     { sub dst, dst, _12 ; sub n_loop, n_loop, 1 }

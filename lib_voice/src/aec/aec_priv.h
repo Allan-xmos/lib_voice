@@ -77,9 +77,10 @@ void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
  * @ref aec_h_hat_bitrev_scatter(), this applies a gradient constraint by zeroing h_hat values
  * above the AEC_FRAME_ADVANCE index.
  * 
- * Each 32 bit tap is narrowed to 16 bit by keeping its top half, rounding and saturating
- * symmetrically as vect_s32_to_vect_s16() does with a shift of 16, so the gathered mantissas are
+ * Each 32 bit tap is narrowed to 16 bit by keeping its top half, so the gathered mantissas are
  * 2^-16 times the full ones. This is the inverse of the widening aec_h_hat_bitrev_scatter() does.
+ * VX4 truncates; other builds round and saturate symmetrically as vect_s32_to_vect_s16() does
+ * with a shift of 16. The two differ by at most one LSB.
  *
  * @param[out] dst AEC_FRAME_ADVANCE taps, word aligned
  * @param[in]  src AEC_PROC_FRAME_LENGTH words, double word aligned. May be the buffer `dst`

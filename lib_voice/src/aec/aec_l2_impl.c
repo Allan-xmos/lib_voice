@@ -217,17 +217,18 @@ void aec_l2_adapt_plus_ifft(
 
     // Update h_hat with delta. The delta is usually far smaller than h_hat, so it is right shifted a long way, and
     // that shift has to round: vect_s16_add() truncates, which would pull every small negative tap down by an LSB on
-    // every update and bias the filter. vect_s16_scale() by one rounds, and past 15 bits every tap rounds to zero.
+    // every update and bias the filter. vect_s16_macc() rounds the product it accumulates, so multiplying the delta
+    // by one rounds its shift in the same pass as the add. Past 15 bits every tap rounds to zero.
+    static const int16_t DWORD_ALIGNED ones[AEC_FRAME_ADVANCE] = {[0 ... AEC_FRAME_ADVANCE-1] = 1};
     const right_shift_t h_hat_shr = sum_exp - h_hat_ph->exp;
     const right_shift_t delta_shr = sum_exp - delta_exp;
     if(delta_shr >= 16) {
         h_hat_ph->hr = vect_s16_shr(h_hat_ph->data, h_hat_ph->data, AEC_FRAME_ADVANCE, h_hat_shr);
+    } else if(delta_shr > 0) {
+        h_hat_ph->hr = vect_s16_macc(h_hat_ph->data, delta_taps, ones, AEC_FRAME_ADVANCE, h_hat_shr, delta_shr);
     } else {
-        if(delta_shr > 0) {
-            vect_s16_scale(delta_taps, delta_taps, AEC_FRAME_ADVANCE, 1, delta_shr);
-        }
         h_hat_ph->hr = vect_s16_add(h_hat_ph->data, h_hat_ph->data, delta_taps, AEC_FRAME_ADVANCE,
-                                    h_hat_shr, (delta_shr > 0) ? 0 : delta_shr);
+                                    h_hat_shr, delta_shr);
     }
     h_hat_ph->exp = sum_exp;
 }

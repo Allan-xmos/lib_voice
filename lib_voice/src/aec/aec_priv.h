@@ -77,13 +77,15 @@ void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
  * @ref aec_h_hat_bitrev_scatter(), this applies a gradient constraint by zeroing h_hat values
  * above the AEC_FRAME_ADVANCE index.
  * 
- * Unlike aec_h_hat_bitrev_scatter(), this function keeps the taps in 32b.
- * 
- * @param[out] dst AEC_FRAME_ADVANCE words, double word aligned
+ * Each 32 bit tap is narrowed to 16 bit by keeping its top half, rounding and saturating
+ * symmetrically as vect_s32_to_vect_s16() does with a shift of 16, so the gathered mantissas are
+ * 2^-16 times the full ones. This is the inverse of the widening aec_h_hat_bitrev_scatter() does.
+ *
+ * @param[out] dst AEC_FRAME_ADVANCE taps, word aligned
  * @param[in]  src AEC_PROC_FRAME_LENGTH words, double word aligned. May be the buffer `dst`
  *                 points into.
  */
-void aec_h_hat_bitrev_gather(int32_t *dst, const int32_t *src);
+void aec_h_hat_bitrev_gather(int16_t *dst, const int32_t *src);
 
 /**
  * @brief Initialise AEC data structures for processing a new frame

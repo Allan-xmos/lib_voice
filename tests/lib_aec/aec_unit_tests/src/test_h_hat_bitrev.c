@@ -22,9 +22,25 @@ typedef struct {
 } full_vector_t;
 
 typedef struct {
-    complex_s32_t DWORD_ALIGNED data[AEC_FRAME_ADVANCE/2];
+    int16_t DWORD_ALIGNED data[AEC_FRAME_ADVANCE];
     int32_t guard[GUARD_WORDS];
 } packed_vector_t;
+
+//The narrowing the gather does: the top half of each word, rounded and saturated symmetrically as vdepth16 does.
+static int16_t narrow(int32_t x)
+{
+    int64_t r = (((int64_t)x) + (1 << 15)) >> 16;
+    if(r > INT16_MAX) r = INT16_MAX;
+    if(r < -INT16_MAX) r = -INT16_MAX;
+    return (int16_t)r;
+}
+
+//Leave the VPU in 16 bit mode, as whatever ran before the gather in the AEC may have done.
+static void set_vpu_16bit_mode()
+{
+    static int16_t DWORD_ALIGNED dummy[16];
+    vect_s16_add(dummy, dummy, dummy, 16, 0, 0);
+}
 
 static void fill_random(int32_t *x, unsigned length, unsigned *seed)
 {
@@ -71,7 +87,7 @@ void test_aec_h_hat_bitrev_scatter()
         fill_random((int32_t*)dst.data, AEC_PROC_FRAME_LENGTH, &seed);
         set_guard(dst.guard);
 
-        aec_h_hat_bitrev_scatter(dst.data, (const complex_s16_t*)taps);
+        aec_h_hat_bitrev_scatter((int32_t*)dst.data, taps);
         check_guard(dst.guard);
 
         to_natural_order(natural, dst.data);
@@ -97,24 +113,33 @@ void test_aec_h_hat_bitrev_gather()
     for(int itt=0; itt<ITERS; itt++) {
         //Every slot holds full scale data, including the ones the gather has to drop.
         fill_random((int32_t*)src, AEC_PROC_FRAME_LENGTH, &seed);
+        if(itt == 0) {
+            //Words that round up past the top, and the most negative word, which saturates.
+            for(unsigned i=0; i<AEC_PROC_FRAME_LENGTH; i++) {
+                ((int32_t*)src)[i] = (i & 1) ? INT32_MIN : INT32_MAX;
+            }
+        }
         memcpy(src_copy, src, sizeof(src_copy));
-        fill_random((int32_t*)dst.data, AEC_FRAME_ADVANCE, &seed);
+        fill_random((int32_t*)dst.data, AEC_FRAME_ADVANCE/2, &seed);
         set_guard(dst.guard);
 
-        aec_h_hat_bitrev_gather(dst.data, src);
+        //The narrowing must not depend on the VPU mode left behind by whatever ran before.
+        if(itt & 1) {
+            set_vpu_16bit_mode();
+        }
+        aec_h_hat_bitrev_gather(dst.data, (const int32_t*)src);
         check_guard(dst.guard);
         TEST_ASSERT_EQUAL_INT32_ARRAY((int32_t*)src_copy, (int32_t*)src, AEC_PROC_FRAME_LENGTH);
 
         to_natural_order(natural, src);
-        const int32_t *dst_taps = (const int32_t*)dst.data;
         for(unsigned n=0; n<AEC_FRAME_ADVANCE; n++) {
-            TEST_ASSERT_EQUAL_INT32(natural[n], dst_taps[aec_h_hat_tap_index(n)]);
+            TEST_ASSERT_EQUAL_INT16(narrow(natural[n]), dst.data[aec_h_hat_tap_index(n)]);
         }
 
         //aec_l2_adapt_plus_ifft() gathers in place, so that has to give the same answer.
         memcpy(in_place, src, sizeof(in_place));
-        aec_h_hat_bitrev_gather(in_place, in_place);
-        TEST_ASSERT_EQUAL_INT32_ARRAY(dst_taps, (int32_t*)in_place, AEC_FRAME_ADVANCE);
+        aec_h_hat_bitrev_gather((int16_t*)in_place, (const int32_t*)in_place);
+        TEST_ASSERT_EQUAL_INT16_ARRAY(dst.data, (int16_t*)in_place, AEC_FRAME_ADVANCE);
     }
 }
 
@@ -133,43 +158,40 @@ void test_aec_h_hat_bitrev_round_trip()
 
     unsigned seed = 0x3B94F26E;
     for(int itt=0; itt<ITERS; itt++) {
-        //h_hat -> scatter -> gather has to give back the stored taps, in their stored order, widened by 2^16.
+        //h_hat -> scatter -> gather has to give back the stored taps, in their stored order. The one exception is
+        //INT16_MIN, which the gather's symmetric saturation brings back as -INT16_MAX.
         for(unsigned i=0; i<AEC_FRAME_ADVANCE; i++) {
             taps[i] = (itt == 0) ? ((i & 1) ? INT16_MIN : INT16_MAX) : pseudo_rand_int16(&seed);
         }
-        aec_h_hat_bitrev_scatter(full, (const complex_s16_t*)taps);
+        aec_h_hat_bitrev_scatter((int32_t*)full, taps);
         set_guard(packed.guard);
-        aec_h_hat_bitrev_gather(packed.data, full);
+        aec_h_hat_bitrev_gather(packed.data, (const int32_t*)full);
         check_guard(packed.guard);
-        const int32_t *packed_taps = (const int32_t*)packed.data;
         for(unsigned k=0; k<AEC_FRAME_ADVANCE; k++) {
-            TEST_ASSERT_EQUAL_INT32(((int32_t)taps[k]) * (1 << 16), packed_taps[k]);
+            const int16_t expected = (taps[k] == INT16_MIN) ? -INT16_MAX : taps[k];
+            TEST_ASSERT_EQUAL_INT16(expected, packed.data[k]);
         }
 
-        //full -> gather -> narrow -> scatter has to give back full with every tap past AEC_FRAME_ADVANCE zeroed.
-        //Clearing the bottom half of each word makes the narrowing exact, so any difference is down to the layout.
+        //full -> gather -> scatter has to give back full with every tap past AEC_FRAME_ADVANCE zeroed.
+        //Clearing the bottom half of each word makes the narrowing exact apart from the saturation, so any other
+        //difference is down to the layout.
         fill_random((int32_t*)full, AEC_PROC_FRAME_LENGTH, &seed);
         for(unsigned i=0; i<AEC_PROC_FRAME_LENGTH; i++) {
             ((int32_t*)full)[i] &= (int32_t)0xFFFF0000;
         }
         memcpy(full_copy, full, sizeof(full_copy));
         //Gather in place, as aec_l2_adapt_plus_ifft() does.
-        aec_h_hat_bitrev_gather(full, full);
-        //Narrow in place to the 16 bit taps h_hat stores. Writing tap k never overwrites a word not yet read.
-        int32_t *words = (int32_t*)full;
         int16_t *narrowed = (int16_t*)full;
-        for(unsigned k=0; k<AEC_FRAME_ADVANCE; k++) {
-            narrowed[k] = (int16_t)(words[k] >> 16);
-        }
+        aec_h_hat_bitrev_gather(narrowed, (const int32_t*)full);
         fill_random((int32_t*)rescattered.data, AEC_PROC_FRAME_LENGTH, &seed);
         set_guard(rescattered.guard);
-        aec_h_hat_bitrev_scatter(rescattered.data, (const complex_s16_t*)narrowed);
+        aec_h_hat_bitrev_scatter((int32_t*)rescattered.data, narrowed);
         check_guard(rescattered.guard);
 
         to_natural_order(natural_in, full_copy);
         to_natural_order(natural_out, rescattered.data);
         for(unsigned n=0; n<AEC_PROC_FRAME_LENGTH; n++) {
-            int32_t expected = (n < AEC_FRAME_ADVANCE) ? natural_in[n] : 0;
+            int32_t expected = (n < AEC_FRAME_ADVANCE) ? ((int32_t)narrow(natural_in[n])) * (1 << 16) : 0;
             TEST_ASSERT_EQUAL_INT32(expected, natural_out[n]);
         }
     }

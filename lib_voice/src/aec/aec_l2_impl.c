@@ -19,45 +19,35 @@
 //ahead of h_hat in them is a whole number of double words, and the FFT scratch buffers here are declared
 //DWORD_ALIGNED.
 //
-//h_hat stores 16 bit taps while the transforms work at 32 bit, so the two directions are not symmetric. The scatter
-//widens as it goes - a pair of taps is one word in h_hat and a double word in the transform buffer - putting each
-//tap in the top half of its slot, which is the widening that costs no instructions. The gather leaves the delta at
-//32 bit and its caller narrows it afterwards, because narrowing a contiguous vector is a job for the VPU.
+//h_hat stores 16 bit taps while the transforms work at 32 bit, so each direction changes the width as it moves. The
+//scatter widens - a pair of taps is one word in h_hat and a double word in the transform buffer - putting each tap
+//in the top half of its slot, which is the widening that costs no instructions. The gather narrows the other way,
+//keeping the top half of each word with the rounding and symmetric saturation of the VPU's vdepth16, the same as
+//vect_s32_to_vect_s16() with a shift of 16.
 //
-//On XS3 and VX4 these are hand written assembly - aec_h_hat_bitrev.S and aec_h_hat_bitrev_vx4b.S - because the
-//load/store offsets a group needs run past the 0..11 immediate range both encodings allow and the compiler answers
-//that by recomputing addresses, at about five instructions per element instead of two. The C below is the reference
-//for what the assembly does, and is what other builds use.
+//On XS3 and VX4 these are hand written assembly - aec_h_hat_bitrev_scatter.S and aec_h_hat_bitrev_gather.S - because
+//the load/store offsets a group needs run past the 0..11 immediate range both encodings allow and the compiler
+//answers that by recomputing addresses, at about five instructions per element instead of two. The C below is the
+//reference for what the assembly does, and is what other builds use.
 #if defined(__XS3A__) || defined(__VX4B__)
-//The assembly scatter writes only the slots h_hat stores, leaving the caller to zero the rest, because
-//vect_s32_set() clears the whole vector with the VPU faster than the scatter can store the zeros itself.
-void aec_h_hat_bitrev_scatter_kept(int32_t *dst, const int16_t *src);
-void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src)
-{
-    vect_s32_set(dst, 0, AEC_PROC_FRAME_LENGTH);
-    aec_h_hat_bitrev_scatter_kept(dst, src);
-}
-
 //The assembly hard codes the layout, so fail the build rather than mis-index if the frame sizes ever change it.
 _Static_assert(AEC_H_HAT_BITREV_DROPPED == 8 && AEC_H_HAT_BITREV_GROUP == 16,
-        "aec_h_hat_bitrev.S and aec_h_hat_bitrev_vx4b.S are written for the 8 group, 16 slot h_hat layout");
+        "aec_h_hat_bitrev_scatter.S and aec_h_hat_bitrev_gather.S are written for the 8 group, 16 slot h_hat layout");
 #else
-typedef int64_t h_hat_tap_pair_t;
-
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
-//constraint zeroes. `src` may be the buffer `dst` points into; the copy only ever moves data towards the front.
+//constraint zeroes and narrowing each tap to 16 bit. `src` may be the buffer `dst` points into; the copy only ever
+//moves data towards the front.
 void aec_h_hat_bitrev_gather(
-        int32_t *dst_words,
-        const int32_t *src_words)
+        int16_t *dst,
+        const int32_t *src)
 {
-    h_hat_tap_pair_t *dst = (h_hat_tap_pair_t*)dst_words;
-    const h_hat_tap_pair_t *src = (const h_hat_tap_pair_t*)src_words;
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
         for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
-            dst[i] = src[2*i]; //the odd slot beside each one holds taps AEC_PROC_FRAME_LENGTH/2 onwards
+            //the odd slot beside each one holds taps AEC_PROC_FRAME_LENGTH/2 onwards
+            vect_s32_to_vect_s16(&dst[2*i], &src[4*i], 2, 16);
         }
-        dst += AEC_H_HAT_BITREV_GROUP-1; //past the dropped even slot, which holds the taps between
-        src += 2*AEC_H_HAT_BITREV_GROUP; //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
+        dst += 2*(AEC_H_HAT_BITREV_GROUP-1); //past the dropped even slot, which holds the taps between
+        src += 4*AEC_H_HAT_BITREV_GROUP;     //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
     }
 }
 
@@ -212,26 +202,22 @@ void aec_l2_adapt_plus_ifft(
     // Perform the inverse FFT on the product to get the time-domain delta_h
     h_hat_inverse_fft(&prod);
 
-    //Save the non-zero taps in bit-reversed order. The gradient constraint is applied as
-    //the discarded taps are effectively zeroed.
-    aec_h_hat_bitrev_gather((int32_t*)delta_scratch, (const int32_t*)delta_scratch);
-
-    // Narrow delta to 16-bit taps before adding to h_hat, this can be done inplace
-    int32_t *delta_words = (int32_t*)delta_scratch;
+    //Save the non-zero taps in bit-reversed order, narrowed to 16 bit. The gradient constraint is
+    //applied as the discarded taps are effectively zeroed. Narrowing keeps the top half of each word,
+    //so the delta's exponent goes up by 16.
     int16_t *delta_taps = (int16_t*)delta_scratch;
+    aec_h_hat_bitrev_gather(delta_taps, (const int32_t*)delta_scratch);
+    const exponent_t delta_exp = prod.exp + 16;
 
-    // Calculate (h + delta) output exponent before we shift delta to 32b, so we can go directly to
-    // the correct exponent
-    const headroom_t delta_hr = vect_s32_headroom(delta_words, AEC_FRAME_ADVANCE);
+    // Calculate (h + delta) output exponent
+    const headroom_t delta_hr = vect_s16_headroom(delta_taps, AEC_FRAME_ADVANCE);
     const exponent_t h_hat_min_exp = h_hat_ph->exp - (exponent_t)h_hat_ph->hr;
-    const exponent_t delta_min_exp = prod.exp + 16 - (exponent_t)delta_hr;
+    const exponent_t delta_min_exp = delta_exp - (exponent_t)delta_hr;
     const exponent_t sum_exp = ((h_hat_min_exp > delta_min_exp) ? h_hat_min_exp : delta_min_exp) + 1;
-
-    vect_s32_to_vect_s16(delta_taps, delta_words, AEC_FRAME_ADVANCE, sum_exp - prod.exp);
 
     // Update h_hat with delta
     h_hat_ph->hr = vect_s16_add(h_hat_ph->data, h_hat_ph->data, delta_taps, AEC_FRAME_ADVANCE,
-                                sum_exp - h_hat_ph->exp, 0);
+                                sum_exp - h_hat_ph->exp, sum_exp - delta_exp);
     h_hat_ph->exp = sum_exp;
 }
 

@@ -23,7 +23,14 @@ void adec_estimate_delay (
     de_output->sum_phase_powers = zero;
 
     for(int ph=0; ph<num_phases; ph++) { //compute delay over 1 x-y pair phases
-        float_s32_t phase_power = float_s64_to_float_s32(bfp_s16_energy(&h_hat[ph]));
+        
+        float_s32_t phase_power;
+        // if the exponent is equal to the zero value exponent, set phase power to zero
+        if (h_hat[ph].exp == AEC_ZEROVAL_EXP) {
+            phase_power = zero;
+        } else {
+            phase_power = float_s64_to_float_s32(bfp_s16_energy(&h_hat[ph]));
+        }
         de_output->phase_power[ph] = phase_power;
         de_output->sum_phase_powers = float_s32_add(de_output->sum_phase_powers, phase_power);
         if(float_s32_gt(phase_power, peak_fd_power)) {

@@ -138,12 +138,15 @@ FUNCTION_NAME:
     // for the fft_size/loop_count
     li count, NGROUPS
     { li _32, 32 ; xm.vclrdr }
-    { xm.ldap t3, .scatter_lut0 ; xm.vldc src }
 
 .L_scatter_group:
     // so in the whole loop:
     // dst += 15 * 2 * 2 = 60
     // src += 16 * 4 * 4 = 256
+
+    // load vC at the top rather than the bottom of the loop,
+    // so the last group doesn't read the 32 bytes after src
+    { xm.ldap t3, .scatter_lut0 ; xm.vldc src }
 
     // [0:15] -> [0:1, 4:5, 8:9, 12:13, 16:17, 20:21, 24:25, 28:29]
     // dst += 32 * 4
@@ -181,10 +184,7 @@ FUNCTION_NAME:
     xm.vlookup src, 0, 1
     { add src, src, t3 ; xm.vstd dst }
 
-    // manually reloading vC
-    { add dst, dst, _32 ; xm.vldc src }
-
-    { xm.ldap t3, .scatter_lut0 ; xm.bt count, .L_scatter_group }
+    { add dst, dst, _32 ; xm.bt count, .L_scatter_group }
 
     ret
 

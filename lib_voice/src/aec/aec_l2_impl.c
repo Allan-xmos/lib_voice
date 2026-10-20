@@ -13,11 +13,10 @@
 //The taps are held in bit-reversed index order so that neither of those per-phase transforms has to run an index
 //bit-reversal pass.
 
-//The gather and scatter below move a whole complex element - a pair of taps - at a time, so that one load and one
-//store moves each one rather than a pair of each. That needs the pair to be aligned to its own width, which holds
-//for every buffer they are used on: aec_state_t declares both AEC memory pools DWORD_ALIGNED and every allocation
-//ahead of h_hat in them is a whole number of double words, and the FFT scratch buffers here are declared
-//DWORD_ALIGNED.
+//The mono FFT packs the real time domain signal into complex pairs to reduce the FFT size. The gather and scatter
+//below move a whole complex element at a time. That needs the pair to be aligned to its own width, which holds for
+//every buffer they are used on: aec_state_t declares both AEC memory pools DWORD_ALIGNED and every allocation ahead
+//of h_hat in them is a whole number of double words, and the FFT scratch buffers here are declared DWORD_ALIGNED.
 //
 //h_hat stores 16 bit taps while the transforms work at 32 bit, so each direction changes the width as it moves. The
 //scatter widens - a pair of taps is one word in h_hat and a double word in the transform buffer - putting each tap
@@ -38,6 +37,7 @@ _Static_assert(AEC_H_HAT_BITREV_DROPPED == 8 && AEC_H_HAT_BITREV_GROUP == 16,
 //Copy the taps h_hat stores out of a full bit-reversed index time domain vector, dropping the slots the gradient
 //constraint zeroes and narrowing each tap to 16 bit. `src` may be the buffer `dst` points into; the copy only ever
 //moves data towards the front.
+//The taps in `src` are treated as complex numbers, with the real and imaginary parts stored in adjacent words.
 void aec_h_hat_bitrev_gather(
         int16_t *dst,
         const int32_t *src,
@@ -67,8 +67,9 @@ void aec_h_hat_bitrev_scatter(
 
     for(unsigned g=0; g<AEC_H_HAT_BITREV_DROPPED; g++) {
         for(unsigned i=0; i<AEC_H_HAT_BITREV_GROUP-1; i++) {
-            dst[4*i]   = ((int32_t)src[2*i]) * (1 << 16);   //a stored pair of taps; the odd slot beside it holds taps
-            dst[4*i+1] = ((int32_t)src[2*i+1]) * (1 << 16); //AEC_PROC_FRAME_LENGTH/2 onwards, and stays zero
+            dst[4*i]   = ((int32_t)src[2*i]) * (1 << 16);   //a stored pair of taps, the real and imaginary parts of one
+            dst[4*i+1] = ((int32_t)src[2*i+1]) * (1 << 16); //complex element; the odd slot beside it holds taps
+                                                            //AEC_PROC_FRAME_LENGTH/2 onwards, and stays zero
         }
         dst += 4*AEC_H_HAT_BITREV_GROUP;     //past the dropped even slot, which holds the taps between
         src += 2*(AEC_H_HAT_BITREV_GROUP-1); //AEC_FRAME_ADVANCE and AEC_PROC_FRAME_LENGTH/2, and its odd partner
@@ -116,10 +117,7 @@ static void h_hat_forward_fft(
 
 /**
  * Transform each filter phase in turn and accumulate X * H_hat into Y_hat.
- *
- * This avoids a VX4 compiler bug related to stack frame handling when large scratch buffers are used.
  */
-__attribute__((noinline))
 static void aec_l2_accumulate_Y_hat(
         bfp_complex_s32_t *Y_hat,
         const bfp_complex_s32_t *X_fifo,
@@ -198,16 +196,13 @@ void aec_l2_adapt_plus_ifft(
     complex_s32_t DWORD_ALIGNED delta_scratch[AEC_FD_FRAME_LENGTH];
     bfp_complex_s32_t prod;
     bfp_complex_s32_init(&prod, delta_scratch, AEC_ZEROVAL_EXP, AEC_FD_FRAME_LENGTH, 0);
-    //prod = T * conj(X)
+    // prod = T * conj(X)
     bfp_complex_s32_conj_mul(&prod, T_ph, X_fifo_ph);
 
     // Perform the inverse FFT on the product to get the time-domain delta_h
     h_hat_inverse_fft(&prod);
 
-    // Calculate (h + delta) output exponent, taking the delta as the top halves of the inverse FFT output (an exponent
-    // 16 higher, same headroom), as the gather narrows it. The headroom of the whole inverse FFT output stands in for
-    // that of the taps h_hat keeps, so that the gather can narrow the delta straight to this exponent. It can only be
-    // the smaller, since the taps the gradient constraint drops are included, so the sum is never short of headroom.
+    // Calculate (h + delta) output exponent, so the delta shift can be applied in the gather
     exponent_t sum_exp;
     right_shift_t h_hat_shr, delta_shr;
     vect_s16_add_prepare(&sum_exp, &h_hat_shr, &delta_shr, h_hat_ph->exp, prod.exp + 16, h_hat_ph->hr, prod.hr);
@@ -217,10 +212,8 @@ void aec_l2_adapt_plus_ifft(
         return;
     }
 
-    //Save the non-zero taps in bit-reversed order, narrowed to 16 bit at the sum's exponent. The gradient constraint
-    //is applied as the discarded taps are effectively zeroed. The delta is usually far smaller than h_hat, so it is
-    //shifted a long way, and the gather rounds that shift: vect_s16_add() would truncate it, turning every negative
-    //delta under an LSB into -1 and biasing the filter.
+    // Save the non-zero taps in bit-reversed order, narrowed to 16 bit at the sum's exponent, then
+    // accumulate into h_hat.
     int16_t *delta_taps = (int16_t*)delta_scratch;
     aec_h_hat_bitrev_gather(delta_taps, (const int32_t*)delta_scratch, delta_shr);
     h_hat_ph->hr = vect_s16_add(h_hat_ph->data, h_hat_ph->data, delta_taps, AEC_FRAME_ADVANCE, h_hat_shr, 0);

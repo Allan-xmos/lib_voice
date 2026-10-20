@@ -11,10 +11,6 @@ set(LIB_COMPILER_FLAGS
             -DHEADROOM_CHECK=0
 )
 
-# The hand written assembly under src/ is per architecture - see aec_h_hat_bitrev_gather.S, which
-# has a C equivalent compiled in its place elsewhere. Each file holds its XS3 and VX4 versions
-# behind __XS3A__ / __VX4B__ guards. Setting LIB_ASM_SRCS explicitly stops XCommon CMake globbing
-# them into the native build, where they would be empty translation units at best.
 if(APP_BUILD_ARCH STREQUAL "xs3a")
     file(GLOB_RECURSE LIB_ASM_SRCS RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_LIST_DIR}/src/*.S")

@@ -4,12 +4,13 @@
 #include <stdio.h>
 #include "aec.h"
 
-//The h_hat gather and scatter are hand written assembly on XS3 and VX4 and plain C elsewhere, so the same test
-//checks whichever this build has. Rather than compare against a copy of the C, it checks them against the layout
-//itself: undoing the bit-reversal of a scattered vector with fft_index_bit_reversal() has to leave tap n in time
-//domain position n, and aec_h_hat_tap_index() says where tap n is stored. The mono FFT packs the real taps into
-//complex elements, so tap n is the real (n even) or imaginary (n odd) part of element n/2, and the bit-reversal
-//permutes whole elements rather than taps.
+//The h_hat gather and scatter are assembly on XS3 and VX4 and plain C elsewhere, so the same test
+//checks whichever this build has. Rather than compare against a copy of the C, it checks them
+//against the layout itself: undoing the bit-reversal of a scattered vector with
+//fft_index_bit_reversal() has to leave tap n in time domain position n, and aec_h_hat_tap_index()
+//says where tap n is stored. The mono FFT packs the real taps into complex elements, so tap n is
+//the real (n even) or imaginary (n odd) part of element n/2, and the bit-reversal permutes whole
+//elements rather than taps.
 
 #define ITERS (((1<<8)/F) > 0 ? ((1<<8)/F) : 1)
 #define GUARD_WORDS (4)
@@ -29,11 +30,6 @@ typedef struct {
 //The narrowing the gather does, as vect_s32_to_vect_s16() does it: an arithmetic shift by shr - 16, saturating if
 //that is to the left, then the top half of each word, rounded and saturated as vdepth16 does. That saturation is
 //symmetric on XS3, but VX4 lets the most negative value through.
-#if defined(__VX4B__)
-#define NARROW_MIN INT16_MIN
-#else
-#define NARROW_MIN (-INT16_MAX)
-#endif
 static int16_t narrow(int32_t x, right_shift_t shr)
 {
     const int s = shr - 16;
@@ -47,7 +43,7 @@ static int16_t narrow(int32_t x, right_shift_t shr)
     }
     int64_t r = (y + (1 << 15)) >> 16;
     if(r > INT16_MAX) r = INT16_MAX;
-    if(r < NARROW_MIN) r = NARROW_MIN;
+    if(r < VPU_INT16_MIN) r = VPU_INT16_MIN;
     return (int16_t)r;
 }
 

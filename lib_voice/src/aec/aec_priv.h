@@ -22,7 +22,7 @@
 /** @name h_hat bit-reversed storage layout
  *
  * The AEC adaptive filter is stored in the time domain, with its taps held in the bit-reversed
- * index order that the low level FFT functions work in. See aec_state_t::h_hat for why.
+ * index order that the low level FFT functions work in. See aec_filter_state_t::h_hat for more details.
  *
  * An AEC_PROC_FRAME_LENGTH point real FFT is computed as an AEC_PROC_FRAME_LENGTH/2 point complex
  * FFT over a vector whose element `c` holds the real time domain samples `td[2c]` and `td[2c+1]`.
@@ -62,8 +62,9 @@ _Static_assert(AEC_H_HAT_BITREV_GROUP * AEC_H_HAT_BITREV_DROPPED == AEC_H_HAT_BI
  *
  * Writes the AEC_FRAME_ADVANCE taps of `src` into the slots of `dst` they occupy in the
  * AEC_PROC_FRAME_LENGTH/2 point complex vector the forward transform wants, and zeroes every
- * other slot. Each 16 bit tap lands in the top half of its 32 bit slot, so the expanded mantissas
- * are 2^16 times the stored ones.
+ * other slot. Each slot is one complex element, a pair of adjacent real taps `td[2c]` and
+ * `td[2c+1]` as its real and imaginary parts, and is moved as a unit. Each 16 bit tap lands in
+ * the top half of its 32 bit word, so the expanded mantissas are 2^16 times the stored ones.
  *
  * @param[out] dst AEC_PROC_FRAME_LENGTH words, double word aligned
  * @param[in]  src AEC_FRAME_ADVANCE taps, word aligned
@@ -76,12 +77,13 @@ void aec_h_hat_bitrev_scatter(int32_t *dst, const int16_t *src);
  * Compress the non-zero h_hat values, keeping them in bit-reversed order. When combined with 
  * @ref aec_h_hat_bitrev_scatter(), this applies a gradient constraint by zeroing h_hat values
  * above the AEC_FRAME_ADVANCE index.
- * 
+ *
+ * `src` is the complex vector the mono inverse transform leaves, so each slot is a pair of
+ * adjacent real taps `td[2c]` and `td[2c+1]` as its real and imaginary parts, and is moved as a
+ * unit.
+ *
  * Each 32 bit tap is narrowed to 16 bit by an arithmetic right shift of `shr` (to the left,
- * saturating, if negative), then rounding and saturation to the top half, so the gathered
- * mantissas are 2^-(shr+16) times the full ones. Unlike vect_s32_to_vect_s16(), `shr` does not
- * include the 16 bits the narrowing drops: with a `shr` of 0 this is the inverse of the widening
- * aec_h_hat_bitrev_scatter() does.
+ * saturating, if negative), then rounding and saturation to the top half.
  *
  * @param[out] dst AEC_FRAME_ADVANCE taps, word aligned
  * @param[in]  src AEC_PROC_FRAME_LENGTH words, double word aligned. May be the buffer `dst`

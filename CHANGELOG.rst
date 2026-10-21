@@ -1,15 +1,34 @@
 lib_voice change log
 ====================
 
-1.1.0
------
-
-  * ADDED: Initial `vx4b` support
-  * CHANGED: `app_pipeline` example is now single-tile
+UNRELEASED
+----------
+  * ADDED: `aec_h_hat_tap_index()`, for mapping a tap's position in an AEC filter phase's impulse
+    response to its position in the stored phase
+  * CHANGED: The AEC and IC adaptive filters are stored in the time domain rather than the frequency
+    domain, reducing AEC memory use by around 25%. The taps are stored in bit-reversed index order
+    so that the per-phase transforms need no index bit-reversal pass; use `aec_h_hat_tap_index()` to read
+    the filter in time order
+  * CHANGED: `aec_memory_pool_t` now holds the shadow filter as well as the main filter, and
+    `aec_shadow_filt_memory_pool_t` is removed; the shadow filter is allocated straight after the
+    main filter, so a configuration with a shorter shadow filter can have a longer main filter
 
   * Changes to dependencies:
 
     - ai_tools: Added dependency 1.4.3.dev40
+
+    - lib_xcore_math: 3.0.0 -> develop
+
+1.1.0
+-----
+
+  * ADDED: Initial `vx4b` support
+
+  * CHANGED: `app_pipeline` example is now single-tile
+
+  * Changes to dependencies:
+
+    - ai_tools: Added dependency 1.4.3
 
     - lib_xcore_math: 2.4.1 -> 3.0.0
 

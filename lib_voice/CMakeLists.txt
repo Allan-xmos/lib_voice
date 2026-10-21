@@ -18,6 +18,15 @@ target_sources(lib_voice_module_aec
         ${CMAKE_CURRENT_LIST_DIR}/src/aec/aec_process_frame.c
         ${CMAKE_CURRENT_LIST_DIR}/src/aec/aec_schedule_defaults.c
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL XCORE_XS3A)
+    file(GLOB_RECURSE LIB_AEC_ASM_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/aec/*.S)
+    target_sources(lib_voice_module_aec
+        INTERFACE
+            ${LIB_AEC_ASM_SOURCES}
+    )
+endif()
+
 target_include_directories(lib_voice_module_aec
     INTERFACE
         ${CMAKE_CURRENT_LIST_DIR}/api/aec

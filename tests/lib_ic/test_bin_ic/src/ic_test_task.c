@@ -1,11 +1,7 @@
 // Copyright 2022-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if !X86_BUILD
-#ifdef __XC__
-    #define chanend_t chanend
-#else
-    #include <xcore/chanend.h>
-#endif
+#include <xcore/chanend.h>
 #include <platform.h>
 #endif
 

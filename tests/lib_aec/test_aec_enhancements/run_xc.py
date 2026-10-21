@@ -1,6 +1,7 @@
 # Copyright 2021-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import numpy as np
+import runpy
 import tempfile
 import shutil
 import configparser
@@ -18,7 +19,7 @@ out_dir = parser.get("Folders", "out_dir")
 
 adapt_mode_dict = {'AEC_ADAPTION_AUTO':0, 'AEC_ADAPTION_FORCE_ON':1, 'AEC_ADAPTION_FORCE_OFF': 2}
 
-dut_H_hat_file = "H_hat.bin"
+dut_H_hat_file = "h_hat.bin"
 runtime_args_file = "args.bin"
 AEC_MAX_Y_CHANNELS = int(parser.get("Config", "y_channel_count"))
 AEC_MAX_X_CHANNELS = int(parser.get("Config", "x_channel_count"))
@@ -77,8 +78,10 @@ def get_h_hat(filename, aec):
     H_hat = None
 
     if aec == 'xc':
-        shutil.copy2(filename, "temp.py")
-        from temp import H_hat
+        # Run the dump in a fresh namespace on every call. Importing it as a module would hand
+        # back the cached module from the first call, so every later test in the session would get
+        # the first test's filter.
+        H_hat = runpy.run_path(str(filename))['H_hat']
     else:
         with open(filename, "rb") as f:
             H_hat = np.load(f)

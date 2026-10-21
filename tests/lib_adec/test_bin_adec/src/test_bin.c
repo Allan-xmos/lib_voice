@@ -102,7 +102,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
     // Open output wav file that will contain the AEC output
     ret = file_open(&output_file, output_file_name, "wb");
     assert((!ret) && "Failed to open file");
-    ret = file_open(&H_hat_file, "H_hat.bin", "wb");
+    ret = file_open(&H_hat_file, "h_hat.bin", "wb");
     assert((!ret) && "Failed to open file");
     ret = file_open(&req_delay_file, "requested_delay_samples.bin", "wb");
     assert((!ret) && "Failed to open file");
@@ -191,7 +191,7 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
         sprintf(buf, "%f\n", float_s32_to_f32(pipeline_state.aec_state.main_state.shared_state->overall_Y[0]));
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
-        sprintf(buf, "%d\n", pipeline_state.aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[0]);
+        sprintf(buf, "%ld\n", (long)pipeline_state.aec_state.main_state.shared_state->shadow_filter_params.shadow_flag[0]);
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
         sprintf(buf, "%d\n", pipeline_state.aec_state.main_state.shared_state->shadow_filter_params.shadow_reset_count[0]);
         file_write(&debug_log_file, (uint8_t*)buf,  strlen(buf));
@@ -206,10 +206,10 @@ void pipeline_wrapper(const char *input_file_name, const char* output_file_name)
         file_write(&output_file, (uint8_t*)pipeline_output, (num_output_y_channels * AEC_FRAME_ADVANCE * sizeof(int32_t)));
 
         char strbuf[100];
-        sprintf(strbuf, "%ld\n", pipeline_state.adec_requested_delay_samples);
+        sprintf(strbuf, "%ld\n", (long)pipeline_state.adec_requested_delay_samples);
         file_write(&req_delay_file, (uint8_t*)strbuf,  strlen(strbuf));
 
-        sprintf(strbuf, "%ld\n", pipeline_state.de_output_measured_delay_samples);
+        sprintf(strbuf, "%ld\n", (long)pipeline_state.de_output_measured_delay_samples);
         file_write(&measured_delay_file, (uint8_t*)strbuf,  strlen(strbuf));
     }
     file_close(&input_file);

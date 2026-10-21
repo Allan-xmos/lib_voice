@@ -16,14 +16,14 @@
       "program": 3884
     },
     "app_memory_aec_std_arch": {
-      "total": 279768,
-      "stack": 228932,
-      "program": 50836
+      "total": 189200,
+      "stack": 137516,
+      "program": 51684
     },
     "app_memory_adec": {
-      "total": 12392,
-      "stack": 2500,
-      "program": 9892
+      "total": 11272,
+      "stack": 1796,
+      "program": 9476
     },
     "app_memory_vnr": {
       "total": 63936,
@@ -31,14 +31,14 @@
       "program": 54804
     },
     "app_memory_aec_alt_arch": {
-      "total": 242376,
-      "stack": 191620,
-      "program": 50756
+      "total": 183344,
+      "stack": 131724,
+      "program": 51620
     },
     "app_memory_ic": {
-      "total": 140432,
-      "stack": 67100,
-      "program": 73332
+      "total": 125840,
+      "stack": 51332,
+      "program": 74508
     }
   }
 }

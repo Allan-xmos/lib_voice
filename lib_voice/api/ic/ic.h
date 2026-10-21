@@ -92,8 +92,4 @@ void ic_calc_vnr_pred(ic_state_t *state,
  */
 void ic_adapt(ic_state_t *state);
 
-#ifdef __XC__
-#error PLEASE CALL IC FROM C TO AVOID STRUCT INCOMPATIBILITY ISSUES
-#endif
-
 #endif //IC_API_H

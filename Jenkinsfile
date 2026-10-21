@@ -116,9 +116,6 @@ def test_arch(String archName) {
 // unstashNames, hwTarget (null skips XTAG reset), archiveAlways/
 // archiveFailure (closures, optional).
 def runVerification(Map cfg) {
-  if (env.GH_LABEL_DOC_ONLY.toBoolean()) {
-    return
-  }
   node(cfg.agentLabel) {
     try {
       stage('Get View') {
@@ -231,6 +228,31 @@ def archiveResultsFailure() {
   archiveArtifacts artifacts: "${env.REPO}/tests/pipeline/keyword_input_*/*.wav", fingerprint: true, allowEmptyArchive: true
 }
 
+// CMake option that shortens tests unless a full test run was requested.
+def speedupOpt() {
+  return (env.FULL_TEST == "1") ? "" : "-DTEST_SPEEDUP_FACTOR=4"
+}
+
+// Runs a test build on its own agent: checks out the repo, creates the build venv
+// (requirements.txt - needs ai_tools, and numpy to generate aec tests), then runs `body`
+// (which should build and stash binaries). Always cleans the sandbox afterwards.
+def buildTests(String agentLabel, Closure body) {
+  node(agentLabel) {
+    try {
+      stage('Get View') {
+        runningOn(env.NODE_NAME)
+        dir("${env.REPO}") {
+          checkout scm
+          createVenv(reqFile: "requirements.txt")
+        }
+      }
+      body()
+    } finally {
+      xcoreCleanSandbox()
+    }
+  }
+}
+
 getApproval()
 
 pipeline {
@@ -278,7 +300,9 @@ pipeline {
     buildDiscarder(xmosDiscardBuildSettings(onlyArtifacts=false))
   }
   stages {
-    stage('Build and Docs') {
+    stage('Build and test') {
+      // Every branch is independent: an architecture's tests start as soon as its own build
+      // finishes, without waiting on other architectures' builds or the docs/repo checks.
       parallel {
         stage('Examples, docs, repo checks') {
           agent {
@@ -340,182 +364,28 @@ pipeline {
               xcoreCleanSandbox()
             }
           }
-        } // Build and Docs
+        } // Examples, docs, repo checks
 
-        stage('vx4b build') {
+        stage('vx4b') {
           when {
             expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
           }
-          agent {
-            label 'x86&&linux'
-          }
-          stages {
-            stage('Get View') {
-              steps {
-                runningOn(env.NODE_NAME)
-
-                dir("${REPO}") {
-                  checkout scm
-                  // need ai_tools for the build
-                  // need numpy to generate aec tests, will get in from ai_tools
-                  createVenv(reqFile: "requirements.txt")
-                }
-              }
-            } // Get View
-
-            stage('Build tests vx4b') {
-              steps {
-                dir("${REPO}") {
-                  withVenv {
-                    withEnv(["TOOLS_VERSION=${params.TOOLS_VX4_VERSION}"]) {
-                      dir("tests") {
-                        script {
-                          def speedupOpt = (env.FULL_TEST == "1") ? "" : "-DTEST_SPEEDUP_FACTOR=4"
-                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "${speedupOpt} -DAPP_HW_TARGET=XK-EVK-XU416", jobs: 8)
-                        }
-                        stash name: 'vx4b_build_xcore', includes: '**/bin/**/*.xe'
-                      }
-                    }
-                  }
-                }
-              }
-            } // Build tests vx4b
-
-          } // stages
-
-          post {
-            cleanup {
-              xcoreCleanSandbox()
-            }
-          }
-        }
-
-        stage('xs3a build, PartA') {
-          when {
-            expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
-          }
-          agent {
-            label 'x86_64&&linux'
-          }
-          stages {
-            stage('Get view') {
-              steps {
-                runningOn(env.NODE_NAME)
-
-                dir("${REPO}") {
-                  checkout scm
-                  // need ai_tools for the build
-                  // need numpy to generate aec tests, will get in from ai_tools
-                  createVenv(reqFile: "requirements.txt")
-                }
-              }
-            }
-            stage('Build tests, xcommon-cmake xcore build, partA') {
-              steps {
-                dir("${REPO}") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        dir("tests") {
-                          script {
-                            def speedupOpt = (env.FULL_TEST == "1") ? "" : "-DTEST_SPEEDUP_FACTOR=4"
-                            xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "${speedupOpt} -DTEST_BUILD_PART=partA")
-                          }
-                          stash name: 'xcommon_cmake_build_xcore_partA', includes: '**/bin/**/*.xe'
-                        }
-                      }
-                    }
-                }
-              }
-            }
-            stage('Build tests, xcommon-cmake native build') {
-              steps {
-                dir("${REPO}") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        dir("tests") {
-                          xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
-                          stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe'
-                        }
-                      }
-                    }
-                }
-              }
-            }
-            stage('Custom CMake build') {
-              steps {
-                sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
-                // Do custom cmake, xcore build, from the tests/custom_cmake_build directory
-                dir("${REPO}/tests/custom_cmake_build") {
-                  withTools(params.TOOLS_VERSION) {
+          steps {
+            script {
+              buildTests('x86&&linux') {
+                stage('Build tests vx4b') {
+                  dir("${env.REPO}") {
                     withVenv {
-                      sh 'cmake -B build --toolchain=../../../xmos_cmake_toolchain/xs3a.cmake'
-                      sh 'make -C build -j$(nproc)'
-                   }
-                  }
-                }
-              }
-            }
-          }
-          post {
-            cleanup {
-              xcoreCleanSandbox()
-            }
-          }
-        } // xs3a build, PartA
-
-        stage('xs3a build, PartB') {
-          when {
-            expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
-          }
-          agent {
-            label 'x86_64&&linux'
-          }
-          stages {
-            stage('Get view') {
-              steps {
-                runningOn(env.NODE_NAME)
-
-                dir("${REPO}") {
-                  checkout scm
-                  // need ai_tools for the build
-                  // need numpy to generate aec tests, will get in from ai_tools
-                  createVenv(reqFile: "requirements.txt")
-                }
-              }
-            }
-            stage('Build tests, xcommon-cmake xcore build, PartB') {
-              steps {
-                dir("${REPO}") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
+                      withEnv(["TOOLS_VERSION=${params.TOOLS_VX4_VERSION}"]) {
                         dir("tests") {
-                          script {
-                            def speedupOpt = (env.FULL_TEST == "1") ? "" : "-DTEST_SPEEDUP_FACTOR=4"
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "${speedupOpt} -DTEST_BUILD_PART=partB")
-                          }
-                          stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
+                          xcoreBuild(buildDir: "build_vx4b", archiveBins: false, cmakeOpts: "${speedupOpt()} -DAPP_HW_TARGET=XK-EVK-XU416", jobs: 8)
+                          stash name: 'vx4b_build_xcore', includes: '**/bin/**/*.xe'
                         }
                       }
                     }
+                  }
                 }
               }
-            }
-          }
-          post {
-            cleanup {
-              xcoreCleanSandbox()
-            }
-          }
-        } // xs3a build, PartB
-      } // parallel
-    } // Build and Docs
-
-    stage("Testing") {
-      agent none
-      steps {
-        script {
-          parallel(
-            'vx4b Verification': {
               runVerification([
                 agentLabel: 'vx4',
                 toolsVersion: params.TOOLS_VX4_VERSION,
@@ -525,8 +395,30 @@ pipeline {
                 archiveAlways: { archiveResultsAlways() },
                 archiveFailure: { archiveResultsFailure() },
               ])
-            },
-            'native and CFFI Verification': {
+            }
+          }
+        } // vx4b
+
+        stage('native and CFFI') {
+          when {
+            expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
+          }
+          steps {
+            script {
+              buildTests('x86_64&&linux') {
+                stage('Build tests, xcommon-cmake native build') {
+                  dir("${env.REPO}") {
+                    withTools(params.TOOLS_VERSION) {
+                      withVenv {
+                        dir("tests") {
+                          xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
+                          stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe'
+                        }
+                      }
+                    }
+                  }
+                }
+              }
               runVerification([
                 agentLabel: 'x86_64&&linux&&!noAVX2',
                 toolsVersion: params.TOOLS_VERSION,
@@ -534,8 +426,64 @@ pipeline {
                 unstashNames: ['xcommon_cmake_build_native'],
                 hwTarget: null,
               ])
-            },
-            'xs3a Verification': {
+            }
+          }
+        } // native and CFFI
+
+        stage('xs3a') {
+          when {
+            expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
+          }
+          steps {
+            script {
+              // PartA and PartB build on two separate agents in parallel; tests start once both finish.
+              // (Scripted parallel: declarative doesn't allow parallel stages nested in a parallel branch.)
+              parallel(
+                'xs3a build, PartA': {
+                  buildTests('x86_64&&linux') {
+                    stage('Build tests, xcommon-cmake xcore build, PartA') {
+                      dir("${env.REPO}") {
+                        withTools(params.TOOLS_VERSION) {
+                          withVenv {
+                            dir("tests") {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "${speedupOpt()} -DTEST_BUILD_PART=partA")
+                              stash name: 'xcommon_cmake_build_xcore_partA', includes: '**/bin/**/*.xe'
+                            }
+                          }
+                        }
+                      }
+                    }
+                    stage('Custom CMake build') {
+                      sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
+                      // Do custom cmake, xcore build, from the tests/custom_cmake_build directory
+                      dir("${env.REPO}/tests/custom_cmake_build") {
+                        withTools(params.TOOLS_VERSION) {
+                          withVenv {
+                            sh 'cmake -B build --toolchain=../../../xmos_cmake_toolchain/xs3a.cmake'
+                            sh 'make -C build -j$(nproc)'
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                'xs3a build, PartB': {
+                  buildTests('x86_64&&linux') {
+                    stage('Build tests, xcommon-cmake xcore build, PartB') {
+                      dir("${env.REPO}") {
+                        withTools(params.TOOLS_VERSION) {
+                          withVenv {
+                            dir("tests") {
+                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "${speedupOpt()} -DTEST_BUILD_PART=partB")
+                              stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+              )
               runVerification([
                 agentLabel: 'xcore.ai',
                 toolsVersion: params.TOOLS_VERSION,
@@ -545,11 +493,11 @@ pipeline {
                 archiveAlways: { archiveResultsAlways() },
                 archiveFailure: { archiveResultsFailure() },
               ])
-            },
-          )
-        }
-      }
-    } // Testing
+            }
+          }
+        } // xs3a
+      } // parallel
+    } // Build and test
 
     stage('🚀 Release') {
       when {

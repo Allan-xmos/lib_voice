@@ -24,6 +24,15 @@
 #endif
 
 
+/** Compile out ADEC/delay-estimation, leaving a fixed delay applied via the delay buffer
+ *
+ * @ingroup stage1_types
+ */
+#ifndef STAGE1_DISABLE_ADEC
+#define STAGE1_DISABLE_ADEC (0)
+#endif
+
+
 /** Number of microphone (Y) channels the pipeline carries through stage1.
  *  In @ref ALT_ARCH_MODE this must be 2.
  *

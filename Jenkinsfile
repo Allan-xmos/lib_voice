@@ -113,7 +113,8 @@ def test_arch(String archName) {
 // Runs one architecture's whole Verification stage (Get View, XTAG reset, tests, pipeline,
 // artifact archiving, cleanup) - shared by vx4b/native/xs3a instead of 3 near-identical
 // declarative stage blocks. `cfg` fields: agentLabel, toolsVersion, archName,
-// unstashNames, hwTarget (null skips XTAG reset), archiveAlways/
+// unstashNames, hwTarget (null skips XTAG reset), build (closure, optional - builds the
+// tests on this same node instead of unstashing them), archiveAlways/
 // archiveFailure (closures, optional).
 def runVerification(Map cfg) {
   node(cfg.agentLabel) {
@@ -132,6 +133,10 @@ def runVerification(Map cfg) {
           }
         }
       } // Get View
+
+      if (cfg.build) {
+        cfg.build()
+      }
 
       if (cfg.hwTarget) {
         stage('Reset XTAGs') {
@@ -405,26 +410,28 @@ pipeline {
           }
           steps {
             script {
-              buildTests('x86_64&&linux') {
-                stage('Build tests, xcommon-cmake native build') {
-                  dir("${env.REPO}") {
-                    withTools(params.TOOLS_VERSION) {
-                      withVenv {
-                        dir("tests") {
-                          xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
-                          stash name: 'xcommon_cmake_build_native', includes: '**/bin/**/', excludes: '**/bin/**/*.xe'
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              // Build and test on the same node
               runVerification([
                 agentLabel: 'x86_64&&linux&&!noAVX2',
                 toolsVersion: params.TOOLS_VERSION,
                 archName: 'native',
-                unstashNames: ['xcommon_cmake_build_native'],
+                unstashNames: [],
                 hwTarget: null,
+                build: {
+                  stage('Build tests, xcommon-cmake native build') {
+                    dir("${env.REPO}") {
+                      // need ai_tools for the build, and numpy to generate aec tests
+                      createVenv(reqFile: "requirements.txt")
+                      withTools(params.TOOLS_VERSION) {
+                        withVenv {
+                          dir("tests") {
+                            xcoreBuild(buildDir: "build_xcommon_cmake_native", archiveBins: false, cmakeOpts: "-DBUILD_NATIVE=ON")
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
               ])
             }
           }
@@ -436,59 +443,37 @@ pipeline {
           }
           steps {
             script {
-              // PartA and PartB build on two separate agents in parallel; tests start once both finish.
-              // (Scripted parallel: declarative doesn't allow parallel stages nested in a parallel branch.)
-              parallel(
-                'xs3a build, PartA': {
-                  buildTests('x86_64&&linux') {
-                    stage('Build tests, xcommon-cmake xcore build, PartA') {
-                      dir("${env.REPO}") {
-                        withTools(params.TOOLS_VERSION) {
-                          withVenv {
-                            dir("tests") {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "${speedupOpt()} -DTEST_BUILD_PART=partA")
-                              stash name: 'xcommon_cmake_build_xcore_partA', includes: '**/bin/**/*.xe'
-                            }
-                          }
-                        }
-                      }
-                    }
-                    stage('Custom CMake build') {
-                      sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
-                      // Do custom cmake, xcore build, from the tests/custom_cmake_build directory
-                      dir("${env.REPO}/tests/custom_cmake_build") {
-                        withTools(params.TOOLS_VERSION) {
-                          withVenv {
-                            sh 'cmake -B build --toolchain=../../../xmos_cmake_toolchain/xs3a.cmake'
-                            sh 'make -C build -j$(nproc)'
-                          }
+              buildTests('x86_64&&linux') {
+                stage('Build tests, xcommon-cmake xcore build') {
+                  dir("${env.REPO}") {
+                    withTools(params.TOOLS_VERSION) {
+                      withVenv {
+                        dir("tests") {
+                          xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: speedupOpt())
+                          stash name: 'xcommon_cmake_build_xcore', includes: '**/bin/**/*.xe'
                         }
                       }
                     }
                   }
-                },
-                'xs3a build, PartB': {
-                  buildTests('x86_64&&linux') {
-                    stage('Build tests, xcommon-cmake xcore build, PartB') {
-                      dir("${env.REPO}") {
-                        withTools(params.TOOLS_VERSION) {
-                          withVenv {
-                            dir("tests") {
-                              xcoreBuild(buildDir: "build_xcommon_cmake", archiveBins: false, cmakeOpts: "${speedupOpt()} -DTEST_BUILD_PART=partB")
-                              stash name: 'xcommon_cmake_build_xcore_partB', includes: '**/bin/**/*.xe'
-                            }
-                          }
-                        }
+                }
+                stage('Custom CMake build') {
+                  sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
+                  // Do custom cmake, xcore build, from the tests/custom_cmake_build directory
+                  dir("${env.REPO}/tests/custom_cmake_build") {
+                    withTools(params.TOOLS_VERSION) {
+                      withVenv {
+                        sh 'cmake -B build --toolchain=../../../xmos_cmake_toolchain/xs3a.cmake'
+                        sh 'make -C build -j$(nproc)'
                       }
                     }
                   }
-                },
-              )
+                }
+              }
               runVerification([
                 agentLabel: 'xcore.ai',
                 toolsVersion: params.TOOLS_VERSION,
                 archName: 'xs3a',
-                unstashNames: ['xcommon_cmake_build_xcore_partA', 'xcommon_cmake_build_xcore_partB'],
+                unstashNames: ['xcommon_cmake_build_xcore'],
                 hwTarget: 'XCORE-AI-EXPLORER',
                 archiveAlways: { archiveResultsAlways() },
                 archiveFailure: { archiveResultsFailure() },

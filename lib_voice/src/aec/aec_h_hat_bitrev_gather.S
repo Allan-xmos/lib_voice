@@ -1,0 +1,240 @@
+// Copyright 2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
+
+#define FUNCTION_NAME   aec_h_hat_bitrev_gather
+#define NGROUPS         8 // AEC_H_HAT_BITREV_DROPPED
+
+#if defined(__XS3A__)
+
+.text
+.issue_mode dual
+
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+.align 16
+.cc_top FUNCTION_NAME.function,FUNCTION_NAME
+
+// r0 = dst (AEC_FRAME_ADVANCE int16_t), has to be word aligned
+// r1 = src (AEC_PROC_FRAME_LENGTH int32_t), has to be double word aligned
+// Save to use in-place
+
+#define NSTACKWORDS     (8 + 8)
+
+#define dst       r0
+#define src       r1
+#define shr       r2
+#define n_loop    r3
+#define _16       r4
+#define _12       r5
+#define msk16     r6
+#define msk12     r7
+#define _64       r10
+
+// This one is different tp the next one,
+// because we have to pre-increment the
+// destination poiner, but the last write
+// in the loop, writes 12 bytes, not 16
+#define GATHER_FOUR_PAIRS_BEGIN \
+    ldd r8, r9, src[0] ; \
+    std r8, r9, r11[0] ; \
+    ldd r8, r9, src[2] ; \
+    std r8, r9, r11[1] ; \
+    ldd r8, r9, src[4] ; \
+    std r8, r9, r11[2] ; \
+    ldd r8, r9, src[6] ; \
+    std r8, r9, r11[3] ; \
+    vlashr r11[0], shr ; \
+    { add dst, dst, _12 ; vdepth16 } ; \
+    add src, src, _64 ; \
+    vstrpv dst[0], msk16
+
+#define GATHER_FOUR_PAIRS \
+    ldd r8, r9, src[0] ; \
+    std r8, r9, r11[0] ; \
+    ldd r8, r9, src[2] ; \
+    std r8, r9, r11[1] ; \
+    ldd r8, r9, src[4] ; \
+    std r8, r9, r11[2] ; \
+    ldd r8, r9, src[6] ; \
+    std r8, r9, r11[3] ; \
+    vlashr r11[0], shr ; \
+    { add dst, dst, _16 ; vdepth16 } ; \
+    add src, src, _64 ; \
+    vstrpv dst[0], msk16
+
+// This one will skip 2 more words
+// of the source pointer
+#define GATHER_THREE_PAIRS \
+    ldd r8, r9, src[0] ; \
+    std r8, r9, r11[0] ; \
+    ldd r8, r9, src[2] ; \
+    std r8, r9, r11[1] ; \
+    ldd r8, r9, src[4] ; \
+    std r8, r9, r11[2] ; \
+    vlashr r11[0], shr ; \
+    { add dst, dst, _16 ; vdepth16 } ; \
+    add src, src, _64 ; \
+    vstrpv dst[0], msk12
+
+FUNCTION_NAME:
+    dualentsp NSTACKWORDS
+    std r4, r5, sp[0]
+    std r6, r7, sp[1]
+    std r8, r9, sp[2]
+    { ldc r11, 0 ; stw r10, sp[6] }
+
+    { ldc n_loop, NGROUPS ; vsetc r11 }
+
+    { ldc _16, 16 ; ldc _12, 12 }
+    { ldaw r11, sp[8] ; shl _64, _16, 2 }
+    { mkmsk msk16, _16 ; mkmsk msk12, _12 }
+    { sub dst, dst, _12 ; sub n_loop, n_loop, 1 }
+
+.L_gather_group:
+    // so in the whole loop:
+    // dst += 15 * 2 * 2 = 60
+    // src += 16 * 4 * 4 = 256
+
+    // [0:7] <- [0:1, 4:5, 8:9, 12:13]
+    // dst += 8 * 2
+    // src += 16 * 4
+    GATHER_FOUR_PAIRS_BEGIN;
+
+    // [8:15] <- [16:17, 20:21, 24:25, 28:29]
+    GATHER_FOUR_PAIRS;
+
+    // [16:23] <- [32:33, 36:37, 40:41, 44:45]
+    GATHER_FOUR_PAIRS;
+
+    // [24:29] <- [48:49, 52:53, 56:57]
+    // dst += 6 * 2
+    // src += 16 * 4
+    GATHER_THREE_PAIRS;
+
+    { sub n_loop, n_loop, 1 ; bt n_loop, .L_gather_group }
+
+    ldw r10, sp[6]
+    ldd r8, r9, sp[2]
+    ldd r6, r7, sp[1]
+    ldd r4, r5, sp[0]
+    retsp NSTACKWORDS
+
+.cc_bottom FUNCTION_NAME.function
+.set FUNCTION_NAME.nstackwords,NSTACKWORDS
+.globl FUNCTION_NAME.nstackwords
+.set FUNCTION_NAME.maxcores,1
+.globl FUNCTION_NAME.maxcores
+.set FUNCTION_NAME.maxtimers,0
+.globl FUNCTION_NAME.maxtimers
+.set FUNCTION_NAME.maxchanends,0
+.globl FUNCTION_NAME.maxchanends
+
+#endif // defined(__XS3A__)
+
+#if defined(__VX4B__)
+
+.text
+
+// a0 = dst (AEC_FRAME_ADVANCE int16_t)
+// a1 = src (AEC_PROC_FRAME_LENGTH int32_t)
+// Save to use in-place
+
+#define NSTACKWORDS     16
+
+#define dst             a0
+#define src             a1
+#define count           a2
+#define _16             a3
+#define shr             a4
+
+#define _12             s2
+#define _256            s3
+#define stk             s4
+#define msk16           s5
+
+.gather_lut:
+    .word 0x03020100, 0x07060504, 0x13121110, 0x17161514
+    .word 0x23222120, 0x27262524, 0x33323130, 0x37363534
+
+.p2align 2
+FUNCTION_NAME:
+    { li _16, 16 ; xm.entsp (NSTACKWORDS)*4 }
+    xm.stdsp s2, s3, 0
+    xm.stdsp s4, s5, 2 * 4
+
+    mv shr, a2
+    li count, NGROUPS
+
+    { li t3, 0 ; li _12, 12 }
+    { xm.ldap t3, .gather_lut ; xm.vsetc t3 }
+    { sll _256, _16, 4 ; xm.vldr t3 }
+    { xm.ldawsp stk, 4 * 4 ; xm.mkmsk msk16, _16 }
+
+.L_gather_group:
+    // so in the whole loop:
+    // dst += 15 * 2 * 2 = 60
+    // src += 16 * 4 * 4 = 256
+
+    { add count, count, -1 ; xm.vldc src }
+
+    // [0:15] <- [0:1, 4:5, 8:9, 12:13, 16:17, 20:21, 24:25, 28:29]
+    // dst += 16 * 2
+    // src += 32 * 4
+    xm.vlookup src, 0, 1
+    xm.vlookup src, 1, 2
+
+    xm.vstd stk
+    xm.vlashr stk, shr
+    xm.vdepth16
+    { add dst, dst, _16 ; xm.vstrpv dst, msk16 }
+    xm.vldr t3
+
+    xm.vlookup src, 0, 3
+    xm.vlookup src, 1, 4
+
+    xm.vstd stk
+    xm.vlashr stk, shr
+    xm.vdepth16
+    { add dst, dst, _16 ; xm.vstrpv dst, msk16 }
+    xm.vldr t3
+
+    // [16:29] <- [32:33, 36:37, 40:41, 44:45, 48:49, 52:53, 56:57]
+    // will actually lookup 8 pairs but only save 7
+    // dst += 14 * 2
+    // src += 32 * 4
+    xm.vlookup src, 0, 5
+    xm.vlookup src, 1, 6
+
+    xm.vstd stk
+    xm.vlashr stk, shr
+    xm.vdepth16
+    { add dst, dst, _16 ; xm.vstrpv dst, msk16 }
+    xm.vldr t3
+
+    xm.vlookup src, 0, 7
+    xm.vlookup src, 1, 0
+
+    { xm.mkmsk t3, _12 ; xm.vstd stk }
+    xm.vlashr stk, shr
+    xm.vdepth16
+    { xm.ldap t3, .gather_lut ; xm.vstrpv dst, t3 }
+    { add dst, dst, _12 ; xm.vldr t3 }
+
+    { add src, src, _256 ; xm.bt count, .L_gather_group }
+
+    xm.lddsp s2, s3, 0
+    xm.lddsp s4, s5, 2 * 4
+    xm.retsp (NSTACKWORDS)*4
+
+.L_gather_end:
+
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+.resource_const FUNCTION_NAME, "stack_frame_bytes", (NSTACKWORDS)*4
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+.size FUNCTION_NAME, .L_gather_end - FUNCTION_NAME
+
+#endif // defined(__VX4B__)
+

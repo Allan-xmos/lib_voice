@@ -16,9 +16,9 @@
       "program": 3884
     },
     "app_memory_aec_std_arch": {
-      "total": 189200,
-      "stack": 137516,
-      "program": 51684
+      "total": 186944,
+      "stack": 135132,
+      "program": 51812
     },
     "app_memory_adec": {
       "total": 11272,
@@ -31,9 +31,9 @@
       "program": 54804
     },
     "app_memory_aec_alt_arch": {
-      "total": 183344,
-      "stack": 131724,
-      "program": 51620
+      "total": 182760,
+      "stack": 131124,
+      "program": 51636
     },
     "app_memory_ic": {
       "total": 125840,

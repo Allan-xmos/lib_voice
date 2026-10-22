@@ -327,8 +327,10 @@ void aec_calc_T(
 
 /** @brief Update filter
  *
- * This function updates the adaptive filter taps (`h_hat'). It calculates the delta update that is applied to the filter by scaling the X FIFO with the T values computed in `aec_compute_T()` and applies the delta update to `h_hat`.
- * A gradient constraint FFT is then applied to constrain the length of each phase of the filter to avoid wrapping when calculating `y_hat`
+ * This function updates the adaptive filter taps (`h_hat`). It computes the delta update by
+ * scaling the X FIFO with the T values from `aec_compute_T()` and transforms that update to the
+ * time domain. The gradient constraint is applied by retaining only the taps represented by
+ * `h_hat` and discarding the remainder before adding the delta to the filter.
  *
  * @param[inout] state AEC state structure. `state->h_hat[y_ch]` is updated
  * @param[in] y_ch mic channel index
@@ -418,7 +420,7 @@ void aec_l2_bfp_s32_unify_exponent(
         uint32_t desired_index,
         uint32_t min_headroom);
 
-void aec_priv_main_init(
+uint8_t *aec_priv_main_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,
@@ -426,7 +428,7 @@ void aec_priv_main_init(
         unsigned num_x_channels,
         unsigned num_phases);
 
-void aec_priv_shadow_init(
+uint8_t *aec_priv_shadow_init(
         aec_filter_state_t *state,
         aec_shared_filter_state_t *shared_state,
         uint8_t *mem_pool,

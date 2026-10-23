@@ -19,7 +19,7 @@ applies delay corrections to maintain optimal AEC performance, and generates met
 (reference energy, correlation factors, and the reference active flag) for downstream processing stages.
 
 Stage1 supports both the standard and the alternating pipeline architectures described in
-:ref:`aec_alt_arch`. The decision to bypass the AEC in the alternating architecture is made inside
+:ref:`alt_arch`. The decision to bypass the AEC in the alternating architecture is made inside
 the AEC, so Stage1 does not depend on the architecture.
 
 Signal Representation
@@ -58,7 +58,7 @@ Stage1 carries :c:macro:`STAGE1_MAX_Y_CHANNELS` microphone channels, which may b
 the AEC is configured for. Microphone channels the AEC does not process are copied from the delayed
 microphone input to the output. In the alternating architecture, for example, the AEC processes only
 1 microphone channel, but Stage1 carries 2, because the IC needs both microphone channels while
-the AEC is bypassed.
+the AEC is bypassed. See :ref:`alt_arch` for a description of both architectures.
 
 Usage
 -----

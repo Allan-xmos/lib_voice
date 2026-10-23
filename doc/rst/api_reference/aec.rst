@@ -30,9 +30,3 @@ AEC Memory Pool
 
 .. doxygengroup:: aec_memory_pool
     :members:
-
-Alternating Architecture Defines
---------------------------------
-
-.. doxygengroup:: alt_arch_defines
-    :members:

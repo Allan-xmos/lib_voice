@@ -113,7 +113,7 @@ void stage1_process_frame(stage1_t *state, int32_t (*output_frame)[AEC_FRAME_ADV
     }
 
     // Overwrite output with mic input if delay estimation enabled, otherwise pass through the mic channels the AEC
-    // hasn't processed. The AEC cannot process the frame in-place because of this.
+    // hasn't processed. Stage1 cannot process the frame in-place because of this.
     int first_mic_ch = state->delay_estimator_enabled ? 0 : state->aec_state.main_state.shared_state->num_y_channels;
     for(int ch=first_mic_ch; ch<STAGE1_MAX_Y_CHANNELS; ch++) {
         vpu_memcpy(&output_frame[ch][0], &input_y[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t));

@@ -84,7 +84,7 @@ In the alternating architecture (:c:macro:`ALT_ARCH_MODE` set to 1), the IC bypa
 reference active flag is set, which is when the AEC is enabled. While bypassed, the delayed primary microphone
 signal is passed to the output unprocessed and the filter does not adapt, but the VNR estimate is still
 calculated so that it can be used by the AGC. In the standard architecture the flag is ignored and the IC
-is always active. See :ref:`aec_alt_arch` for a description of both architectures.
+is always active. See :ref:`alt_arch` for a description of both architectures.
 
 
 Parameters

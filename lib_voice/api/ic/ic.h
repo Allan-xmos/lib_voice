@@ -28,7 +28,7 @@ int32_t ic_init(ic_state_t *state);
  * In @ref ALT_ARCH_MODE the IC is bypassed while `ref_active_flag` is set: the delayed y_data is passed
  * to the output unprocessed and the filter does not adapt, while the VNR estimate is still calculated.
  * Pass the reference active flag reported by `aec_process_frame()`, so that the IC only runs while the
- * AEC is bypassed. Outside @ref ALT_ARCH_MODE `ref_active_flag` is ignored.
+ * AEC is bypassed. Outside @ref ALT_ARCH_MODE `ref_active_flag` is ignored and 0 can be passed.
  *
  * @param[inout] state pointer to IC state structure
  * @param[out] output array reference containing IC processed output buffer

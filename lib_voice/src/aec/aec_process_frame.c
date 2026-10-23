@@ -579,10 +579,13 @@ void aec_process_frame(
 #if ALT_ARCH_MODE
     // The bypassed output above is the windowed and overlap-added mic input, which is not sample aligned with the
     // mic input. Downstream, the IC needs its mic channels with their original phase relationship preserved, so
-    // overwrite the output with the mic input. The AEC cannot process the frame in-place because of this.
+    // overwrite the output with the mic input. y_data may have been overwritten if the frame is processed in-place,
+    // so copy the mic input from the end of prev_y, where aec_frame_init() saved it.
     if(main_state->shared_state->config_params.aec_core_conf.bypass) {
         for(int ch=0; ch<num_y_channels; ch++) {
-            vpu_memcpy(&output_main[ch][0], &y_data[ch][0], AEC_FRAME_ADVANCE*sizeof(int32_t));
+            vpu_memcpy(&output_main[ch][0],
+                    &main_state->shared_state->prev_y[ch].data[AEC_PROC_FRAME_LENGTH - (2*AEC_FRAME_ADVANCE)],
+                    AEC_FRAME_ADVANCE*sizeof(int32_t));
         }
     }
 #endif

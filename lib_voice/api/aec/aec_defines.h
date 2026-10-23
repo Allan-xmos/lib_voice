@@ -10,8 +10,14 @@
 
 #include "alt_arch.h"
 
-#ifdef __aec_conf_h_exists__
+#if defined(__aec_conf_h_exists__)
+    // Set by XCommon CMake (LIB_OPTIONAL_HEADERS) or lib_voice's generate_schedule()
     #include "aec_conf.h"
+#elif defined(__has_include)
+    // plain CMake checks the include path
+    #if __has_include("aec_conf.h")
+        #include "aec_conf.h"
+    #endif
 #endif
 
 /**

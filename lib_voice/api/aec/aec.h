@@ -124,8 +124,9 @@ void aec_init(
  * and `output_main` is a sample aligned copy of `y_data`. This lets microphone channels the AEC is not
  * configured for bypass the AEC entirely and be passed to the IC alongside the AEC output: in the
  * alternating architecture the AEC processes 1 microphone channel while the IC uses 2. Pass the held flag
- * to `ic_process_frame()` so that the IC is bypassed whenever the AEC is enabled. `output_main` must not
- * alias `y_data` in this mode.
+ * to `ic_process_frame()` so that the IC is bypassed whenever the AEC is enabled.
+ *
+ * The frame can be processed in-place: `output_main` may alias `y_data`, and `output_shadow` may alias `x_data`.
  *
  * @param[inout] aec_state       AEC state structure
  * @param[inout] output_main     Output from processing the mic input through the main filter

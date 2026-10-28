@@ -29,7 +29,7 @@ endif()
 
 target_include_directories(lib_voice_module_aec
     INTERFACE
-        ${CMAKE_CURRENT_LIST_DIR}/api ## alt_arch.h, shared with the IC
+        ${CMAKE_CURRENT_LIST_DIR}/api ## voice_defines.h, shared with the IC
         ${CMAKE_CURRENT_LIST_DIR}/api/aec
         ${CMAKE_CURRENT_LIST_DIR}/src/aec ## this is needed for the IC
 )

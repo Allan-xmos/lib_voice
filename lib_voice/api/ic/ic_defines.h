@@ -12,7 +12,7 @@
 #include <limits.h>
 #include <string.h>
 #include "xmath/xmath.h"
-#include "alt_arch.h"
+#include "voice_defines.h"
 #include "vnr_features_api.h"
 #include "vnr_inference_api.h"
 
